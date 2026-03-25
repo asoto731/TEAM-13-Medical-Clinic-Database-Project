@@ -41,22 +41,32 @@ function pill(status) {
 }
 
 /* ── Member Schedule Builder (Hubstaff-style: people as rows) ── */
-async function buildMemberCalendar(currentPhysicianId) {
+async function buildMemberCalendar(currentPhysicianId, ownSchedule) {
     const container = document.getElementById("memberSchedule");
     if (!container) return;
 
     let physicians = [];
     try {
         const r = await fetch("/api/staff/all-schedules");
-        physicians = await r.json();
-    } catch (e) {
-        container.innerHTML = '<p class="loading-msg">Could not load schedule data</p>';
-        return;
-    }
+        if (r.ok) {
+            physicians = await r.json();
+        }
+    } catch (e) { /* endpoint not yet available — use fallback */ }
 
+    // Fallback: build a single-row view from the current physician's own schedule
     if (!physicians || physicians.length === 0) {
-        container.innerHTML = '<p class="loading-msg">No schedule data available</p>';
-        return;
+        if (ownSchedule && ownSchedule.length > 0 && currentPhysicianId) {
+            physicians = [{
+                physician_id: currentPhysicianId,
+                first_name: document.getElementById("greetName")?.textContent.replace("Dr. ","") || "You",
+                last_name: "",
+                specialty: document.getElementById("specialtyBadge")?.textContent || "Physician",
+                schedule: ownSchedule
+            }];
+        } else {
+            container.innerHTML = '<p class="loading-msg">No schedule on record</p>';
+            return;
+        }
     }
 
     const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -193,7 +203,7 @@ async function loadDashboard() {
             : `<tr><td colspan="6" class="table-empty">No patients found</td></tr>`;
 
         /* Work schedule — member roster calendar */
-        buildMemberCalendar(physician ? physician.physician_id : null);
+        buildMemberCalendar(physician ? physician.physician_id : null, schedule);
 
         /* Referrals table */
         document.getElementById("referralsBody").innerHTML = referrals.length
