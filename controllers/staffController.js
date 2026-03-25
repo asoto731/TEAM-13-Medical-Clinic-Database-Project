@@ -203,4 +203,50 @@ const getStaffDashboard = (req, res) => {
   );
 };
 
-module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard };
+/* ─────────────────────────────────────────────
+   All Physicians' Work Schedules
+   GET /api/staff/all-schedules
+───────────────────────────────────────────── */
+const getAllSchedules = (req, res) => {
+  const sql = `
+    SELECT ph.physician_id, ph.first_name, ph.last_name, ph.specialty,
+           ws.day_of_week, ws.start_time, ws.end_time,
+           o.city, o.state, o.street_address
+    FROM physician ph
+    LEFT JOIN work_schedule ws ON ph.physician_id = ws.physician_id
+    LEFT JOIN office o ON ws.office_id = o.office_id
+    ORDER BY ph.last_name,
+      FIELD(ws.day_of_week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')`;
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "Schedule query failed" });
+
+    // Group by physician
+    const map = {};
+    rows.forEach(r => {
+      if (!map[r.physician_id]) {
+        map[r.physician_id] = {
+          physician_id: r.physician_id,
+          first_name:   r.first_name,
+          last_name:    r.last_name,
+          specialty:    r.specialty,
+          schedule:     []
+        };
+      }
+      if (r.day_of_week) {
+        map[r.physician_id].schedule.push({
+          day_of_week:  r.day_of_week,
+          start_time:   r.start_time,
+          end_time:     r.end_time,
+          city:         r.city,
+          state:        r.state,
+          street_address: r.street_address
+        });
+      }
+    });
+
+    res.json(Object.values(map));
+  });
+};
+
+module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules };

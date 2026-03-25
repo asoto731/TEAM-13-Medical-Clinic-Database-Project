@@ -528,3 +528,119 @@ body {
     color: #1e40af;
     border-left: 3px solid #3b82f6;
 }
+
+/* ── Member Schedule (Hubstaff-style: people as rows) ── */
+.ms-wrap {
+    overflow-x: auto;
+    margin: 16px;
+    border: 1px solid #e8eaf0;
+    border-radius: 10px;
+}
+
+.ms-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+    font-size: 12px;
+}
+
+.ms-table thead th {
+    padding: 10px 14px;
+    background: #fafbff;
+    border-bottom: 2px solid #e8eaf0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #888;
+    text-align: center;
+}
+
+.ms-table thead th:first-child {
+    text-align: left;
+    width: 180px;
+    position: sticky;
+    left: 0;
+    background: #fafbff;
+    z-index: 2;
+}
+
+.ms-table tbody tr {
+    border-bottom: 1px solid #f0f2f8;
+    transition: background 0.15s;
+}
+
+.ms-table tbody tr:hover { background: #fafbff; }
+.ms-table tbody tr:last-child { border-bottom: none; }
+
+.ms-table tbody tr.ms-me {
+    background: #f0fdf4;
+}
+.ms-table tbody tr.ms-me:hover { background: #e6faf0; }
+
+.ms-name-cell {
+    padding: 12px 16px;
+    position: sticky;
+    left: 0;
+    background: inherit;
+    z-index: 1;
+    min-width: 160px;
+}
+
+.ms-name-cell .ms-name {
+    font-weight: 700;
+    color: #222;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.ms-name-cell .ms-spec {
+    font-size: 10px;
+    color: #aaa;
+    font-weight: 300;
+    margin-top: 2px;
+}
+
+.ms-day-cell {
+    padding: 8px 6px;
+    vertical-align: top;
+    min-width: 100px;
+    border-left: 1px solid #f0f2f8;
+}
+
+.ms-shift {
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 3px solid #10b981;
+}
+
+.ms-shift .ms-shift-time {
+    display: block;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+.ms-shift .ms-shift-loc {
+    display: block;
+    font-size: 10px;
+    font-weight: 300;
+    color: #047857;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+}
+
+.ms-off {
+    color: #ddd;
+    font-size: 11px;
+    text-align: center;
+    padding: 12px 0;
+    letter-spacing: 1px;
+}
