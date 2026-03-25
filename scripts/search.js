@@ -7,8 +7,6 @@
 var searchInput = document.getElementById('hero-search');
 var resultsBox  = document.getElementById('search-results');
 
-if (!searchInput || !resultsBox) return; // guard: not on home page
-
 /* ── Search data (populated from API) ── */
 var SEARCH_DATA = [];
 
