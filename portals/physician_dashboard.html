@@ -159,8 +159,25 @@
                 <div class="section-block-header">
                     <div><h3>Work Schedule</h3><p>Your assigned offices and hours</p></div>
                 </div>
-                <div class="schedule-grid" id="scheduleGrid">
-                    <p class="loading-msg">Loading…</p>
+                <!-- Weekly Calendar -->
+                <div class="week-calendar-wrap">
+                    <div class="week-calendar">
+                        <!-- Header row: times col + 7 day columns -->
+                        <div class="wc-header">
+                            <div class="wc-time-col"></div>
+                            <div class="wc-day">Mon</div>
+                            <div class="wc-day">Tue</div>
+                            <div class="wc-day">Wed</div>
+                            <div class="wc-day">Thu</div>
+                            <div class="wc-day">Fri</div>
+                            <div class="wc-day">Sat</div>
+                            <div class="wc-day">Sun</div>
+                        </div>
+                        <!-- Body: time rows populated by JS -->
+                        <div class="wc-body" id="wcBody">
+                            <p class="loading-msg">Loading…</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -40,6 +40,87 @@ function pill(status) {
     return `<span class="pill pill-${cls}">${status}</span>`;
 }
 
+/* ── Weekly Calendar Builder ── */
+function buildWeekCalendar(schedule, appointments) {
+    const body = document.getElementById("wcBody");
+    if (!body) return;
+
+    if (!schedule || schedule.length === 0) {
+        body.innerHTML = '<p class="loading-msg">No schedule on record</p>';
+        return;
+    }
+
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const START_HOUR = 7;   // 7 AM
+    const END_HOUR   = 20;  // 8 PM (exclusive, so last row is 7 PM–8 PM)
+    const ROW_HEIGHT = 52;  // px — must match .wc-row min-height
+
+    // Index schedule entries by day name
+    const schedByDay = {};
+    days.forEach(d => { schedByDay[d] = []; });
+    (schedule || []).forEach(s => {
+        const dayKey = s.day_of_week;
+        if (schedByDay[dayKey] !== undefined) {
+            schedByDay[dayKey].push(s);
+        }
+    });
+
+    // Index appointments by (day-of-week name → hour)
+    // appointment_date is an ISO string; appointment_time is "HH:MM:SS"
+    const apptByDayHour = {}; // key: "Monday_9" → array of appts
+    (appointments || []).forEach(a => {
+        if (!a.appointment_date || !a.appointment_time) return;
+        const dateStr = a.appointment_date.slice(0, 10);
+        const d = new Date(dateStr + 'T00:00:00');
+        const jsDay = d.getDay(); // 0=Sun,1=Mon,...,6=Sat
+        const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][jsDay];
+        const hour = parseInt(a.appointment_time.toString().split(':')[0], 10);
+        const key = dayName + '_' + hour;
+        if (!apptByDayHour[key]) apptByDayHour[key] = [];
+        apptByDayHour[key].push(a);
+    });
+
+    let html = '';
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+        const label = h === 12 ? '12 PM' : (h < 12 ? h + ' AM' : (h - 12) + ' PM');
+        let rowHtml = `<div class="wc-row"><div class="wc-time-label">${label}</div>`;
+
+        days.forEach(dayName => {
+            let cellContent = '';
+
+            // Check if this day+hour falls within a work_schedule entry
+            const dayEntries = schedByDay[dayName] || [];
+            dayEntries.forEach(s => {
+                const startH = parseInt(s.start_time.toString().split(':')[0], 10);
+                const endH   = parseInt(s.end_time.toString().split(':')[0], 10);
+                if (h >= startH && h < endH) {
+                    const loc = s.city ? s.city + (s.state ? ', ' + s.state : '') : 'Office';
+                    cellContent += `<div class="wc-block available" title="${s.street_address || ''}, ${s.city || ''}, ${s.state || ''}">
+                        ${h === startH ? loc : ''}
+                    </div>`;
+                }
+            });
+
+            // Check appointments for this day+hour
+            const apptKey = dayName + '_' + h;
+            const appts = apptByDayHour[apptKey] || [];
+            appts.forEach(a => {
+                const pt = a.patient_first ? (a.patient_first + ' ' + a.patient_last) : 'Patient';
+                cellContent += `<div class="wc-block appointment" title="${pt}${a.reason_for_visit ? ' – ' + a.reason_for_visit : ''}">
+                    ${pt}
+                </div>`;
+            });
+
+            rowHtml += `<div class="wc-cell">${cellContent}</div>`;
+        });
+
+        rowHtml += '</div>';
+        html += rowHtml;
+    }
+
+    body.innerHTML = html;
+}
+
 /* ── Load data ── */
 async function loadDashboard() {
     try {
@@ -116,16 +197,8 @@ async function loadDashboard() {
             </tr>`).join("")
             : `<tr><td colspan="6" class="table-empty">No patients found</td></tr>`;
 
-        /* Work schedule cards */
-        const grid = document.getElementById("scheduleGrid");
-        grid.innerHTML = schedule.length
-            ? schedule.map(s => `
-                <div class="schedule-card">
-                    <div class="day">${s.day_of_week}</div>
-                    <div class="time">${timeFmt(s.start_time)} – ${timeFmt(s.end_time)}</div>
-                    <div class="office">${s.street_address}, ${s.city}, ${s.state}</div>
-                </div>`).join("")
-            : `<p class="loading-msg">No schedule on record</p>`;
+        /* Work schedule — weekly calendar */
+        buildWeekCalendar(schedule, appointments);
 
         /* Referrals table */
         document.getElementById("referralsBody").innerHTML = referrals.length

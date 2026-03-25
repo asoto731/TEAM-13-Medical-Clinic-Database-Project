@@ -437,3 +437,94 @@ body {
     .sections-grid { grid-template-columns: 1fr; }
     .two-col { grid-template-columns: 1fr; }
 }
+
+/* ── Weekly Calendar ── */
+.week-calendar-wrap {
+    overflow-y: auto;
+    max-height: 520px;
+    border: 1px solid #e8eaf0;
+    border-radius: 10px;
+    margin: 16px;
+}
+
+.week-calendar {
+    display: flex;
+    flex-direction: column;
+    min-width: 700px;
+}
+
+.wc-header {
+    display: grid;
+    grid-template-columns: 64px repeat(7, 1fr);
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 2;
+    border-bottom: 2px solid #e8eaf0;
+}
+
+.wc-time-col { /* empty corner */ }
+
+.wc-day {
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-left: 1px solid #e8eaf0;
+}
+
+.wc-body {
+    position: relative;
+}
+
+.wc-row {
+    display: grid;
+    grid-template-columns: 64px repeat(7, 1fr);
+    border-bottom: 1px solid #f0f2f8;
+    min-height: 52px;
+}
+
+.wc-row:nth-child(even) { background: #fafbff; }
+
+.wc-time-label {
+    font-size: 11px;
+    color: #aaa;
+    padding: 6px 8px 0;
+    text-align: right;
+    font-weight: 600;
+}
+
+.wc-cell {
+    border-left: 1px solid #f0f2f8;
+    position: relative;
+    min-height: 52px;
+}
+
+.wc-block {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    top: 4px;
+    bottom: 4px;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow: hidden;
+}
+
+.wc-block.available {
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 3px solid #10b981;
+}
+
+.wc-block.appointment {
+    background: #dbeafe;
+    color: #1e40af;
+    border-left: 3px solid #3b82f6;
+}
