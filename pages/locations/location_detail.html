@@ -11,11 +11,11 @@
     <nav>
         <h2 class="logo">Palantir Clinic</h2>
         <ul>
-            <li><a href="../home_page.html">Home</a></li>
-            <li><a href="locations.html">Locations</a></li>
-            <li><a href="../about.html">About</a></li>
-            <li><a href="../../auth/patient_login.html">Patient Login</a></li>
-            <li><a href="../../auth/staff_login.html">Staff Portal</a></li>
+            <li><a href="/">Home</a></li>
+            <li><a href="/pages/locations/locations.html">Locations</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/auth/patient_login.html">Patient Login</a></li>
+            <li><a href="/auth/staff_login.html">Staff Portal</a></li>
         </ul>
     </nav>
 </header>
@@ -63,8 +63,8 @@
     </section>
 
     <div class="bottom-actions">
-        <a href="locations.html" class="back-link">&larr; All Locations</a>
-        <a href="../../auth/patient_login.html" class="btn-book">Book an Appointment</a>
+        <a href="/pages/locations/locations.html" class="back-link">&larr; All Locations</a>
+        <a href="/auth/patient_login.html" class="btn-book">Book an Appointment</a>
     </div>
 
 </div>
@@ -78,7 +78,7 @@
   if (!city) {
     document.getElementById('bannerTitle').textContent = 'Location Not Found';
     document.getElementById('bannerState').textContent = '';
-    document.getElementById('addressCard').innerHTML   = '<p>No city specified. <a href="locations.html">View all locations</a>.</p>';
+    document.getElementById('addressCard').innerHTML   = '<p>No city specified. <a href="/pages/locations/locations.html">View all locations</a>.</p>';
     document.getElementById('deptGrid').innerHTML      = '';
     document.getElementById('doctorsGrid').innerHTML   = '';
   } else {
