@@ -8,12 +8,13 @@ loginButton.addEventListener("click", async function (event) {
   const password = document.getElementById("password").value.trim();
 
   if (!email || !password) {
+    message.style.color = "#c0392b";
     message.textContent = "Please enter both email and password.";
     return;
   }
 
   try {
-    const response = await fetch("http://localhost:3000/api/auth/login", {
+    const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
@@ -22,15 +23,18 @@ loginButton.addEventListener("click", async function (event) {
     const data = await response.json();
 
     if (response.ok) {
-      message.textContent = "Login successful!";
-      localStorage.setItem("user", JSON.stringify(data.user));
+      message.style.color = "#1a6b3a";
+      message.textContent = "Login successful! Redirecting...";
+      localStorage.setItem("patientUser", JSON.stringify(data.user));
       setTimeout(() => {
         window.location.href = "/portals/patient_dashboard.html";
       }, 1000);
     } else {
-      message.textContent = data.error;
+      message.style.color = "#c0392b";
+      message.textContent = data.error || data.message || "Invalid email or password.";
     }
   } catch (err) {
+    message.style.color = "#c0392b";
     message.textContent = "Server error. Is the server running?";
   }
 });

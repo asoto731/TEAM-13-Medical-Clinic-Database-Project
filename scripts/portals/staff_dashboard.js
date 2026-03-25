@@ -129,6 +129,7 @@ async function loadDashboard() {
         /* Profile */
         document.getElementById("profileGrid").innerHTML = `
             ${infoRow("Full Name", `${firstName} ${lastName}`)}
+            ${infoRow("Date of Birth", fmt(staff?.date_of_birth))}
             ${infoRow("Role", staff?.role)}
             ${infoRow("Department", staff?.department_name)}
             ${infoRow("Clinic", staff?.clinic_name)}

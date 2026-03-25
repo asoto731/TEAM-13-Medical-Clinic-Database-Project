@@ -20,10 +20,12 @@ document.getElementById('btn').addEventListener('click', async () => {
         if (res.ok) {
             message.style.color = '#1f6d45';
             message.textContent = 'Login successful. Redirecting...';
-            // Store role info for the dashboard
-            localStorage.setItem('staffUser', JSON.stringify(data.user));
+            localStorage.setItem('clinicUser', JSON.stringify(data.user));
+            const dest = data.user.role === 'physician'
+                ? '/portals/physician_dashboard.html'
+                : '/portals/staff_dashboard.html';
             setTimeout(() => {
-                window.location.href = '/portals/staff_dashboard.html';
+                window.location.href = dest;
             }, 1000);
         } else {
             message.style.color = '#c0392b';

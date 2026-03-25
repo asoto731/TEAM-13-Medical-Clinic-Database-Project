@@ -27,22 +27,12 @@
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('overview')">
-                <span class="nav-icon">🏠</span> Overview
-            </button>
-            <button class="nav-item" onclick="showSection('appointments')">
-                <span class="nav-icon">📅</span> My Appointments
-            </button>
-            <button class="nav-item" onclick="showSection('history')">
-                <span class="nav-icon">📋</span> Medical History
-            </button>
-            <button class="nav-item" onclick="showSection('billing')">
-                <span class="nav-icon">💳</span> Billing
-            </button>
+            <button class="nav-item active" onclick="showSection('overview')">Overview</button>
+            <button class="nav-item" onclick="showSection('appointments')">My Appointments</button>
+            <button class="nav-item" onclick="showSection('history')">Medical History</button>
+            <button class="nav-item" onclick="showSection('billing')">Billing</button>
             <div class="nav-section-label">Account</div>
-            <button class="nav-item" onclick="showSection('profile')">
-                <span class="nav-icon">👤</span> My Profile
-            </button>
+            <button class="nav-item" onclick="showSection('profile')">My Profile</button>
         </nav>
         <div class="sidebar-user">
             <div class="user-avatar" id="avatarInitials">?</div>
@@ -67,7 +57,7 @@
 
             <div class="greeting-card">
                 <div>
-                    <h2>Hi, <span id="greetName">there</span>! 👋</h2>
+                    <h2>Hi, <span id="greetName">there</span>.</h2>
                     <p id="greetSub">Loading your health summary…</p>
                 </div>
                 <div class="greeting-meta">
@@ -78,10 +68,10 @@
 
             <!-- Quick actions like the screenshot -->
             <div class="quick-actions">
-                <button class="quick-btn blue" onclick="showSection('appointments')">📅 My Appointments</button>
-                <button class="quick-btn navy" onclick="showSection('history')">📋 Medical History</button>
-                <button class="quick-btn red"  onclick="showSection('profile')">🚨 Emergency Contacts</button>
-                <button class="quick-btn blue" onclick="showSection('billing')">💳 Billing</button>
+                <button class="quick-btn blue" onclick="showSection('appointments')">My Appointments</button>
+                <button class="quick-btn navy" onclick="showSection('history')">Medical History</button>
+                <button class="quick-btn red"  onclick="showSection('profile')">Emergency Contacts</button>
+                <button class="quick-btn blue" onclick="showSection('billing')">Billing</button>
             </div>
 
             <!-- Stats -->

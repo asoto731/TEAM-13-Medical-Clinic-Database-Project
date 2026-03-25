@@ -16,7 +16,7 @@ registerButton.addEventListener("click", async function (event) {
   }
 
   try {
-    const response = await fetch("http://localhost:3000/api/auth/register", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password, role: "patient" })
@@ -25,14 +25,17 @@ registerButton.addEventListener("click", async function (event) {
     const data = await response.json();
 
     if (response.ok) {
-      message.textContent = "Registration successful!";
+      message.style.color = "#1a6b3a";
+      message.textContent = "Registration successful! Redirecting to login...";
       setTimeout(() => {
-        window.location.href = "patient_login.html";
+        window.location.href = "/auth/patient_login.html";
       }, 1000);
     } else {
+      message.style.color = "#c0392b";
       message.textContent = data.error || "Registration failed.";
     }
   } catch (error) {
+    message.style.color = "#c0392b";
     message.textContent = "Server error. Is the server running?";
   }
 });

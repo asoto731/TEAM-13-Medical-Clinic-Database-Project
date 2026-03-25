@@ -41,10 +41,13 @@ nav a {
     color: white;
     font-weight: 500;
     font-size: 14px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    transition: background 0.2s;
 }
 
 nav a:hover {
-    text-decoration: underline;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .logo {

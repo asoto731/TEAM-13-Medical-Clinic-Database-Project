@@ -67,6 +67,10 @@ const loginUser = (req, res) => {
 
     const user = results[0];
 
+    if (user.role !== "patient") {
+      return res.status(403).json({ error: "Please use the Staff Portal to log in." });
+    }
+
     res.json({
       message: "Login successful",
       user: {

@@ -70,7 +70,6 @@ body {
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
     padding: 11px 20px;
     font-size: 13px;
     color: #555;

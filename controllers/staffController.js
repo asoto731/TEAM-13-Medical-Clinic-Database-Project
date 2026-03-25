@@ -153,8 +153,8 @@ const getStaffDashboard = (req, res) => {
       }
 
       const staffSql = `
-        SELECT s.staff_id, s.first_name, s.last_name, s.role,
-               s.phone_number, s.email, s.hire_date,
+        SELECT s.staff_id, s.first_name, s.last_name, s.date_of_birth,
+               s.role, s.phone_number, s.email, s.hire_date,
                s.shift_start, s.shift_end,
                d.department_name, c.clinic_name
         FROM staff s
