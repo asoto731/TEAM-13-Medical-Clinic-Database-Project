@@ -224,27 +224,26 @@ function closeModalOutside(e) {
 document.addEventListener("keydown", (e) => {
     const modal = document.getElementById("profileModal");
     const modalOpen = modal && !modal.classList.contains("hidden");
+    if (!modalOpen) return;
 
-    if (e.key === "Escape" && modalOpen) {
+    if (e.key === "Escape") {
         closeProfileModal();
+        return;
     }
 
-    // Enter anywhere inside the modal submits the form (unless already on a button)
-    if (e.key === "Enter" && modalOpen) {
-        const tag = document.activeElement?.tagName;
-        // Let textarea newlines and button clicks work naturally
-        if (tag === "TEXTAREA") return;
-        // If focused on "Do this later" button, click it (dismiss)
-        if (document.activeElement?.classList.contains("modal-cancel-btn")) {
+    if (e.key === "Enter") {
+        const active = document.activeElement;
+        // Dropdowns handle Enter themselves
+        if (active?.tagName === "SELECT") return;
+        // "Do this later" — dismiss
+        if (active?.classList.contains("modal-cancel-btn")) {
             e.preventDefault();
             closeProfileModal();
             return;
         }
-        // If focused on Save or anywhere else in modal, submit
-        if (tag !== "SELECT") {
-            e.preventDefault();
-            document.getElementById("profileForm")?.requestSubmit();
-        }
+        // Everything else in the modal — run the submit handler directly
+        e.preventDefault();
+        submitProfile(e);
     }
 });
 
