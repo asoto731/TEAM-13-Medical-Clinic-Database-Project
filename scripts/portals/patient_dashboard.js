@@ -190,6 +190,8 @@ function checkProfileCompleteness(patient) {
     _patientId = patient.patient_id;
 
     const missing = [];
+    if (!patient.first_name)              missing.push("first name");
+    if (!patient.last_name)               missing.push("last name");
     if (!patient.date_of_birth)           missing.push("date of birth");
     if (!patient.phone_number)            missing.push("phone number");
     if (!patient.email)                   missing.push("email");
@@ -198,11 +200,17 @@ function checkProfileCompleteness(patient) {
     if (!patient.emergency_contact_name)  missing.push("emergency contact name");
     if (!patient.emergency_contact_phone) missing.push("emergency contact phone");
 
-    if (missing.length === 0) return;
-    if (_bannerSuppressed) return;   // user just dismissed modal — don't nag immediately
-
     const banner = document.getElementById("profileBanner");
-    const list   = document.getElementById("bannerMissingList");
+
+    // Everything filled in — hide the banner and stop
+    if (missing.length === 0) {
+        banner.classList.add("hidden");
+        return;
+    }
+
+    if (_bannerSuppressed) return;   // user just dismissed — don't nag immediately
+
+    const list = document.getElementById("bannerMissingList");
     list.textContent = `Missing: ${missing.join(", ")}.`;
     banner.classList.remove("hidden");
 }
