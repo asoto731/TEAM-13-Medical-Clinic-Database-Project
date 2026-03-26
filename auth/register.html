@@ -4,9 +4,10 @@
     <title>Create Account - Palantir Clinic</title>
     <link rel="stylesheet" href="../styles/register.css">
     <style>
-        .pw-rule        { transition: color 0.2s; }
-        .pw-rule.pass   { color: #16a34a; }
-        .pw-rule.fail   { color: #dc2626; }
+        .pw-rule           { color: #9ca3af; transition: color 0.2s; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+        .pw-rule::before   { content: "○"; font-size: 10px; flex-shrink: 0; }
+        .pw-rule.pass      { color: #16a34a; }
+        .pw-rule.pass::before { content: "✓"; }
     </style>
 </head>
 <body>
@@ -44,11 +45,12 @@
             <div class="form-group full-width">
                 <label>Password</label>
                 <input type="password" id="password" placeholder="Create a password" required autocomplete="new-password">
-                <div id="pwStrength" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#666;display:none">
-                    <div id="pw-len"   class="pw-rule">✗ At least 8 characters</div>
-                    <div id="pw-upper" class="pw-rule">✗ One uppercase letter</div>
-                    <div id="pw-num"   class="pw-rule">✗ One number</div>
-                    <div id="pw-spec"  class="pw-rule">✗ One special character (!@#$…)</div>
+                <div id="pwStrength" style="margin-top:10px;display:none;flex-direction:column;gap:5px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;">
+                    <div style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px">Password must include</div>
+                    <div id="pw-len"   class="pw-rule">At least 8 characters</div>
+                    <div id="pw-upper" class="pw-rule">One uppercase letter</div>
+                    <div id="pw-num"   class="pw-rule">One number</div>
+                    <div id="pw-spec"  class="pw-rule">One special character (!@#$…)</div>
                 </div>
             </div>
             <div class="form-group">

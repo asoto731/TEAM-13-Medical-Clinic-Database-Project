@@ -20,6 +20,17 @@
         .schedule-card .day { color: #1a4731; }
         .topbar-title span { color: #1a4731; }
 
+        /* Physician dark mode accent — green */
+        html[data-theme="dark"] .nav-item.active         { color: #4db87a; border-left-color: #3a9e6a; background: #0e2a1c; }
+        html[data-theme="dark"] .greeting-card h2        { color: #4db87a; }
+        html[data-theme="dark"] .stat-card .stat-value   { color: #4db87a; }
+        html[data-theme="dark"] .section-block-header h3 { color: #4db87a; }
+        html[data-theme="dark"] .topbar-title span       { color: #4db87a; }
+        html[data-theme="dark"] .greeting-badge          { background: #0e2a1c; color: #4db87a; }
+        html[data-theme="dark"] .sidebar-logo .clinic-name { color: #4db87a; }
+        html[data-theme="dark"] .schedule-card           { background: #0e2a1c; border-left-color: #3a9e6a; }
+        html[data-theme="dark"] .schedule-card .day      { color: #4db87a; }
+
         /* ── Referral Cards ── */
         .referral-cards-grid {
             display: grid;
@@ -150,6 +161,7 @@
         }
         .btn-cancel:hover { background: #e2e5ef; }
     </style>
+    <script>if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark");</script>
 </head>
 <body>
 
@@ -184,7 +196,10 @@
 
         <div class="topbar">
             <div class="topbar-title">Palantir Clinic &rsaquo; <span id="currentSection">Overview</span></div>
-            <button class="logout-btn" id="logoutBtn">Sign Out</button>
+            <div class="topbar-right">
+                <button id="darkModeToggle" class="dark-mode-toggle">🌙 Dark</button>
+                <button class="logout-btn" id="logoutBtn">Sign Out</button>
+            </div>
         </div>
 
         <!-- ── Overview ── -->
@@ -365,6 +380,7 @@
     </div>
 </div>
 
+<script src="../scripts/dark-mode.js"></script>
 <script src="../scripts/portals/physician_dashboard.js"></script>
 </body>
 </html>

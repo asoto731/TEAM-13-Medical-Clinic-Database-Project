@@ -1024,3 +1024,233 @@ body {
 }
 
 .call-loc a:hover { color: #6ea8fe; }
+
+/* ══════════════════════════════════
+   DARK MODE TOGGLE BUTTON
+══════════════════════════════════ */
+.topbar-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.dark-mode-toggle {
+    padding: 7px 16px;
+    background: #f5f7ff;
+    border: 1px solid #d0d8f0;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: "Merriweather", serif;
+    color: #1f2a6d;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+.dark-mode-toggle:hover { background: #e8eeff; }
+
+/* ══════════════════════════════════
+   DARK MODE
+══════════════════════════════════ */
+[data-theme="dark"] body {
+    background: #0f1117;
+    color: #dce0f4;
+}
+
+/* Sidebar */
+[data-theme="dark"] .sidebar {
+    background: #13162b;
+    border-right-color: #252948;
+}
+[data-theme="dark"] .sidebar-logo { border-bottom-color: #252948; }
+[data-theme="dark"] .sidebar-logo .clinic-name { color: #8ba4ff; }
+[data-theme="dark"] .sidebar-logo .portal-label { color: #3a3f6a; }
+[data-theme="dark"] .nav-section-label { color: #323760; }
+[data-theme="dark"] .nav-item { color: #7880a8; background: none; }
+[data-theme="dark"] .nav-item:hover { background: #1a1f3a; color: #b0b8d8; }
+[data-theme="dark"] .nav-item.active { background: #1c2248; color: #8ba4ff; border-left-color: #6ea8fe; }
+[data-theme="dark"] .sidebar-user { border-top-color: #252948; }
+[data-theme="dark"] .user-info .user-name { color: #dce0f4; }
+[data-theme="dark"] .user-info .user-role { color: #3a3f6a; }
+
+/* Topbar */
+[data-theme="dark"] .topbar {
+    background: #13162b;
+    border-bottom-color: #252948;
+}
+[data-theme="dark"] .topbar-title { color: #3a3f6a; }
+[data-theme="dark"] .topbar-title span { color: #8ba4ff; }
+[data-theme="dark"] .logout-btn {
+    background: #1c1f38;
+    border-color: #323760;
+    color: #8ba4ff;
+}
+[data-theme="dark"] .logout-btn:hover { background: #22284a; }
+[data-theme="dark"] .dark-mode-toggle {
+    background: #1c1f38;
+    border-color: #323760;
+    color: #8ba4ff;
+}
+[data-theme="dark"] .dark-mode-toggle:hover { background: #22284a; }
+
+/* Greeting */
+[data-theme="dark"] .greeting-card {
+    background: #13162b;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .greeting-card h2 { color: #8ba4ff; }
+[data-theme="dark"] .greeting-card p  { color: #4a5080; }
+[data-theme="dark"] .greeting-badge   { background: #1c2248; color: #8ba4ff; }
+
+/* Stat cards */
+[data-theme="dark"] .stat-card {
+    background: #13162b;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .stat-card .stat-label { color: #3a3f6a; }
+[data-theme="dark"] .stat-card .stat-value { color: #8ba4ff; }
+[data-theme="dark"] .stat-card .stat-sub   { color: #4a5080; }
+
+/* Section blocks */
+[data-theme="dark"] .section-block {
+    background: #13162b;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .section-block-header { border-bottom-color: #252948; }
+[data-theme="dark"] .section-block-header h3 { color: #8ba4ff; }
+[data-theme="dark"] .section-block-header p  { color: #3a3f6a; }
+
+/* Tables */
+[data-theme="dark"] .data-table thead th {
+    background: #1a1d34;
+    color: #3a3f6a;
+    border-bottom-color: #252948;
+}
+[data-theme="dark"] .data-table tbody tr   { border-bottom-color: #1c1f38; }
+[data-theme="dark"] .data-table tbody tr:hover { background: #181b30; }
+[data-theme="dark"] .data-table td         { color: #7880a8; }
+[data-theme="dark"] .data-table td.primary { color: #dce0f4; }
+[data-theme="dark"] .table-empty           { color: #2e3358; }
+
+/* Quick-action info rows */
+[data-theme="dark"] #careCard div > span:last-child,
+[data-theme="dark"] #profileInfo div > span:last-child,
+[data-theme="dark"] #emergencyInfo div > span:last-child { color: #dce0f4; }
+[data-theme="dark"] #careCard div > span:first-child,
+[data-theme="dark"] #profileInfo div > span:first-child,
+[data-theme="dark"] #emergencyInfo div > span:first-child { color: #3a3f6a; }
+[data-theme="dark"] #careCard hr { border-top-color: #252948; }
+
+/* Schedule cards */
+[data-theme="dark"] .schedule-card {
+    background: #1a1d34;
+    border-left-color: #6ea8fe;
+}
+[data-theme="dark"] .schedule-card .day    { color: #8ba4ff; }
+[data-theme="dark"] .schedule-card .time   { color: #7880a8; }
+[data-theme="dark"] .schedule-card .office { color: #3a3f6a; }
+
+/* Week calendar */
+[data-theme="dark"] .week-calendar-wrap { border-color: #252948; }
+[data-theme="dark"] .wc-header {
+    background: #13162b;
+    border-bottom-color: #252948;
+}
+[data-theme="dark"] .wc-day          { color: #3a3f6a; border-left-color: #252948; }
+[data-theme="dark"] .wc-row          { border-bottom-color: #1c1f38; }
+[data-theme="dark"] .wc-row:nth-child(even) { background: #181b30; }
+[data-theme="dark"] .wc-time-label   { color: #2e3358; }
+[data-theme="dark"] .wc-cell         { border-left-color: #1c1f38; }
+
+/* Member schedule */
+[data-theme="dark"] .ms-wrap { border-color: #252948; }
+[data-theme="dark"] .ms-table thead th {
+    background: #1a1d34;
+    border-bottom-color: #252948;
+    color: #3a3f6a;
+}
+[data-theme="dark"] .ms-table thead th:first-child { background: #1a1d34; }
+[data-theme="dark"] .ms-table tbody tr           { border-bottom-color: #1c1f38; }
+[data-theme="dark"] .ms-table tbody tr:hover      { background: #1a1d34; }
+[data-theme="dark"] .ms-table tbody tr.ms-me      { background: #0e2318; }
+[data-theme="dark"] .ms-table tbody tr.ms-me:hover { background: #122a1e; }
+[data-theme="dark"] .ms-name-cell .ms-name        { color: #dce0f4; }
+[data-theme="dark"] .ms-name-cell .ms-spec        { color: #2e3358; }
+[data-theme="dark"] .ms-off                       { color: #252948; }
+
+/* Profile banner */
+[data-theme="dark"] .profile-banner {
+    background: #24200e;
+    border-color: #7a5a00;
+    border-left-color: #f59e0b;
+}
+[data-theme="dark"] .banner-title { color: #f8c060; }
+[data-theme="dark"] .banner-sub   { color: #a07020; }
+[data-theme="dark"] .banner-btn-dismiss {
+    background: transparent;
+    color: #a07020;
+    border-color: #7a5a00;
+}
+[data-theme="dark"] .banner-btn-dismiss:hover { background: #2e2810; }
+
+/* Modal */
+[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,0.75); }
+[data-theme="dark"] .modal-box     { background: #13162b; }
+[data-theme="dark"] .modal-header  { border-bottom-color: #252948; }
+[data-theme="dark"] .modal-header h3 { color: #8ba4ff; }
+[data-theme="dark"] .modal-header p  { color: #3a3f6a; }
+[data-theme="dark"] .modal-section-label { color: #2e3358; }
+[data-theme="dark"] .modal-field label   { color: #5a608a; }
+[data-theme="dark"] .modal-field input,
+[data-theme="dark"] .modal-field select  {
+    background: #1c1f38;
+    border-color: #323760;
+    color: #dce0f4;
+}
+[data-theme="dark"] .modal-field input:focus,
+[data-theme="dark"] .modal-field select:focus {
+    border-color: #6ea8fe;
+    background: #20244a;
+}
+[data-theme="dark"] .modal-field input::placeholder { color: #2e3358; }
+[data-theme="dark"] .modal-cancel-btn {
+    color: #5a608a;
+    border-color: #323760;
+    background: none;
+}
+[data-theme="dark"] .modal-cancel-btn:hover { color: #8ba4ff; border-color: #6ea8fe; }
+[data-theme="dark"] .modal-save-btn { background: #3040a8; }
+[data-theme="dark"] .modal-save-btn:hover { background: #3c4ec0; }
+[data-theme="dark"] .profile-edit-btn {
+    background: #1c1f38;
+    border-color: #323760;
+    color: #8ba4ff;
+}
+[data-theme="dark"] .profile-edit-btn:hover { background: #22284a; }
+[data-theme="dark"] .modal-call-box   { background: #1a1d34; border-top-color: #252948; }
+[data-theme="dark"] .call-title       { color: #8ba4ff; }
+[data-theme="dark"] .call-sub         { color: #3a3f6a; }
+[data-theme="dark"] .call-loc         { background: #13162b; border-color: #252948; }
+[data-theme="dark"] .call-city        { color: #3a3f6a; }
+[data-theme="dark"] .call-loc a       { color: #8ba4ff; }
+[data-theme="dark"] .call-loc a:hover { color: #a8c4ff; }
+
+/* Save/error messages */
+[data-theme="dark"] .modal-save-msg.success { background: #0e2318; color: #4ade80; }
+[data-theme="dark"] .modal-save-msg.error   { background: #220e0e; color: #f87171; }
+
+/* Patient referral cards */
+[data-theme="dark"] .referral-card {
+    background: #1a1d34;
+    border-color: #252948;
+}
+[data-theme="dark"] .referral-specialist { color: #8ba4ff; }
+[data-theme="dark"] .referral-specialty  { color: #3a3f6a; }
+[data-theme="dark"] .referral-reason     { color: #7880a8; }
+[data-theme="dark"] .referral-meta       { color: #2e3358; }
+
+/* Physician portal referral cards */
+[data-theme="dark"] .referral-card-patient { color: #4db87a; }
+[data-theme="dark"] .referral-card-meta    { color: #3a3f6a; }
+[data-theme="dark"] .referral-card-reason  { color: #7880a8; }
+[data-theme="dark"] .referral-card-dates   { color: #2e3358; }

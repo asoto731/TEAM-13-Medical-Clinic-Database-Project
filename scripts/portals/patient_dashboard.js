@@ -330,37 +330,42 @@ function validateProfileForm() {
     const phoneRe  = /^\(\d{3}\) \d{3}-\d{4}$/;   // must match (XXX) XXX-XXXX exactly
     const zipRe    = /^\d{5}(-\d{4})?$/;
     const stateRe  = /^[A-Za-z]{2}$/;
-    const emailRe  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRe  = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     const nameRe   = /^[a-zA-Z\s\-'\.]+$/;
 
-    const phone    = document.getElementById("mf_phone").value.trim();
-    const ecPhone  = document.getElementById("mf_ec_phone").value.trim();
-    const zip      = document.getElementById("mf_zip").value.trim();
-    const state    = document.getElementById("mf_state").value.trim();
-    const email    = document.getElementById("mf_email").value.trim();
     const firstName = document.getElementById("mf_first_name").value.trim();
     const lastName  = document.getElementById("mf_last_name").value.trim();
     const dob       = document.getElementById("mf_dob").value;
+    const gender    = document.getElementById("mf_gender").value;
+    const phone     = document.getElementById("mf_phone").value.trim();
+    const email     = document.getElementById("mf_email").value.trim();
+    const street    = document.getElementById("mf_street").value.trim();
     const ecName    = document.getElementById("mf_ec_name").value.trim();
+    const ecPhone   = document.getElementById("mf_ec_phone").value.trim();
+    const zip       = document.getElementById("mf_zip").value.trim();
+    const state     = document.getElementById("mf_state").value.trim();
 
-    if (firstName && !nameRe.test(firstName))
-        return "First name should only contain letters.";
-    if (lastName && !nameRe.test(lastName))
-        return "Last name should only contain letters.";
-    if (ecName && !nameRe.test(ecName))
-        return "Emergency contact name should only contain letters.";
-    if (phone && !phoneRe.test(phone))
-        return "Phone must be in (XXX) XXX-XXXX format — just type your digits and it formats automatically.";
-    if (ecPhone && !phoneRe.test(ecPhone))
-        return "Emergency contact phone must be in (XXX) XXX-XXXX format.";
-    if (email && !emailRe.test(email))
-        return "Please enter a valid email address (e.g. name@email.com).";
-    if (zip && !zipRe.test(zip))
-        return "ZIP code must be 5 digits (e.g. 77450).";
-    if (state && !stateRe.test(state))
-        return "State must be a 2-letter code (e.g. TX).";
-    if (dob && new Date(dob) > new Date())
-        return "Date of birth cannot be in the future.";
+    // ── Required field checks ──
+    if (!firstName)  return "Please enter your first name.";
+    if (!lastName)   return "Please enter your last name.";
+    if (!dob)        return "Please enter your date of birth.";
+    if (!gender)     return "Please select your gender.";
+    if (!phone)      return "Please enter your phone number.";
+    if (!email)      return "Please enter your email address.";
+    if (!street)     return "Please enter your street address.";
+    if (!ecName)     return "Please enter an emergency contact name.";
+    if (!ecPhone)    return "Please enter an emergency contact phone number.";
+
+    // ── Format / value checks ──
+    if (!nameRe.test(firstName))  return "First name should only contain letters.";
+    if (!nameRe.test(lastName))   return "Last name should only contain letters.";
+    if (ecName && !nameRe.test(ecName))   return "Emergency contact name should only contain letters.";
+    if (!phoneRe.test(phone))     return "Phone must be in (XXX) XXX-XXXX format — just type digits and it auto-formats.";
+    if (!phoneRe.test(ecPhone))   return "Emergency contact phone must be in (XXX) XXX-XXXX format.";
+    if (!emailRe.test(email))     return "Please enter a valid email address (e.g. name@email.com).";
+    if (zip && !zipRe.test(zip))  return "ZIP code must be 5 digits (e.g. 77450).";
+    if (state && !stateRe.test(state)) return "State must be a 2-letter code (e.g. TX).";
+    if (new Date(dob) > new Date())    return "Date of birth cannot be in the future.";
     return null;
 }
 
@@ -456,12 +461,14 @@ async function submitProfile(e) {
         }, 1200);
     } catch (err) {
         msg.className = "modal-save-msg error";
-        const friendly = {
-            server_unavailable: "We're having trouble connecting right now. Please try again in a moment or call your clinic.",
-            save_failed: "We weren't able to save your changes. Please try again.",
-            "Failed to fetch": "No internet connection detected. Please check your connection and try again."
-        };
-        msg.textContent = friendly[err.message] || "Something went wrong. You can close this and try again later, or call us directly.";
+        if (err.message === "server_unavailable") {
+            msg.textContent = "Server is unreachable. Please try again or call your clinic.";
+        } else if (err.message === "Failed to fetch") {
+            msg.textContent = "No internet connection. Please check your connection and try again.";
+        } else {
+            // Show the actual error from the server (validation messages, etc.)
+            msg.textContent = err.message || "Something went wrong. Please try again.";
+        }
     }
 }
 

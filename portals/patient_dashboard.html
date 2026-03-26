@@ -13,7 +13,17 @@
         .quick-btn.navy    { background: #1f2a6d; }
         .quick-btn.red     { background: #e05c5c; }
         .schedule-card     { border-left-color: #6ea8fe; }
+
+        /* Patient dark mode accent — navy/blue */
+        html[data-theme="dark"] .nav-item.active         { color: #7ba4ff; border-left-color: #6ea8fe; background: #1c2248; }
+        html[data-theme="dark"] .greeting-card h2        { color: #7ba4ff; }
+        html[data-theme="dark"] .stat-card .stat-value   { color: #7ba4ff; }
+        html[data-theme="dark"] .section-block-header h3 { color: #7ba4ff; }
+        html[data-theme="dark"] .topbar-title span       { color: #7ba4ff; }
+        html[data-theme="dark"] .greeting-badge          { background: #1c2248; color: #7ba4ff; }
+        html[data-theme="dark"] .sidebar-logo .clinic-name { color: #7ba4ff; }
     </style>
+    <script>if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark");</script>
 </head>
 <body>
 
@@ -50,7 +60,10 @@
         <!-- Top bar -->
         <div class="topbar">
             <div class="topbar-title">Palantir Clinic &rsaquo; <span id="currentSection">Overview</span></div>
-            <button class="logout-btn" id="logoutBtn">Sign Out</button>
+            <div class="topbar-right">
+                <button id="darkModeToggle" class="dark-mode-toggle">🌙 Dark</button>
+                <button class="logout-btn" id="logoutBtn">Sign Out</button>
+            </div>
         </div>
 
         <!-- ── Profile Incomplete Banner ── -->
@@ -322,6 +335,7 @@
     </div><!-- /main-content -->
 </div><!-- /dashboard-wrap -->
 
+<script src="../scripts/dark-mode.js"></script>
 <script src="../scripts/portals/patient_dashboard.js"></script>
 </body>
 </html>

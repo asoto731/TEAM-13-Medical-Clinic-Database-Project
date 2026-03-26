@@ -29,8 +29,7 @@ pwInput.addEventListener("input", () => {
     const s = checkPasswordStrength(pwInput.value);
     const set = (id, pass) => {
         const el = document.getElementById(id);
-        el.className = "pw-rule " + (pass ? "pass" : "fail");
-        el.textContent = (pass ? "✓" : "✗") + el.textContent.slice(1);
+        el.className = "pw-rule" + (pass ? " pass" : "");
     };
     set("pw-len",   s.len);
     set("pw-upper", s.upper);
