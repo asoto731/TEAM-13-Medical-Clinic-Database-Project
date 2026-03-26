@@ -1,4 +1,5 @@
-const db = require("../db");
+const db      = require("../db");
+const bcrypt  = require("bcryptjs");
 
 const testRoute = (req, res) => {
   db.query("SELECT 1 + 1 AS result", (err, results) => {
@@ -16,6 +17,16 @@ const registerUser = (req, res) => {
     return res.status(400).json({ error: "Name, email, and password are required" });
   }
 
+  // ── Password strength rules (mirrors frontend checks) ──
+  const pwErrors = [];
+  if (password.length < 8)                       pwErrors.push("at least 8 characters");
+  if (!/[A-Z]/.test(password))                   pwErrors.push("one uppercase letter");
+  if (!/[0-9]/.test(password))                   pwErrors.push("one number");
+  if (!/[^A-Za-z0-9]/.test(password))            pwErrors.push("one special character (e.g. !@#$)");
+  if (pwErrors.length > 0) {
+    return res.status(400).json({ error: `Password must contain: ${pwErrors.join(", ")}.` });
+  }
+
   const checkEmailSql = "SELECT * FROM users WHERE username = ?";
 
   db.query(checkEmailSql, [email], (checkErr, checkResults) => {
@@ -30,9 +41,11 @@ const registerUser = (req, res) => {
     const insertSql =
       "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)";
 
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
     db.query(
       insertSql,
-      [email, password, role || "patient"],
+      [email, hashedPassword, role || "patient"],
       (insertErr, insertResult) => {
         if (insertErr) {
           return res.status(500).json({ error: "Error registering user" });
@@ -73,9 +86,9 @@ const loginUser = (req, res) => {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
-  const sql = "SELECT * FROM users WHERE username = ? AND password_hash = ?";
+  const sql = "SELECT * FROM users WHERE username = ?";
 
-  db.query(sql, [email, password], (err, results) => {
+  db.query(sql, [email], (err, results) => {
     if (err) {
       return res.status(500).json({ error: "Login query failed" });
     }
@@ -85,6 +98,17 @@ const loginUser = (req, res) => {
     }
 
     const user = results[0];
+    const stored = user.password_hash;
+
+    // Support both bcrypt-hashed passwords (new) and legacy plain-text (seed data)
+    const isHashed = stored && stored.startsWith("$2");
+    const passwordMatch = isHashed
+      ? bcrypt.compareSync(password, stored)
+      : password === stored;
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
 
     if (user.role !== "patient") {
       return res.status(403).json({ error: "Please use the Staff Portal to log in." });

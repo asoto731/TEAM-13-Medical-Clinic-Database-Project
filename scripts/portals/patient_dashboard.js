@@ -12,6 +12,20 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
     window.location.href = "/auth/patient_login.html";
 });
 
+/* ── Phone auto-formatter ── */
+function formatPhoneInput(e) {
+    let raw = e.target.value.replace(/\D/g, "").slice(0, 10);
+    if (raw.length <= 3)        e.target.value = raw.length ? "(" + raw : "";
+    else if (raw.length <= 6)   e.target.value = "(" + raw.slice(0,3) + ") " + raw.slice(3);
+    else                        e.target.value = "(" + raw.slice(0,3) + ") " + raw.slice(3,6) + "-" + raw.slice(6);
+}
+document.addEventListener("DOMContentLoaded", () => {
+    ["mf_phone","mf_ec_phone"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", formatPhoneInput);
+    });
+});
+
 /* ── Section nav ── */
 function showSection(name) {
     document.querySelectorAll(".page-section").forEach(s => s.classList.add("hidden"));
@@ -244,6 +258,12 @@ function checkProfileCompleteness(patient) {
 
 let _bannerSuppressed = false;
 
+function dismissBanner() {
+    document.getElementById("profileBanner").classList.add("hidden");
+    _bannerSuppressed = true;
+    setTimeout(() => { _bannerSuppressed = false; }, 30000); // re-check after 30s
+}
+
 function openProfileModal() {
     document.getElementById("profileModal").classList.remove("hidden");
     document.body.style.overflow = "hidden";
@@ -307,7 +327,7 @@ function prefillModal(patient) {
 }
 
 function validateProfileForm() {
-    const phoneRe  = /^[\d\s\(\)\-\+\.]{7,15}$/;
+    const phoneRe  = /^\(\d{3}\) \d{3}-\d{4}$/;   // must match (XXX) XXX-XXXX exactly
     const zipRe    = /^\d{5}(-\d{4})?$/;
     const stateRe  = /^[A-Za-z]{2}$/;
     const emailRe  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -330,9 +350,9 @@ function validateProfileForm() {
     if (ecName && !nameRe.test(ecName))
         return "Emergency contact name should only contain letters.";
     if (phone && !phoneRe.test(phone))
-        return "Phone number must be digits only (e.g. 555-123-4567).";
+        return "Phone must be in (XXX) XXX-XXXX format — just type your digits and it formats automatically.";
     if (ecPhone && !phoneRe.test(ecPhone))
-        return "Emergency contact phone must be digits only.";
+        return "Emergency contact phone must be in (XXX) XXX-XXXX format.";
     if (email && !emailRe.test(email))
         return "Please enter a valid email address (e.g. name@email.com).";
     if (zip && !zipRe.test(zip))

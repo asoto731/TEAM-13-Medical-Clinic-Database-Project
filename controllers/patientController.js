@@ -109,7 +109,7 @@ const updatePatientProfile = (req, res) => {
     if (!user_id) return res.status(400).json({ message: "user_id is required" });
 
     // ── Server-side validation ──
-    const phoneRe = /^[\d\s\(\)\-\+\.]{7,15}$/;
+    const phoneRe = /^\(\d{3}\) \d{3}-\d{4}$/;   // must match trigger format: (XXX) XXX-XXXX
     const zipRe   = /^\d{5}(-\d{4})?$/;
     const stateRe = /^[A-Za-z]{2}$/;
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -120,9 +120,9 @@ const updatePatientProfile = (req, res) => {
     if (last_name && !nameRe.test(last_name))
         return res.status(400).json({ message: "Last name should only contain letters." });
     if (phone_number && !phoneRe.test(phone_number))
-        return res.status(400).json({ message: "Phone number must be digits only (e.g. 555-123-4567)." });
+        return res.status(400).json({ message: "Phone number must be in (XXX) XXX-XXXX format." });
     if (emergency_contact_phone && !phoneRe.test(emergency_contact_phone))
-        return res.status(400).json({ message: "Emergency contact phone must be digits only." });
+        return res.status(400).json({ message: "Emergency contact phone must be in (XXX) XXX-XXXX format." });
     if (email && !emailRe.test(email))
         return res.status(400).json({ message: "Please enter a valid email address." });
     if (zip_code && !zipRe.test(zip_code))
