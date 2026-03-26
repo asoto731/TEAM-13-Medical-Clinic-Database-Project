@@ -1,34 +1,209 @@
-# Team 13 — Palantir Clinic Database Project
+# Team 13 — Palantir Clinic
 
-A full-stack medical clinic web application built with **Node.js / Express** on the backend and **vanilla HTML/CSS/JS** on the frontend, backed by a **MySQL** database.
+A full-stack medical clinic web application with role-based portals for patients, physicians, and staff. Built with **Node.js / Express**, **vanilla HTML/CSS/JS**, and a **MySQL** database hosted on Railway.
 
----
-
-## How to Run
-
-1. Make sure MySQL is running locally and the database is set up (see [Database Setup](#database-setup))
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the server:
-   ```bash
-   node server.js
-   ```
-4. Open your browser to `http://localhost:3000`
+**Live database:** hosted on Railway — no local MySQL setup needed.
 
 ---
 
-## Database Setup
+## Team Members & Branches
 
-The full schema is in `database/Team_13_Medical_Clinic_DB.sql`.
+| Branch | Member | Contributions |
+|--------|--------|---------------|
+| `TinaT` | Tina T. | Frontend, dashboards, CSS, project structure, API integration |
+| `MaxC` | Max C. | Backend auth, patient login/register, DB queries |
+| `Timi-A` | Timi A. | Database schema, seed data, triggers |
+| `main` | Everyone | Stable merged code — always deployable |
 
-Run it in MySQL:
-```sql
-SOURCE /path/to/database/Team_13_Medical_Clinic_DB.sql;
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vanilla HTML, CSS, JavaScript |
+| Backend | Node.js + Express |
+| Database | MySQL (hosted on Railway) |
+| ORM | mysql2 (raw queries, connection pool) |
+| Deployment | Railway |
+
+---
+
+## Local Setup
+
+### 1. Clone the repo
+```bash
+git clone https://github.com/xinaxm4/TEAM-13-Medical-Clinic-Database-Project.git
+cd TEAM-13-Medical-Clinic-Database-Project
 ```
 
-The database connection is configured in `db.js` (host, user, password, database name). Each team member should update this file to match their local MySQL credentials.
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Create your `.env` file
+Copy the example and fill in the credentials shared by your team:
+```bash
+cp .env.example .env
+```
+
+Your `.env` should look like this (get credentials from a teammate):
+```
+DB_HOST=<railway_host>
+DB_USER=root
+DB_PORT=<railway_port>
+DB_PASSWORD=<railway_password>
+DB_NAME=railway
+PORT=3000
+```
+
+> **Note:** `.env` is gitignored and never committed. Do not share credentials publicly.
+
+### 4. Start the server
+```bash
+node server.js
+```
+
+### 5. Open in browser
+```
+http://localhost:3000
+```
+
+---
+
+## Demo Login Credentials
+
+### Patient Portal — `/auth/patient_login.html`
+
+| Email | Password |
+|-------|----------|
+| `alex.smith@email.com` | `password123` |
+| `taylor.jones@email.com` | `password123` |
+| `morgan.w@email.com` | `password123` |
+
+New patients can self-register at `/auth/register.html`.
+
+### Staff & Physician Portal — `/auth/staff_login.html`
+
+| Username | Password | Role |
+|----------|----------|------|
+| `dr.garcia` | `clinic123` | Physician |
+| `dr.turner` | `clinic123` | Physician |
+| `dr.johnson` | `clinic123` | Physician |
+| `staff.adams` | `staff123` | Staff |
+| `staff.brooks` | `staff123` | Staff |
+
+---
+
+## Pages & Portals
+
+### Public pages (no login required)
+| URL | Description |
+|-----|-------------|
+| `/` | Home page — hero, smart search bar |
+| `/pages/about.html` | About Palantir Clinic — mission, specialties, locations |
+| `/pages/locations/locations.html` | All 7 clinic locations |
+| `/pages/locations/<city>.html` | Individual clinic detail page |
+
+### Auth
+| URL | Description |
+|-----|-------------|
+| `/auth/patient_login.html` | Patient login |
+| `/auth/register.html` | New patient registration |
+| `/auth/staff_login.html` | Physician & staff login |
+
+### Dashboards (login required)
+| URL | Role | Features |
+|-----|------|---------|
+| `/portals/patient_dashboard.html` | Patient | Appointments, medical history, billing, profile completion |
+| `/portals/physician_dashboard.html` | Physician | Weekly schedule, patient list, referrals, appointments |
+| `/portals/staff_dashboard.html` | Staff | Department appointments, billing queue, profile |
+
+---
+
+## API Endpoints
+
+### Auth — `/api/auth`
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/auth/register` | Register a new patient account |
+| `POST` | `/api/auth/login` | Patient login |
+
+### Patient — `/api/patient`
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/patient/dashboard?user_id=X` | Full patient portal data |
+| `PUT` | `/api/patient/profile` | Update patient profile info |
+
+### Staff & Physician — `/api/staff`
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/staff/login` | Physician or staff login |
+| `GET` | `/api/staff/physician/dashboard?user_id=X` | Physician portal data |
+| `GET` | `/api/staff/staff/dashboard?user_id=X` | Staff portal data |
+| `GET` | `/api/staff/all-schedules` | All physicians' weekly schedules |
+
+---
+
+## Database Schema
+
+The database is hosted on Railway and shared by all team members. The full schema is in `database/Team_13_Medical_Clinic_DB.sql`.
+
+### Key Tables
+
+| Table | Description |
+|-------|-------------|
+| `users` | Login credentials for all roles. Links to `physician` or `staff` via FK. `role` column determines portal access. |
+| `patient` | Demographics, DOB, contact info, emergency contact, primary physician, insurance. Has `user_id` FK to `users`. |
+| `physician` | Doctor info, specialty, department. Has `user_id` FK to `users`. |
+| `staff` | Non-physician employees, shift hours, department. Has `user_id` FK to `users`. |
+| `appointment` | All scheduled visits — links patient, physician, and office. |
+| `work_schedule` | Which office a physician works at on each day of the week. |
+| `referral` | Specialist referrals issued by a primary physician. |
+| `diagnosis` | ICD-10 coded diagnoses linked to appointments. |
+| `treatment` | Treatment plans and medications linked to appointments. |
+| `medical_history` | Long-term conditions on record for each patient. |
+| `billing` | Payment records — auto-generated by trigger when appointment is completed. |
+| `office` | Physical clinic locations with address and phone number. |
+| `insurance` | Insurance providers and coverage info. |
+| `department` | Clinical departments (Cardiology, Neurology, etc.) linked to a clinic. |
+
+### Entity Relationships
+- `users` → `patient` via `patient.user_id`
+- `users` → `physician` via `physician.user_id` and `users.physician_id`
+- `users` → `staff` via `staff.user_id` and `users.staff_id`
+- `patient` → `physician` via `patient.primary_physician_id`
+- `appointment` → `patient`, `physician`, `office`, `appointment_status`
+- `work_schedule` → `physician`, `office`
+- `referral` → `patient`, primary `physician`, specialist `physician`
+- `billing` → `appointment`, `patient`, `insurance`
+
+---
+
+## MySQL Triggers
+
+Three triggers are implemented in the Railway database:
+
+| Trigger | Event | Purpose |
+|---------|-------|---------|
+| `trg_auto_billing_on_complete` | `AFTER UPDATE` on `appointment` | Automatically creates a billing record (status: Unpaid) when an appointment status changes to `Completed` |
+| `trg_prevent_past_appointments` | `BEFORE INSERT` on `appointment` | Rejects any appointment booked with a date in the past |
+| `trg_validate_referral_dates` | `BEFORE INSERT` on `referral` | Rejects referrals where the expiration date is on or before the issue date |
+
+---
+
+## User Roles & Access Control
+
+| Role | Login Page | Redirect After Login | Account Created By |
+|------|-----------|---------------------|-------------------|
+| `patient` | `/auth/patient_login.html` | Patient dashboard | Self-registration |
+| `physician` | `/auth/staff_login.html` | Physician dashboard | Admin (inserted directly to DB) |
+| `staff` | `/auth/staff_login.html` | Staff dashboard | Admin (inserted directly to DB) |
+
+- Patients who try to log in through the Staff Portal are blocked with an error message.
+- Staff/physicians who try to log in through the Patient Portal are blocked.
+- Session is stored in `localStorage` as `patientUser` (patients) or `clinicUser` (physician/staff).
 
 ---
 
@@ -37,139 +212,77 @@ The database connection is configured in `db.js` (host, user, password, database
 ```
 TEAM-13-Medical-Clinic-Database-Project/
 │
-├── server.js                        # Express server — starts on port 3000, registers all routes
-├── db.js                            # MySQL connection — update credentials for your local DB
-├── package.json                     # Node dependencies (express, cors, mysql2)
+├── server.js                        # Express server, route registration, static file serving
+├── db.js                            # MySQL connection pool (reads credentials from .env)
+├── .env                             # Local environment variables — NOT committed (gitignored)
+├── .env.example                     # Template showing required environment variables
+├── package.json
 │
-├── pages/                           # Public-facing marketing pages (no login required)
-│   ├── home_page.html               # Landing page with hero, smart search, and nav
-│   ├── about.html                   # About the clinic
-│   └── locations/                   # One page per clinic location
-│       ├── locations.html           # Grid overview of all clinic locations
-│       ├── chicago.html
-│       ├── dallas.html
-│       ├── houston.html
-│       ├── austin.html
-│       ├── san_antonio.html
-│       ├── los_angeles.html
-│       └── new_york.html
+├── pages/                           # Public marketing pages
+│   ├── home_page.html               # Landing page with hero and smart search
+│   ├── about.html                   # About page (mission, specialties, locations)
+│   └── locations/                   # Clinic location pages
+│       ├── locations.html           # All locations grid
+│       └── <city>.html              # Individual location detail pages
 │
-├── auth/                            # Login and registration pages
-│   ├── patient_login.html           # Patient login form
-│   ├── register.html                # New patient registration form
-│   └── staff_login.html             # Physician & staff login form (no self-registration)
+├── auth/                            # Login & registration pages
+│   ├── patient_login.html
+│   ├── register.html
+│   └── staff_login.html
 │
-├── portals/                         # Role-based dashboards (require login)
-│   ├── patient_dashboard.html       # Patient portal: appointments, billing, medical history
-│   ├── physician_dashboard.html     # Physician portal: schedule, patients, referrals
-│   └── staff_dashboard.html         # Staff portal: department appointments, billing queue
+├── portals/                         # Role-based dashboard pages
+│   ├── patient_dashboard.html
+│   ├── physician_dashboard.html
+│   └── staff_dashboard.html
 │
-├── styles/                          # All CSS files
-│   ├── home_page.css                # Styles for landing page hero + search
-│   ├── about.css                    # Styles for about page
-│   ├── locations.css                # Styles for locations grid page
-│   ├── location_detail.css          # Shared styles for individual clinic location pages
-│   ├── patient_login.css            # Styles for patient login page
-│   ├── staff_login.css              # Styles for staff/physician login page
-│   ├── register.css                 # Styles for registration page
-│   ├── sidebar.css                  # Styles for the sliding login drawer (used on all pages)
-│   └── dashboard.css                # Shared styles for all three portal dashboards
+├── styles/                          # CSS
+│   ├── dashboard.css                # Shared dashboard styles (all 3 portals)
+│   ├── home_page.css
+│   ├── about.css
+│   ├── locations.css
+│   ├── location_detail.css
+│   ├── patient_login.css
+│   ├── staff_login.css
+│   └── register.css
 │
-├── scripts/                         # All JavaScript files
-│   ├── sidebar.js                   # Sliding login drawer — injected on every page automatically.
-│   │                                #   Intercepts Patient Login / Staff Portal nav clicks,
-│   │                                #   handles login API calls, redirects by role.
-│   ├── search.js                    # Smart search on home page — filters doctors,
-│   │                                #   specialties, and locations as you type.
+├── scripts/                         # JavaScript
+│   ├── search.js                    # Smart search on home page
+│   ├── sidebar.js                   # Login drawer on public pages
 │   ├── auth/
-│   │   ├── patient_login.js         # Submits patient login form → /api/auth/login
-│   │   ├── register.js              # Submits new patient registration → /api/auth/register
-│   │   └── staff_login.js           # Submits staff login form → /api/staff/login
+│   │   ├── patient_login.js
+│   │   ├── register.js
+│   │   └── staff_login.js
 │   └── portals/
-│       ├── patient_dashboard.js     # Fetches patient data → /api/patient/dashboard
-│       ├── physician_dashboard.js   # Fetches physician data → /api/staff/physician/dashboard
-│       └── staff_dashboard.js       # Fetches staff data → /api/staff/staff/dashboard
+│       ├── patient_dashboard.js
+│       ├── physician_dashboard.js
+│       └── staff_dashboard.js
 │
-├── controllers/                     # Business logic (called by routes)
-│   ├── authController.js            # Patient register + login (MaxC)
-│   ├── staffController.js           # Staff/physician login + dashboard data queries
-│   └── patientController.js         # Patient dashboard data queries
+├── controllers/                     # Express route handlers
+│   ├── authController.js            # register, login
+│   ├── staffController.js           # physician/staff dashboard, all-schedules
+│   └── patientController.js         # patient dashboard, profile update
 │
-├── routes/                          # Express route definitions
-│   ├── authRoutes.js                # POST /api/auth/login, POST /api/auth/register
-│   ├── staffRoutes.js               # POST /api/staff/login
-│   │                                # GET  /api/staff/physician/dashboard?user_id=X
-│   │                                # GET  /api/staff/staff/dashboard?user_id=X
-│   └── patientRoutes.js             # GET  /api/patient/dashboard?email=X
+├── routes/                          # Route definitions
+│   ├── authRoutes.js
+│   ├── staffRoutes.js
+│   └── patientRoutes.js
 │
-├── database/                        # Database-related files
-│   ├── Team_13_Medical_Clinic_DB.sql  # Full MySQL schema (all CREATE TABLE statements)
-│   ├── clinic_db.js                 # Sample DB queries / data utilities
-│   └── clinic_triggers.js           # MySQL trigger definitions
+├── database/                        # Schema and seed scripts
+│   ├── Team_13_Medical_Clinic_DB.sql  # Full CREATE TABLE schema
+│   └── seed_clinical.js               # Seeds diagnosis, treatment, referral tables
 │
-└── images/                          # Static images used by CSS backgrounds
-    ├── medical_homepage_image.jpg   # Hero background on home + login pages
-    ├── locations.jpg                # Hero background on locations + clinic detail pages
-    └── about.jpg                    # Hero background on about page
+└── images/                          # Static image assets
+    ├── medical_homepage_image.jpg
+    ├── locations.jpg
+    └── about.jpg
 ```
 
 ---
 
-## API Endpoints
+## Security Notes
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| `POST` | `/api/auth/register` | Register a new patient account |
-| `POST` | `/api/auth/login` | Patient login (email + password) |
-| `POST` | `/api/staff/login` | Physician or staff login (username + password) |
-| `GET`  | `/api/patient/dashboard?email=X` | Load patient portal data |
-| `GET`  | `/api/staff/physician/dashboard?user_id=X` | Load physician portal data |
-| `GET`  | `/api/staff/staff/dashboard?user_id=X` | Load staff portal data |
-
----
-
-## User Roles & Portals
-
-| Role | Login Page | Dashboard | How account is created |
-|------|-----------|-----------|------------------------|
-| `patient` | `/auth/patient_login.html` | `/portals/patient_dashboard.html` | Self-register via `/auth/register.html` |
-| `physician` | `/auth/staff_login.html` | `/portals/physician_dashboard.html` | Admin creates account in `users` table |
-| `staff` | `/auth/staff_login.html` | `/portals/staff_dashboard.html` | Admin creates account in `users` table |
-
-The `users` table stores all login credentials. The `role` column (`patient`, `physician`, `staff`) determines which dashboard the user is redirected to after login.
-
----
-
-## Key Database Tables
-
-| Table | Purpose |
-|-------|---------|
-| `users` | Login credentials — links to `physician` or `staff` via foreign key |
-| `patient` | Patient demographics, primary physician, insurance |
-| `physician` | Doctor info, specialty, department |
-| `staff` | Non-physician staff, role, department, shift hours |
-| `appointment` | All scheduled visits — links patient, physician, office |
-| `work_schedule` | Which offices a physician works at, and on which days |
-| `referral` | Specialist referrals issued by a primary physician |
-| `diagnosis` / `treatment` | Clinical records attached to appointments |
-| `medical_history` | Long-term conditions on record for a patient |
-| `billing` | Payment records linked to appointments |
-
----
-
-## Branch Ownership
-
-| Branch | Owner | Focus |
-|--------|-------|-------|
-| `TinaT` | Tina T. | Frontend pages, CSS, project structure |
-| `MaxC` | Max C. | Backend auth, patient login/register logic |
-| `Timi-A` | Timi A. | TBD |
-| `main` | Everyone | Stable merged code |
-
----
-
-## Notes
-
-- Passwords are currently stored as **plain text** in the `password_hash` column. For a production app this should use `bcrypt`. Fine for demo/class purposes.
-- The `users` table does **not** have a `patient_id` column, so patient records are looked up by matching `patient.email = users.username`. A future improvement would be to add `patient_id INT NULL` to the `users` table.
-- The `sidebar.js` script is automatically included on every page and intercepts all "Patient Login" and "Staff Portal" nav links to open the sliding drawer instead of navigating to a separate page.
+- Passwords are stored as **plain text** in `password_hash` — acceptable for a class demo; production would use `bcrypt`
+- Database credentials are stored in `.env` (gitignored) and set as environment variables on Railway
+- Role-based access is enforced server-side — patients cannot hit physician/staff endpoints and vice versa
+- SQL injection is mitigated via parameterized queries (`?` placeholders with `mysql2`)
+- No rate limiting or JWT — acceptable for demo scope
