@@ -87,6 +87,30 @@ const updatePatientProfile = (req, res) => {
 
     if (!user_id) return res.status(400).json({ message: "user_id is required" });
 
+    // ── Server-side validation ──
+    const phoneRe = /^[\d\s\(\)\-\+\.]{7,15}$/;
+    const zipRe   = /^\d{5}(-\d{4})?$/;
+    const stateRe = /^[A-Za-z]{2}$/;
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const nameRe  = /^[a-zA-Z\s\-'\.]+$/;
+
+    if (first_name && !nameRe.test(first_name))
+        return res.status(400).json({ message: "First name should only contain letters." });
+    if (last_name && !nameRe.test(last_name))
+        return res.status(400).json({ message: "Last name should only contain letters." });
+    if (phone_number && !phoneRe.test(phone_number))
+        return res.status(400).json({ message: "Phone number must be digits only (e.g. 555-123-4567)." });
+    if (emergency_contact_phone && !phoneRe.test(emergency_contact_phone))
+        return res.status(400).json({ message: "Emergency contact phone must be digits only." });
+    if (email && !emailRe.test(email))
+        return res.status(400).json({ message: "Please enter a valid email address." });
+    if (zip_code && !zipRe.test(zip_code))
+        return res.status(400).json({ message: "ZIP code must be 5 digits (e.g. 77450)." });
+    if (state && !stateRe.test(state))
+        return res.status(400).json({ message: "State must be a 2-letter code (e.g. TX)." });
+    if (date_of_birth && new Date(date_of_birth) > new Date())
+        return res.status(400).json({ message: "Date of birth cannot be in the future." });
+
     const sql = `
         UPDATE patient SET
             first_name              = COALESCE(?, first_name),

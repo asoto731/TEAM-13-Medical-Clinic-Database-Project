@@ -190,12 +190,15 @@ function checkProfileCompleteness(patient) {
     if (!patient.emergency_contact_phone) missing.push("emergency contact phone");
 
     if (missing.length === 0) return;
+    if (_bannerSuppressed) return;   // user just dismissed modal — don't nag immediately
 
     const banner = document.getElementById("profileBanner");
     const list   = document.getElementById("bannerMissingList");
     list.textContent = `Missing: ${missing.join(", ")}.`;
     banner.classList.remove("hidden");
 }
+
+let _bannerSuppressed = false;
 
 function openProfileModal() {
     document.getElementById("profileModal").classList.remove("hidden");
@@ -205,11 +208,22 @@ function openProfileModal() {
 function closeProfileModal() {
     document.getElementById("profileModal").classList.add("hidden");
     document.body.style.overflow = "";
+    // Reset save message so it's clean next time modal opens
+    const msg = document.getElementById("profileSaveMsg");
+    if (msg) { msg.className = "modal-save-msg hidden"; msg.textContent = ""; }
+    // Stop the banner from immediately re-appearing after the user dismisses
+    _bannerSuppressed = true;
+    setTimeout(() => { _bannerSuppressed = false; }, 5000);
 }
 
 function closeModalOutside(e) {
     if (e.target === document.getElementById("profileModal")) closeProfileModal();
 }
+
+// ESC key closes modal
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeProfileModal();
+});
 
 function prefillModal(patient) {
     document.getElementById("mf_first_name").value = patient.first_name || "";
@@ -226,9 +240,55 @@ function prefillModal(patient) {
     document.getElementById("mf_ec_phone").value   = patient.emergency_contact_phone || "";
 }
 
+function validateProfileForm() {
+    const phoneRe  = /^[\d\s\(\)\-\+\.]{7,15}$/;
+    const zipRe    = /^\d{5}(-\d{4})?$/;
+    const stateRe  = /^[A-Za-z]{2}$/;
+    const emailRe  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const nameRe   = /^[a-zA-Z\s\-'\.]+$/;
+
+    const phone    = document.getElementById("mf_phone").value.trim();
+    const ecPhone  = document.getElementById("mf_ec_phone").value.trim();
+    const zip      = document.getElementById("mf_zip").value.trim();
+    const state    = document.getElementById("mf_state").value.trim();
+    const email    = document.getElementById("mf_email").value.trim();
+    const firstName = document.getElementById("mf_first_name").value.trim();
+    const lastName  = document.getElementById("mf_last_name").value.trim();
+    const dob       = document.getElementById("mf_dob").value;
+    const ecName    = document.getElementById("mf_ec_name").value.trim();
+
+    if (firstName && !nameRe.test(firstName))
+        return "First name should only contain letters.";
+    if (lastName && !nameRe.test(lastName))
+        return "Last name should only contain letters.";
+    if (ecName && !nameRe.test(ecName))
+        return "Emergency contact name should only contain letters.";
+    if (phone && !phoneRe.test(phone))
+        return "Phone number must be digits only (e.g. 555-123-4567).";
+    if (ecPhone && !phoneRe.test(ecPhone))
+        return "Emergency contact phone must be digits only.";
+    if (email && !emailRe.test(email))
+        return "Please enter a valid email address (e.g. name@email.com).";
+    if (zip && !zipRe.test(zip))
+        return "ZIP code must be 5 digits (e.g. 77450).";
+    if (state && !stateRe.test(state))
+        return "State must be a 2-letter code (e.g. TX).";
+    if (dob && new Date(dob) > new Date())
+        return "Date of birth cannot be in the future.";
+    return null;
+}
+
 async function submitProfile(e) {
     e.preventDefault();
     const msg = document.getElementById("profileSaveMsg");
+
+    const validationError = validateProfileForm();
+    if (validationError) {
+        msg.className = "modal-save-msg error";
+        msg.textContent = validationError;
+        return;
+    }
+
     msg.className = "modal-save-msg";
     msg.textContent = "Saving…";
 
