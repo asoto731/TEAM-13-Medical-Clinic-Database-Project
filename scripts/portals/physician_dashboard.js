@@ -129,6 +129,60 @@ async function buildMemberCalendar(currentPhysicianId, ownSchedule, officeId) {
     container.innerHTML = html;
 }
 
+/* ── Clinical Note Modal ── */
+let _notePatientId = null;
+
+function openNoteModal(patient_id, patient_name) {
+    _notePatientId = patient_id;
+    document.getElementById("noteModalPatientName").textContent = "Patient: " + patient_name;
+    document.getElementById("note_condition").value = "";
+    document.getElementById("note_status").value = "Active";
+    document.getElementById("note_notes").value = "";
+    const msg = document.getElementById("noteSaveMsg");
+    msg.style.display = "none"; msg.textContent = "";
+    const modal = document.getElementById("noteModal");
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+}
+
+function closeNoteModal() {
+    document.getElementById("noteModal").style.display = "none";
+    document.body.style.overflow = "";
+    _notePatientId = null;
+}
+
+async function submitNote() {
+    const msg = document.getElementById("noteSaveMsg");
+    const condition = document.getElementById("note_condition").value.trim();
+    const status    = document.getElementById("note_status").value;
+    const notes     = document.getElementById("note_notes").value.trim();
+
+    if (!condition) {
+        msg.style.cssText = "display:block;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;background:#fee2e2;color:#991b1b";
+        msg.textContent = "Please enter a condition or diagnosis.";
+        return;
+    }
+
+    msg.style.cssText = "display:block;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;background:#f0f2f8;color:#555";
+    msg.textContent = "Saving…";
+
+    try {
+        const r = await fetch("/api/staff/physician/note", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ patient_id: _notePatientId, condition, status, notes })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message || "Failed to save note");
+        msg.style.cssText = "display:block;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;background:#d1fae5;color:#065f46";
+        msg.textContent = "Note saved! Patient's medical history has been updated.";
+        setTimeout(closeNoteModal, 1500);
+    } catch(err) {
+        msg.style.cssText = "display:block;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700;background:#fee2e2;color:#991b1b";
+        msg.textContent = err.message || "Could not save note.";
+    }
+}
+
 /* ── Referral Modal ── */
 function openReferralModal(referral) {
     document.getElementById("refModalPatient").textContent   = `${referral.patient_first} ${referral.patient_last}`;
@@ -263,8 +317,9 @@ async function loadDashboard() {
                 <td>${a.city || "—"}</td>
                 <td>${a.reason_for_visit || "—"}</td>
                 <td>${pill(a.status_name)}</td>
+                <td><button onclick='openNoteModal(${a.patient_id},"${a.patient_first} ${a.patient_last}")' style="padding:5px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;color:#15803d;cursor:pointer;font-family:inherit">+ Note</button></td>
             </tr>`).join("")
-            : `<tr><td colspan="6" class="table-empty">No appointments found</td></tr>`;
+            : `<tr><td colspan="7" class="table-empty">No appointments found</td></tr>`;
 
         /* Patients table */
         document.getElementById("patientsBody").innerHTML = patients.length

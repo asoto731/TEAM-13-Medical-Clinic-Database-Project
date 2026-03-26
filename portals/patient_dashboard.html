@@ -184,6 +184,56 @@
             </div>
         </div>
 
+        <!-- ── Care Setup Modal ── -->
+        <div id="careSetupModal" class="modal-overlay hidden" onclick="closeCareModalOutside(event)">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <div>
+                        <h3>Choose Your Care Team</h3>
+                        <p>Select a clinic location and primary physician. You can update this later.</p>
+                    </div>
+                    <button class="modal-close" onclick="closeCareModal()">&times;</button>
+                </div>
+
+                <div class="modal-section-label">Step 1 — Your Clinic Location</div>
+                <div class="modal-grid">
+                    <div class="modal-field modal-field-full">
+                        <label>City</label>
+                        <select id="care_city" onchange="loadPhysiciansForCity()">
+                            <option value="">Select a city…</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-section-label">Step 2 — Primary Physician</div>
+                <div class="modal-grid">
+                    <div class="modal-field modal-field-full">
+                        <label>Physician</label>
+                        <select id="care_physician">
+                            <option value="">Select a city first…</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-section-label">Step 3 — Insurance (Optional)</div>
+                <div class="modal-grid">
+                    <div class="modal-field modal-field-full">
+                        <label>Insurance Plan</label>
+                        <select id="care_insurance">
+                            <option value="">None / Self-Pay</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="careSetupMsg" class="modal-save-msg hidden"></div>
+
+                <div class="modal-footer">
+                    <button type="button" class="modal-cancel-btn" onclick="closeCareModal()">Do this later</button>
+                    <button type="button" class="modal-save-btn" onclick="submitCareSetup()">Confirm My Care Team</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ── Overview Section ── -->
         <div class="page-section" id="sec-overview">
 

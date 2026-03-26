@@ -328,4 +328,18 @@ const updateReferralStatus = (req, res) => {
   );
 };
 
-module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus };
+/* POST /api/staff/physician/note */
+const addPhysicianNote = (req, res) => {
+    const { patient_id, condition, notes, status } = req.body;
+    if (!patient_id || !condition) {
+        return res.status(400).json({ message: "patient_id and condition are required" });
+    }
+    const sql = `INSERT INTO medical_history (patient_id, \`condition\`, diagnosis_date, status, notes)
+                 VALUES (?, ?, CURDATE(), ?, ?)`;
+    db.query(sql, [patient_id, condition, status || "Active", notes || null], (err) => {
+        if (err) return res.status(500).json({ message: "Could not add note: " + err.message });
+        res.json({ message: "Note added successfully" });
+    });
+};
+
+module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote };

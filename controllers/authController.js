@@ -64,8 +64,8 @@ const registerUser = (req, res) => {
         const lastName = nameParts.slice(1).join(" ") || "Patient";
 
         const patientSql = `INSERT INTO patient
-          (patient_id, user_id, first_name, last_name, email, phone_number, date_of_birth, primary_physician_id, insurance_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)`;
+          (patient_id, user_id, first_name, last_name, email, phone_number, date_of_birth)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
         db.query(patientSql, [newUserId, newUserId, firstName, lastName, email || null, phone_number || null, date_of_birth || null], (patErr) => {
           if (patErr) {

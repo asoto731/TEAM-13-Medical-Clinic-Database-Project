@@ -96,7 +96,9 @@ async function loadDashboard() {
         const firstName = patient.first_name || "";
         const lastName  = patient.last_name  || "";
         document.getElementById("greetName").textContent = firstName;
-        document.getElementById("greetSub").textContent  = `Primary Physician: Dr. ${patient.doc_last} · ${patient.specialty}`;
+        document.getElementById("greetSub").textContent = patient.doc_last
+            ? `Primary Physician: Dr. ${patient.doc_last} · ${patient.specialty}`
+            : "No primary physician assigned yet — choose your care team below";
         document.getElementById("sidebarName").textContent = `${firstName} ${lastName}`;
         document.getElementById("avatarInitials").textContent = (firstName[0] || "") + (lastName[0] || "");
 
@@ -120,14 +122,27 @@ async function loadDashboard() {
             : `<tr><td colspan="3" class="table-empty">No upcoming appointments</td></tr>`;
 
         /* ── Overview: care card ── */
-        document.getElementById("careCard").innerHTML = `
-            ${infoRow("Primary Physician", `Dr. ${patient.doc_first} ${patient.doc_last}`)}
-            ${infoRow("Specialty", patient.specialty)}
-            ${infoRow("Physician Phone", patient.doc_phone)}
-            <hr style="border:none;border-top:1px solid #f0f2f8;margin:4px 0">
-            ${infoRow("Insurance Provider", patient.provider_name)}
-            ${infoRow("Policy Number", patient.policy_number)}
-            ${infoRow("Coverage", patient.coverage_percentage ? patient.coverage_percentage + "%" : "—")}`;
+        if (!patient.primary_physician_id) {
+            document.getElementById("careCard").innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px 0;text-align:center">
+                    <div style="font-size:32px">🏥</div>
+                    <div>
+                        <div style="font-size:14px;font-weight:700;color:#1f2a6d;margin-bottom:4px">No physician assigned yet</div>
+                        <div style="font-size:12px;color:#aaa;font-weight:300;line-height:1.6">Choose a clinic location and primary<br>physician to complete your setup.</div>
+                    </div>
+                    <button class="profile-edit-btn" onclick="openCareModal()" style="width:100%">Choose My Care Team →</button>
+                </div>`;
+        } else {
+            document.getElementById("careCard").innerHTML = `
+                ${infoRow("Primary Physician", `Dr. ${patient.doc_first} ${patient.doc_last}`)}
+                ${infoRow("Specialty", patient.specialty)}
+                ${infoRow("Physician Phone", patient.doc_phone)}
+                <hr style="border:none;border-top:1px solid #f0f2f8;margin:4px 0">
+                ${infoRow("Insurance Provider", patient.provider_name || "None / Self-Pay")}
+                ${infoRow("Policy Number", patient.policy_number || "—")}
+                ${infoRow("Coverage", patient.coverage_percentage ? patient.coverage_percentage + "%" : "—")}
+                <button class="profile-edit-btn" onclick="openCareModal()" style="margin-top:8px">Change Care Team</button>`;
+        }
 
         /* ── Appointments table ── */
         const aBody = document.getElementById("apptBody");
@@ -262,6 +277,95 @@ function dismissBanner() {
     document.getElementById("profileBanner").classList.add("hidden");
     _bannerSuppressed = true;
     setTimeout(() => { _bannerSuppressed = false; }, 30000); // re-check after 30s
+}
+
+/* ── Care Setup Modal ── */
+async function openCareModal() {
+    document.getElementById("careSetupModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    const msg = document.getElementById("careSetupMsg");
+    if (msg) { msg.className = "modal-save-msg hidden"; msg.textContent = ""; }
+
+    // Load cities
+    const citySelect = document.getElementById("care_city");
+    citySelect.innerHTML = '<option value="">Loading…</option>';
+    try {
+        const r = await fetch("/api/patient/care/cities");
+        const cities = await r.json();
+        citySelect.innerHTML = '<option value="">Select a city…</option>' +
+            cities.map(c => `<option value="${c.city}">${c.city}${c.state ? ", " + c.state : ""}</option>`).join("");
+    } catch(e) { citySelect.innerHTML = '<option value="">Could not load cities</option>'; }
+
+    // Load insurance options
+    const insSelect = document.getElementById("care_insurance");
+    insSelect.innerHTML = '<option value="">None / Self-Pay</option>';
+    try {
+        const r = await fetch("/api/patient/care/insurance");
+        const plans = await r.json();
+        insSelect.innerHTML += plans.map(p =>
+            `<option value="${p.insurance_id}">${p.provider_name}${p.coverage_percentage ? " (" + p.coverage_percentage + "% coverage)" : ""}</option>`
+        ).join("");
+    } catch(e) { /* keep default */ }
+}
+
+async function loadPhysiciansForCity() {
+    const city = document.getElementById("care_city").value;
+    const phSelect = document.getElementById("care_physician");
+    if (!city) { phSelect.innerHTML = '<option value="">Select a city first…</option>'; return; }
+    phSelect.innerHTML = '<option value="">Loading…</option>';
+    try {
+        const r = await fetch(`/api/patient/care/physicians?city=${encodeURIComponent(city)}`);
+        const physicians = await r.json();
+        if (physicians.length === 0) {
+            phSelect.innerHTML = '<option value="">No physicians at this location</option>';
+        } else {
+            phSelect.innerHTML = '<option value="">Choose a physician…</option>' +
+                physicians.map(p => `<option value="${p.physician_id}">Dr. ${p.first_name} ${p.last_name}${p.specialty ? " — " + p.specialty : ""}</option>`).join("");
+        }
+    } catch(e) { phSelect.innerHTML = '<option value="">Could not load physicians</option>'; }
+}
+
+function closeCareModal() {
+    document.getElementById("careSetupModal").classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
+function closeCareModalOutside(e) {
+    if (e.target === document.getElementById("careSetupModal")) closeCareModal();
+}
+
+async function submitCareSetup() {
+    const msg = document.getElementById("careSetupMsg");
+    const physician_id = document.getElementById("care_physician").value;
+    const insurance_id = document.getElementById("care_insurance").value;
+
+    if (!physician_id) {
+        msg.className = "modal-save-msg error";
+        msg.textContent = "Please select a physician.";
+        return;
+    }
+
+    msg.className = "modal-save-msg";
+    msg.textContent = "Saving…";
+
+    try {
+        const r = await fetch("/api/patient/care/assign", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user.id, physician_id, insurance_id: insurance_id || null })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message || "Failed to assign care team");
+        msg.className = "modal-save-msg success";
+        msg.textContent = "Care team set! Loading your dashboard…";
+        setTimeout(() => {
+            closeCareModal();
+            loadDashboard();
+        }, 1000);
+    } catch(err) {
+        msg.className = "modal-save-msg error";
+        msg.textContent = err.message || "Something went wrong. Please try again.";
+    }
 }
 
 function openProfileModal() {

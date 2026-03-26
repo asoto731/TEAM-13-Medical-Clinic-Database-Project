@@ -277,9 +277,9 @@
                 </div>
                 <table class="data-table">
                     <thead>
-                        <tr><th>Date</th><th>Time</th><th>Patient</th><th>Office</th><th>Reason</th><th>Status</th></tr>
+                        <tr><th>Date</th><th>Time</th><th>Patient</th><th>Office</th><th>Reason</th><th>Status</th><th>Notes</th></tr>
                     </thead>
-                    <tbody id="apptBody"><tr><td colspan="6" class="table-empty">Loading…</td></tr></tbody>
+                    <tbody id="apptBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -341,6 +341,44 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- ── Clinical Note Modal ── -->
+<div id="noteModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:none;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;font-family:inherit">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:22px 26px 16px;border-bottom:1px solid #f0f2f8">
+            <div>
+                <h3 style="font-size:15px;color:#1a4731;margin-bottom:4px">Add Clinical Note</h3>
+                <p id="noteModalPatientName" style="font-size:12px;color:#888;font-weight:300"></p>
+            </div>
+            <button onclick="closeNoteModal()" style="background:none;border:none;font-size:22px;color:#aaa;cursor:pointer;line-height:1">&times;</button>
+        </div>
+        <div style="padding:20px 26px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px">Condition / Diagnosis <span style="color:#e05c5c">*</span></label>
+                <input id="note_condition" type="text" placeholder="e.g. Hypertension, Knee pain…"
+                    style="padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;outline:none">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px">Status</label>
+                <select id="note_status" style="padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:#fafbff">
+                    <option value="Active">Active</option>
+                    <option value="Monitoring">Monitoring</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px">Clinical Notes</label>
+                <textarea id="note_notes" rows="4" placeholder="Observations, treatment plan, follow-up instructions…"
+                    style="padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;outline:none"></textarea>
+            </div>
+            <div id="noteSaveMsg" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:700"></div>
+        </div>
+        <div style="padding:16px 26px 22px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #f0f2f8">
+            <button onclick="closeNoteModal()" style="padding:10px 20px;background:none;color:#888;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+            <button onclick="submitNote()" style="padding:10px 24px;background:#1f6d45;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Save Note</button>
+        </div>
     </div>
 </div>
 

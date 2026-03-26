@@ -164,4 +164,57 @@ const updatePatientProfile = (req, res) => {
     });
 };
 
-module.exports = { getPatientDashboard, updatePatientProfile };
+/* GET /api/patient/care/cities */
+const getCareCities = (req, res) => {
+    db.query(
+        "SELECT DISTINCT city, state FROM office WHERE city IS NOT NULL ORDER BY city",
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            res.json(rows);
+        }
+    );
+};
+
+/* GET /api/patient/care/physicians?city=X */
+const getPhysiciansByCity = (req, res) => {
+    const { city } = req.query;
+    if (!city) return res.status(400).json({ message: "city required" });
+    const sql = `
+        SELECT DISTINCT ph.physician_id, ph.first_name, ph.last_name, ph.specialty
+        FROM physician ph
+        JOIN work_schedule ws ON ph.physician_id = ws.physician_id
+        JOIN office o ON ws.office_id = o.office_id
+        WHERE o.city = ?
+        ORDER BY ph.last_name`;
+    db.query(sql, [city], (err, rows) => {
+        if (err) return res.status(500).json({ message: "Query failed" });
+        res.json(rows);
+    });
+};
+
+/* GET /api/patient/care/insurance */
+const getInsuranceOptions = (req, res) => {
+    db.query(
+        "SELECT insurance_id, provider_name, coverage_percentage FROM insurance ORDER BY provider_name",
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            res.json(rows);
+        }
+    );
+};
+
+/* PUT /api/patient/care/assign */
+const assignCare = (req, res) => {
+    const { user_id, physician_id, insurance_id } = req.body;
+    if (!user_id || !physician_id) return res.status(400).json({ message: "user_id and physician_id required" });
+    db.query(
+        "UPDATE patient SET primary_physician_id = ?, insurance_id = ? WHERE user_id = ?",
+        [physician_id, insurance_id || null, user_id],
+        (err) => {
+            if (err) return res.status(500).json({ message: "Could not assign care team" });
+            res.json({ message: "Care team assigned successfully" });
+        }
+    );
+};
+
+module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare };
