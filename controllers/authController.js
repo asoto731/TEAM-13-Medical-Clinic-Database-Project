@@ -38,9 +38,28 @@ const registerUser = (req, res) => {
           return res.status(500).json({ error: "Error registering user" });
         }
 
-        res.status(201).json({
-          message: "User registered successfully",
-          userId: insertResult.insertId
+        const newUserId = insertResult.insertId;
+
+        // Only create a patient profile for patient-role registrations
+        if ((role || "patient") !== "patient") {
+          return res.status(201).json({ message: "User registered successfully", userId: newUserId });
+        }
+
+        // Split full name into first / last (everything after first space is last name)
+        const nameParts = (name || "").trim().split(/\s+/);
+        const firstName = nameParts[0] || "New";
+        const lastName = nameParts.slice(1).join(" ") || "Patient";
+
+        const patientSql = `INSERT INTO patient
+          (patient_id, first_name, last_name, primary_physician_id, insurance_id)
+          VALUES (?, ?, ?, 1, 1)`;
+
+        db.query(patientSql, [newUserId, firstName, lastName], (patErr) => {
+          if (patErr) {
+            console.error("Patient row creation failed:", patErr.message);
+            // User was created — still return success, profile just incomplete
+          }
+          res.status(201).json({ message: "User registered successfully", userId: newUserId });
         });
       }
     );
