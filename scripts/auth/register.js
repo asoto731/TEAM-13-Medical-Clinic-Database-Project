@@ -4,14 +4,15 @@ const message = document.getElementById("message");
 registerButton.addEventListener("click", async function (event) {
   event.preventDefault();
 
-  const fname = document.getElementById("fname").value.trim();
-  const lname = document.getElementById("lname").value.trim();
-  const name = fname + " " + lname;
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const fname        = document.getElementById("fname").value.trim();
+  const lname        = document.getElementById("lname").value.trim();
+  const email        = document.getElementById("email").value.trim();
+  const password     = document.getElementById("password").value.trim();
+  const phone_number = document.getElementById("phonenum").value.trim();
+  const date_of_birth = document.getElementById("DOB").value || null;
 
   if (!fname || !lname || !email || !password) {
-    message.textContent = "Please fill in all fields.";
+    message.textContent = "Please fill in your name, email, and password.";
     return;
   }
 
@@ -19,7 +20,7 @@ registerButton.addEventListener("click", async function (event) {
     const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role: "patient" })
+      body: JSON.stringify({ name: fname + " " + lname, email, password, phone_number, date_of_birth, role: "patient" })
     });
 
     const data = await response.json();

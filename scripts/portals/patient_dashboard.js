@@ -254,18 +254,30 @@ async function submitProfile(e) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body)
         });
+
+        // Guard against server returning HTML instead of JSON
+        const contentType = r.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+            throw new Error("server_unavailable");
+        }
+
         const data = await r.json();
-        if (!r.ok) throw new Error(data.message || "Save failed");
+        if (!r.ok) throw new Error(data.message || "save_failed");
 
         msg.className = "modal-save-msg success";
-        msg.textContent = "Profile updated successfully!";
+        msg.textContent = "Your profile has been updated!";
         setTimeout(() => {
             closeProfileModal();
-            loadDashboard(); // refresh dashboard with new data
+            loadDashboard();
         }, 1200);
     } catch (err) {
         msg.className = "modal-save-msg error";
-        msg.textContent = err.message || "Could not save. Please try again.";
+        const friendly = {
+            server_unavailable: "We're having trouble connecting right now. Please try again in a moment or call your clinic.",
+            save_failed: "We weren't able to save your changes. Please try again.",
+            "Failed to fetch": "No internet connection detected. Please check your connection and try again."
+        };
+        msg.textContent = friendly[err.message] || "Something went wrong. You can close this and try again later, or call us directly.";
     }
 }
 

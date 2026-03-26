@@ -156,7 +156,9 @@ nav a:hover {
     z-index: 100;
     display: none;
     max-height: 360px;
-    overflow-y: auto;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     text-align: left;
 }
 

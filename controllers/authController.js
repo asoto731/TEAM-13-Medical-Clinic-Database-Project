@@ -10,7 +10,7 @@ const testRoute = (req, res) => {
 };
 
 const registerUser = (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, phone_number, date_of_birth } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Name, email, and password are required" });
@@ -51,10 +51,10 @@ const registerUser = (req, res) => {
         const lastName = nameParts.slice(1).join(" ") || "Patient";
 
         const patientSql = `INSERT INTO patient
-          (patient_id, user_id, first_name, last_name, primary_physician_id, insurance_id)
-          VALUES (?, ?, ?, ?, 1, 1)`;
+          (patient_id, user_id, first_name, last_name, email, phone_number, date_of_birth, primary_physician_id, insurance_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)`;
 
-        db.query(patientSql, [newUserId, newUserId, firstName, lastName], (patErr) => {
+        db.query(patientSql, [newUserId, newUserId, firstName, lastName, email || null, phone_number || null, date_of_birth || null], (patErr) => {
           if (patErr) {
             console.error("Patient row creation failed:", patErr.message);
             // User was created — still return success, profile just incomplete
