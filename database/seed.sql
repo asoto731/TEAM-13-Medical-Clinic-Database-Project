@@ -191,12 +191,12 @@ INSERT IGNORE INTO staff (staff_id, first_name, last_name, date_of_birth, depart
 
 -- ─── Sample Patients ────────────────────────────────────────
 
-INSERT IGNORE INTO patient (patient_id, first_name, last_name, date_of_birth, phone_number, email, street_address, city, state, zip_code, gender, emergency_contact_name, emergency_contact_phone, primary_physician_id, insurance_id) VALUES
-  (1, 'Alex',    'Smith',    '1992-05-14', '(214) 555-1001', 'alex.smith@email.com',    '123 Elm St',      'Dallas',      'TX', '75201', 'Male',   'Jamie Smith',    '(214) 555-1002', 3,  1),
-  (2, 'Taylor',  'Jones',    '1985-11-22', '(713) 555-1001', 'taylor.jones@email.com',  '456 Oak Ave',     'Houston',     'TX', '77001', 'Female', 'Chris Jones',    '(713) 555-1002', 5,  2),
-  (3, 'Morgan',  'Williams', '1998-03-08', '(512) 555-1001', 'morgan.w@email.com',      '789 Pine Rd',     'Austin',      'TX', '78701', 'Female', 'Sam Williams',   '(512) 555-1002', 9,  3),
-  (4, 'Jordan',  'Brown',    '1975-07-19', '(312) 555-1001', 'jordan.brown@email.com',  '321 Maple Blvd',  'Chicago',     'IL', '60601', 'Male',   'Riley Brown',    '(312) 555-1002', 17, 4),
-  (5, 'Casey',   'Davis',    '2001-01-30', '(213) 555-1001', 'casey.davis@email.com',   '654 Cedar Lane',  'Los Angeles', 'CA', '90001', 'Female', 'Quinn Davis',    '(213) 555-1002', 21, 5);
+INSERT IGNORE INTO patient (patient_id, user_id, first_name, last_name, date_of_birth, phone_number, email, street_address, city, state, zip_code, gender, emergency_contact_name, emergency_contact_phone, primary_physician_id, insurance_id) VALUES
+  (1, 1, 'Alex',    'Smith',    '1992-05-14', '(214) 555-1001', 'alex.smith@email.com',    '123 Elm St',      'Dallas',      'TX', '75201', 'Male',   'Jamie Smith',    '(214) 555-1002', 3,  1),
+  (2, 2, 'Taylor',  'Jones',    '1985-11-22', '(713) 555-1001', 'taylor.jones@email.com',  '456 Oak Ave',     'Houston',     'TX', '77001', 'Female', 'Chris Jones',    '(713) 555-1002', 5,  2),
+  (3, 3, 'Morgan',  'Williams', '1998-03-08', '(512) 555-1001', 'morgan.w@email.com',      '789 Pine Rd',     'Austin',      'TX', '78701', 'Female', 'Sam Williams',   '(512) 555-1002', 9,  3),
+  (4, 4, 'Jordan',  'Brown',    '1975-07-19', '(312) 555-1001', 'jordan.brown@email.com',  '321 Maple Blvd',  'Chicago',     'IL', '60601', 'Male',   'Riley Brown',    '(312) 555-1002', 17, 4),
+  (5, 5, 'Casey',   'Davis',    '2001-01-30', '(213) 555-1001', 'casey.davis@email.com',   '654 Cedar Lane',  'Los Angeles', 'CA', '90001', 'Female', 'Quinn Davis',    '(213) 555-1002', 21, 5);
 
 -- ─── Sample Appointments ────────────────────────────────────
 

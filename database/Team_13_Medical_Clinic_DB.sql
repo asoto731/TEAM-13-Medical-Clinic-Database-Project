@@ -80,6 +80,7 @@ CREATE TABLE insurance (
 
 CREATE TABLE patient (
     patient_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id    INT UNIQUE,                      -- FK to users.user_id (set on registration / login)
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     date_of_birth DATE,
@@ -92,8 +93,9 @@ CREATE TABLE patient (
     gender VARCHAR(20),
     emergency_contact_name VARCHAR(100),
     emergency_contact_phone VARCHAR(15),
-    primary_physician_id INT NOT NULL,
-    insurance_id INT NOT NULL,
+    primary_physician_id INT NULL DEFAULT NULL, -- assigned after care-team selection
+    insurance_id INT NULL DEFAULT NULL,         -- assigned after care-team selection
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL,
     FOREIGN KEY (primary_physician_id) REFERENCES physician(physician_id),
     FOREIGN KEY (insurance_id) REFERENCES insurance(insurance_id)
 ) ENGINE=InnoDB;
