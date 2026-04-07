@@ -22,8 +22,8 @@ document.getElementById('btn').addEventListener('click', async () => {
             message.textContent = 'Login successful. Redirecting...';
             localStorage.setItem('clinicUser', JSON.stringify(data.user));
             const dest = data.user.role === 'physician'
-                ? '/portals/physician_dashboard.html'
-                : '/portals/staff_dashboard.html';
+                ? '/client/portals/physician_dashboard.html'
+                : '/client/portals/staff_dashboard.html';
             setTimeout(() => {
                 window.location.href = dest;
             }, 1000);

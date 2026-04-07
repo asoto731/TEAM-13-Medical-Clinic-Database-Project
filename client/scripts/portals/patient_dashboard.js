@@ -2,14 +2,14 @@
 const user = JSON.parse(localStorage.getItem("user") || localStorage.getItem("patientUser") || "null");
 
 if (!user || (user.role && user.role !== "patient")) {
-    window.location.href = "/auth/patient_login.html";
+    window.location.href = "/client/auth/patient_login.html";
 }
 
 /* ── Logout ── */
 document.getElementById("logoutBtn").addEventListener("click", () => {
     localStorage.removeItem("user");
     localStorage.removeItem("patientUser");
-    window.location.href = "/auth/patient_login.html";
+    window.location.href = "/client/auth/patient_login.html";
 });
 
 /* ── Phone auto-formatter ── */

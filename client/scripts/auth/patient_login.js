@@ -27,7 +27,7 @@ loginButton.addEventListener("click", async function (event) {
       message.textContent = "Login successful! Redirecting...";
       localStorage.setItem("patientUser", JSON.stringify(data.user));
       setTimeout(() => {
-        window.location.href = "/portals/patient_dashboard.html";
+        window.location.href = "/client/portals/patient_dashboard.html";
       }, 1000);
     } else {
       message.style.color = "#c0392b";

@@ -2,13 +2,13 @@
 const user = JSON.parse(localStorage.getItem("clinicUser") || "null");
 
 if (!user || user.role !== "physician") {
-    window.location.href = "/auth/staff_login.html";
+    window.location.href = "/client/auth/staff_login.html";
 }
 
 /* ── Logout ── */
 document.getElementById("logoutBtn").addEventListener("click", () => {
     localStorage.removeItem("clinicUser");
-    window.location.href = "/auth/staff_login.html";
+    window.location.href = "/client/auth/staff_login.html";
 });
 
 /* ── Section nav ── */

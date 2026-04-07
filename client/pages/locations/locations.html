@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <title>Locations - Palantir Clinic</title>
-  <link rel="stylesheet" href="../../styles/locations.css">
-  <link rel="stylesheet" href="../../styles/sidebar.css">
+  <link rel="stylesheet" href="/client/styles/pages/locations.css">
+  <link rel="stylesheet" href="/styles/sidebar.css">
 </head>
 
 <body>
@@ -13,9 +13,9 @@
     <h2 class="logo">Palantir Clinic</h2>
     <ul>
       <li><a href="/">Home</a></li>
-      <li><a href="/pages/about.html">About</a></li>
-      <li><a href="/auth/patient_login.html">Patient Login</a></li>
-      <li><a href="/auth/staff_login.html">Staff Portal</a></li>
+      <li><a href="/client/pages/about.html">About</a></li>
+      <li><a href="/client/auth/patient_login.html">Patient Login</a></li>
+      <li><a href="/client/auth/staff_login.html">Staff Portal</a></li>
     </ul>
   </nav>
 </header>
@@ -34,7 +34,7 @@
   </div>
 </section>
 
-<script src="../../scripts/sidebar.js" defer></script>
+<script src="/scripts/sidebar.js" defer></script>
 <script>
   fetch('/api/locations')
     .then(function(r) { return r.json(); })

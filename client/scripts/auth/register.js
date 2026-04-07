@@ -79,7 +79,7 @@ registerButton.addEventListener("click", async function (event) {
             message.style.color = "#1a6b3a";
             message.textContent = "Registration successful! Redirecting to login...";
             setTimeout(() => {
-                window.location.href = "/auth/patient_login.html";
+                window.location.href = "/client/auth/patient_login.html";
             }, 1000);
         } else {
             message.style.color = "#c0392b";
