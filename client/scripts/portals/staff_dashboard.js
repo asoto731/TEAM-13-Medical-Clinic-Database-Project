@@ -6,10 +6,24 @@ if (!user || user.role !== "staff") {
 }
 
 /* ── Logout ── */
-document.getElementById("logoutBtn").addEventListener("click", () => {
+function logoutUser() {
     localStorage.removeItem("clinicUser");
     window.location.href = "/client/auth/staff_login.html";
-});
+}
+document.getElementById("logoutBtn").addEventListener("click", logoutUser);
+
+/* ── HIPAA: Idle auto-logout after 15 minutes ── */
+(function setupIdleLogout() {
+    const IDLE_MS = 15 * 60 * 1000;
+    let idleTimer = setTimeout(logoutUser, IDLE_MS);
+    function resetTimer() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(logoutUser, IDLE_MS);
+    }
+    ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"].forEach(evt =>
+        document.addEventListener(evt, resetTimer, { passive: true })
+    );
+})();
 
 /* ── Section nav ── */
 function showSection(name) {

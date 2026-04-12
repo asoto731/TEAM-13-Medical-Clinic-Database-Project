@@ -6,11 +6,25 @@ if (!user || (user.role && user.role !== "patient")) {
 }
 
 /* ── Logout ── */
-document.getElementById("logoutBtn").addEventListener("click", () => {
+function logoutUser() {
     localStorage.removeItem("user");
     localStorage.removeItem("patientUser");
     window.location.href = "/client/auth/patient_login.html";
-});
+}
+document.getElementById("logoutBtn").addEventListener("click", logoutUser);
+
+/* ── HIPAA: Idle auto-logout after 15 minutes ── */
+(function setupIdleLogout() {
+    const IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    let idleTimer = setTimeout(logoutUser, IDLE_MS);
+    function resetTimer() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(logoutUser, IDLE_MS);
+    }
+    ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"].forEach(evt =>
+        document.addEventListener(evt, resetTimer, { passive: true })
+    );
+})();
 
 /* ── Phone auto-formatter ── */
 function formatPhoneInput(e) {
@@ -72,6 +86,14 @@ function infoRow(label, value) {
     return `<div style="display:flex;flex-direction:column;gap:2px">
         <span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${label}</span>
         <span style="font-size:14px;color:#333">${value || "—"}</span>
+    </div>`;
+}
+
+// Sensitive fields (DOB, policy number) — no copy/paste per HIPAA display policy
+function sensitiveRow(label, value) {
+    return `<div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${label}</span>
+        <span style="font-size:14px;color:#333;user-select:none;-webkit-user-select:none" oncopy="return false" oncut="return false">${value || "—"}</span>
     </div>`;
 }
 
@@ -139,7 +161,7 @@ async function loadDashboard() {
                 ${infoRow("Physician Phone", patient.doc_phone)}
                 <hr style="border:none;border-top:1px solid #f0f2f8;margin:4px 0">
                 ${infoRow("Insurance Provider", patient.provider_name || "None / Self-Pay")}
-                ${infoRow("Policy Number", patient.policy_number || "—")}
+                ${sensitiveRow("Policy Number", patient.policy_number || "—")}
                 ${infoRow("Coverage", patient.coverage_percentage ? patient.coverage_percentage + "%" : "—")}
                 <button class="profile-edit-btn" onclick="openCareModal()" style="margin-top:8px">Change Care Team</button>`;
         }
@@ -190,7 +212,7 @@ async function loadDashboard() {
         /* ── Profile info ── */
         document.getElementById("profileInfo").innerHTML = `
             ${infoRow("Full Name", `${patient.first_name || "—"} ${patient.last_name || ""}`)}
-            ${infoRow("Date of Birth", fmt(patient.date_of_birth))}
+            ${sensitiveRow("Date of Birth", fmt(patient.date_of_birth))}
             ${infoRow("Gender", patient.gender)}
             ${infoRow("Email", patient.email)}
             ${infoRow("Phone", patient.phone_number)}

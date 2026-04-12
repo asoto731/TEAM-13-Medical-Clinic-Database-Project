@@ -57,6 +57,25 @@ registerButton.addEventListener("click", async function (event) {
         return;
     }
 
+    // ── Age validation: required, 18+, no future dates ──
+    if (!date_of_birth) {
+        message.style.color = "#c0392b";
+        message.textContent = "Date of birth is required.";
+        return;
+    }
+    const dob = new Date(date_of_birth);
+    if (dob > new Date()) {
+        message.style.color = "#c0392b";
+        message.textContent = "Date of birth cannot be in the future.";
+        return;
+    }
+    const ageYears = (new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageYears < 18) {
+        message.style.color = "#c0392b";
+        message.textContent = "You must be 18 or older to register.";
+        return;
+    }
+
     // ── Client-side password strength gate ──
     const s = checkPasswordStrength(password);
     if (!s.len || !s.upper || !s.num || !s.spec) {

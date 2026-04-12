@@ -1,4 +1,21 @@
-const db = require("../db");
+const db     = require("../db");
+const bcrypt = require("bcryptjs");
+const { auditLog } = require("./authController");
+
+// ── In-memory rate limiter (shared pattern with authController) ──
+const loginAttempts = new Map();
+function isRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  if (!loginAttempts.has(ip)) loginAttempts.set(ip, []);
+  const attempts = loginAttempts.get(ip).filter(t => now - t < windowMs);
+  loginAttempts.set(ip, attempts);
+  if (attempts.length >= 5) return true;
+  attempts.push(now);
+  loginAttempts.set(ip, attempts);
+  return false;
+}
+function clearRateLimit(ip) { loginAttempts.delete(ip); }
 
 /* ─────────────────────────────────────────────
    Staff / Physician Login
@@ -7,14 +24,20 @@ const db = require("../db");
 ───────────────────────────────────────────── */
 const loginStaff = (req, res) => {
   const { username, password } = req.body;
+  const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
 
   if (!username || !password) {
     return res.status(400).json({ message: "Username and password are required" });
   }
 
-  const sql = "SELECT * FROM users WHERE username = ? AND password_hash = ?";
+  // ── Rate limiting: 5 attempts per IP per 15 min ──
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ message: "Too many login attempts. Please wait 15 minutes and try again." });
+  }
 
-  db.query(sql, [username, password], (err, results) => {
+  const sql = "SELECT * FROM users WHERE username = ?";
+
+  db.query(sql, [username], (err, results) => {
     if (err) return res.status(500).json({ message: "Login query failed" });
 
     if (results.length === 0) {
@@ -22,10 +45,19 @@ const loginStaff = (req, res) => {
     }
 
     const user = results[0];
+    const passwordMatch = bcrypt.compareSync(password, user.password_hash);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
 
     if (user.role === "patient") {
       return res.status(403).json({ message: "Please use the patient login portal." });
     }
+
+    // ── Clear rate limit on success + audit log ──
+    clearRateLimit(ip);
+    auditLog(user.user_id, "LOGIN", "user", user.user_id, ip);
 
     res.json({
       message: "Login successful",

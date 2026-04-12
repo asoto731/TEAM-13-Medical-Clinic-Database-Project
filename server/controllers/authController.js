@@ -1,5 +1,41 @@
-const db      = require("../db");
-const bcrypt  = require("bcryptjs");
+const db              = require("../db");
+const bcrypt          = require("bcryptjs");
+const { validatePassword } = require("../utils/validatePassword");
+
+// ── In-memory rate limiter: 5 attempts per IP per 15 minutes ──
+const loginAttempts = new Map();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 min
+  const maxAttempts = 5;
+
+  if (!loginAttempts.has(ip)) {
+    loginAttempts.set(ip, []);
+  }
+  // Drop attempts outside the current window
+  const attempts = loginAttempts.get(ip).filter(t => now - t < windowMs);
+  loginAttempts.set(ip, attempts);
+
+  if (attempts.length >= maxAttempts) return true;
+
+  attempts.push(now);
+  loginAttempts.set(ip, attempts);
+  return false;
+}
+
+function clearRateLimit(ip) {
+  loginAttempts.delete(ip);
+}
+
+// ── Audit log helper ──
+function auditLog(userId, action, targetType, targetId, ip) {
+  db.query(
+    "INSERT INTO audit_log (user_id, action, target_type, target_id, ip_address) VALUES (?, ?, ?, ?, ?)",
+    [userId || null, action, targetType || null, targetId || null, ip || null],
+    () => {} // fire-and-forget
+  );
+}
 
 const testRoute = (req, res) => {
   db.query("SELECT 1 + 1 AS result", (err, results) => {
@@ -17,14 +53,22 @@ const registerUser = (req, res) => {
     return res.status(400).json({ error: "Name, email, and password are required" });
   }
 
-  // ── Password strength rules (mirrors frontend checks) ──
-  const pwErrors = [];
-  if (password.length < 8)                       pwErrors.push("at least 8 characters");
-  if (!/[A-Z]/.test(password))                   pwErrors.push("one uppercase letter");
-  if (!/[0-9]/.test(password))                   pwErrors.push("one number");
-  if (!/[^A-Za-z0-9]/.test(password))            pwErrors.push("one special character (e.g. !@#$)");
-  if (pwErrors.length > 0) {
-    return res.status(400).json({ error: `Password must contain: ${pwErrors.join(", ")}.` });
+  // ── Password strength (uses shared utility) ──
+  const pwError = validatePassword(password);
+  if (pwError) return res.status(400).json({ error: pwError });
+
+  // ── Age validation: must be 18+, no future dates ──
+  if (date_of_birth) {
+    const dob = new Date(date_of_birth);
+    const today = new Date();
+    if (dob > today) {
+      return res.status(400).json({ error: "Date of birth cannot be in the future." });
+    }
+    const ageMs = today - dob;
+    const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageYears < 18) {
+      return res.status(400).json({ error: "You must be 18 or older to register." });
+    }
   }
 
   const checkEmailSql = "SELECT * FROM users WHERE username = ?";
@@ -81,9 +125,15 @@ const registerUser = (req, res) => {
 
 const loginUser = (req, res) => {
   const { email, password } = req.body;
+  const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
 
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
+  }
+
+  // ── Rate limiting: 5 failed attempts per IP per 15 min ──
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ error: "Too many login attempts. Please wait 15 minutes and try again." });
   }
 
   const sql = "SELECT * FROM users WHERE username = ?";
@@ -98,13 +148,7 @@ const loginUser = (req, res) => {
     }
 
     const user = results[0];
-    const stored = user.password_hash;
-
-    // Support both bcrypt-hashed passwords (new) and legacy plain-text (seed data)
-    const isHashed = stored && stored.startsWith("$2");
-    const passwordMatch = isHashed
-      ? bcrypt.compareSync(password, stored)
-      : password === stored;
+    const passwordMatch = bcrypt.compareSync(password, user.password_hash);
 
     if (!passwordMatch) {
       return res.status(401).json({ error: "Invalid email or password" });
@@ -113,6 +157,10 @@ const loginUser = (req, res) => {
     if (user.role !== "patient") {
       return res.status(403).json({ error: "Please use the Staff Portal to log in." });
     }
+
+    // ── Clear rate limit on success + audit log ──
+    clearRateLimit(ip);
+    auditLog(user.user_id, "LOGIN", "user", user.user_id, ip);
 
     res.json({
       message: "Login successful",
@@ -126,4 +174,4 @@ const loginUser = (req, res) => {
   });
 };
 
-module.exports = { testRoute, registerUser, loginUser };
+module.exports = { testRoute, registerUser, loginUser, auditLog };
