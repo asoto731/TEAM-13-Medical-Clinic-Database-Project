@@ -184,7 +184,7 @@ const getPhysiciansByCity = (req, res) => {
         FROM physician ph
         JOIN work_schedule ws ON ph.physician_id = ws.physician_id
         JOIN office o ON ws.office_id = o.office_id
-        WHERE o.city = ?
+        WHERE o.city = ? AND ph.physician_type = 'primary'
         ORDER BY ph.last_name`;
     db.query(sql, [city], (err, rows) => {
         if (err) return res.status(500).json({ message: "Query failed" });

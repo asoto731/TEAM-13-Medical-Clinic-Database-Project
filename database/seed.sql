@@ -1,5 +1,5 @@
 -- ============================================================
---  Audit Trail Health — Seed Data (Trimmed & Clean)
+--  Audit Trail Health — Seed Data (Expanded v2)
 --  Passwords meet strength requirements: 8+ chars, uppercase,
 --  number, special character — all pre-hashed with bcrypt.
 --
@@ -17,7 +17,6 @@ INSERT IGNORE INTO appointment_status (status_id, status_name) VALUES
   (3, 'Cancelled'),
   (4, 'No-Show');
 
--- Full referral lifecycle
 INSERT IGNORE INTO referral_status (referral_status_id, referral_status_name) VALUES
   (1, 'Requested'),
   (2, 'Issued'),
@@ -27,50 +26,127 @@ INSERT IGNORE INTO referral_status (referral_status_id, referral_status_name) VA
   (6, 'Completed'),
   (7, 'Expired');
 
--- ─── Insurance (3 providers) ────────────────────────────────
+-- ─── Insurance (5 providers) ────────────────────────────────
 
 INSERT IGNORE INTO insurance (insurance_id, provider_name, policy_number, coverage_percentage, group_number, phone_number) VALUES
   (1, 'BlueCross BlueShield', 'BCB-100001', 80.00, 'GRP-001', '(800) 555-2583'),
   (2, 'Aetna',                'AET-200002', 75.00, 'GRP-002', '(800) 555-2386'),
-  (3, 'UnitedHealth',         'UHC-300003', 85.00, 'GRP-003', '(800) 555-4822');
+  (3, 'UnitedHealth',         'UHC-300003', 85.00, 'GRP-003', '(800) 555-4822'),
+  (4, 'Cigna',                'CIG-400004', 78.00, 'GRP-004', '(800) 555-2446'),
+  (5, 'Humana',               'HUM-500005', 82.00, 'GRP-005', '(800) 555-4862');
 
--- ─── Clinics (3 Texas locations) ────────────────────────────
+-- ─── Clinics (8 locations across the US) ────────────────────
 
 INSERT IGNORE INTO clinic (clinic_id, clinic_name, phone_number, street_address, city, state, zip_code) VALUES
-  (1, 'Audit Trail Health Dallas',  '(214) 555-0200', '3001 Knox St Suite 200',     'Dallas',  'TX', '75205'),
-  (2, 'Audit Trail Health Houston', '(713) 555-0200', '2900 Weslayan St Suite 300', 'Houston', 'TX', '77027'),
-  (3, 'Audit Trail Health Austin',  '(512) 555-0200', '3824 Medical Pkwy',          'Austin',  'TX', '78756');
+  (1, 'Audit Trail Health Dallas',     '(214) 555-0200', '3001 Knox St Suite 200',       'Dallas',     'TX', '75205'),
+  (2, 'Audit Trail Health Houston',    '(713) 555-0200', '2900 Weslayan St Suite 300',   'Houston',    'TX', '77027'),
+  (3, 'Audit Trail Health Austin',     '(512) 555-0200', '3824 Medical Pkwy',            'Austin',     'TX', '78756'),
+  (4, 'Audit Trail Health New York',   '(212) 555-0200', '245 E 54th St Suite 1200',     'New York',   'NY', '10022'),
+  (5, 'Audit Trail Health Chicago',    '(312) 555-0200', '875 N Michigan Ave Suite 500', 'Chicago',    'IL', '60611'),
+  (6, 'Audit Trail Health Los Angeles','(310) 555-0200', '8920 Wilshire Blvd Suite 300', 'Los Angeles','CA', '90211'),
+  (7, 'Audit Trail Health Phoenix',    '(602) 555-0200', '2222 E Highland Ave Suite 100','Phoenix',    'AZ', '85016'),
+  (8, 'Audit Trail Health Seattle',    '(206) 555-0200', '1200 5th Ave Suite 1800',      'Seattle',    'WA', '98101');
 
 -- ─── Offices (one per clinic) ───────────────────────────────
 
 INSERT IGNORE INTO office (office_id, clinic_id, phone_number, street_address, city, state, zip_code) VALUES
-  (1, 1, '(214) 555-0200', '3001 Knox St Suite 200',     'Dallas',  'TX', '75205'),
-  (2, 2, '(713) 555-0200', '2900 Weslayan St Suite 300', 'Houston', 'TX', '77027'),
-  (3, 3, '(512) 555-0200', '3824 Medical Pkwy',          'Austin',  'TX', '78756');
+  (1, 1, '(214) 555-0200', '3001 Knox St Suite 200',       'Dallas',      'TX', '75205'),
+  (2, 2, '(713) 555-0200', '2900 Weslayan St Suite 300',   'Houston',     'TX', '77027'),
+  (3, 3, '(512) 555-0200', '3824 Medical Pkwy',            'Austin',      'TX', '78756'),
+  (4, 4, '(212) 555-0200', '245 E 54th St Suite 1200',     'New York',    'NY', '10022'),
+  (5, 5, '(312) 555-0200', '875 N Michigan Ave Suite 500', 'Chicago',     'IL', '60611'),
+  (6, 6, '(310) 555-0200', '8920 Wilshire Blvd Suite 300', 'Los Angeles', 'CA', '90211'),
+  (7, 7, '(602) 555-0200', '2222 E Highland Ave Suite 100','Phoenix',     'AZ', '85016'),
+  (8, 8, '(206) 555-0200', '1200 5th Ave Suite 1800',      'Seattle',     'WA', '98101');
 
--- ─── Departments (2 per clinic: 1 primary, 1 specialist) ────
+-- ─── Departments (3–4 per clinic: primary + specialist mix) ─
 
 INSERT IGNORE INTO department (department_id, department_name, description, clinic_id) VALUES
-  (1, 'Internal Medicine', 'Chronic disease management, diagnostics, and preventive wellness', 1),
-  (2, 'Orthopedics',       'Joint replacement, sports medicine, and spine care',               1),
-  (3, 'Family Medicine',   'Comprehensive primary care for all ages and conditions',            2),
-  (4, 'Cardiology',        'Heart disease prevention, diagnostics, and treatment',              2),
-  (5, 'General Practice',  'Primary care and preventive medicine for all ages',                 3),
-  (6, 'Neurology',         'Brain, spinal cord, and nervous system conditions',                 3);
+  -- Dallas (clinic 1)
+  (1,  'Internal Medicine', 'Chronic disease management, diagnostics, and preventive wellness',   1),
+  (2,  'Orthopedics',       'Joint replacement, sports medicine, and spine care',                 1),
+  (7,  'Family Medicine',   'Comprehensive primary care for all ages and conditions',              1),
+  (8,  'Dermatology',       'Skin, hair, and nail conditions including cancer screening',          1),
+  -- Houston (clinic 2)
+  (3,  'Family Medicine',   'Comprehensive primary care for all ages and conditions',              2),
+  (4,  'Cardiology',        'Heart disease prevention, diagnostics, and treatment',                2),
+  (9,  'Internal Medicine', 'Chronic disease management, diagnostics, and preventive wellness',    2),
+  (10, 'Gastroenterology',  'Digestive system disorders, endoscopy, and liver care',               2),
+  -- Austin (clinic 3)
+  (5,  'General Practice',  'Primary care and preventive medicine for all ages',                   3),
+  (6,  'Neurology',         'Brain, spinal cord, and nervous system conditions',                   3),
+  (11, 'Geriatrics',        'Specialized primary care for patients 65 and older',                  3),
+  (12, 'Endocrinology',     'Diabetes, thyroid disorders, and hormonal conditions',                3),
+  -- San Antonio (clinic 4)
+  (13, 'Family Medicine',   'Comprehensive primary care for all ages and conditions',              4),
+  (14, 'Internal Medicine', 'Chronic disease management, diagnostics, and preventive wellness',    4),
+  (15, 'Oncology',          'Cancer diagnosis, chemotherapy, radiation coordination, and care',    4),
+  (16, 'Rheumatology',      'Arthritis, autoimmune diseases, and musculoskeletal disorders',       4),
+  -- Fort Worth (clinic 5)
+  (17, 'Family Medicine',   'Comprehensive primary care for all ages and conditions',              5),
+  (18, 'General Practice',  'Primary care and preventive medicine for all ages',                   5),
+  (19, 'Cardiology',        'Heart disease prevention, diagnostics, and treatment',                5),
+  (20, 'Pulmonology',       'Lung disease, asthma, COPD, and respiratory care',                    5),
+  -- Plano (clinic 6)
+  (21, 'Internal Medicine', 'Chronic disease management, diagnostics, and preventive wellness',    6),
+  (22, 'Family Medicine',   'Comprehensive primary care for all ages and conditions',               6),
+  (23, 'Orthopedics',       'Joint replacement, sports medicine, and spine care',                  6),
+  (24, 'Urology',           'Kidney, bladder, and urinary tract conditions',                       6),
+  -- El Paso (clinic 7)
+  (25, 'General Practice',  'Primary care and preventive medicine for all ages',                   7),
+  (26, 'Family Medicine',   'Comprehensive primary care for all ages and conditions',               7),
+  (27, 'Neurology',         'Brain, spinal cord, and nervous system conditions',                    7),
+  -- Corpus Christi (clinic 8)
+  (28, 'Family Medicine',   'Comprehensive primary care for all ages and conditions',               8),
+  (29, 'Internal Medicine', 'Chronic disease management, diagnostics, and preventive wellness',     8),
+  (30, 'Pulmonology',       'Lung disease, asthma, COPD, and respiratory care',                     8);
 
--- ─── Physicians (6 total: 3 primary, 3 specialist) ──────────
+-- ─── Physicians (30 total: ~2–3 primary + 1–2 specialist per city) ──
 
 INSERT IGNORE INTO physician (physician_id, first_name, last_name, email, phone_number, specialty, department_id, hire_date, physician_type) VALUES
-  (1, 'Emily',    'Johnson', 'e.johnson@palantirclinic.com', '(214) 555-0301', 'Internal Medicine', 1, '2019-01-10', 'primary'),
-  (2, 'Maria',    'Garcia',  'm.garcia@palantirclinic.com',  '(214) 555-0302', 'Orthopedics',       2, '2018-03-15', 'specialist'),
-  (3, 'Patricia', 'Moore',   'p.moore@palantirclinic.com',   '(713) 555-0301', 'Family Medicine',   3, '2015-04-01', 'primary'),
-  (4, 'Angela',   'White',   'a.white@palantirclinic.com',   '(713) 555-0302', 'Cardiology',        4, '2016-09-01', 'specialist'),
-  (5, 'Robert',   'Davis',   'r.davis@palantirclinic.com',   '(512) 555-0301', 'General Practice',  5, '2014-04-01', 'primary'),
-  (6, 'Rachel',   'Foster',  'r.foster@palantirclinic.com',  '(512) 555-0302', 'Neurology',         6, '2019-06-15', 'specialist');
+  -- Dallas (office 1)
+  (1,  'Emily',      'Johnson',   'e.johnson@audittrailhealth.com',   '(214) 555-0301', 'Internal Medicine', 1,  '2019-01-10', 'primary'),
+  (2,  'Maria',      'Garcia',    'm.garcia@audittrailhealth.com',    '(214) 555-0302', 'Orthopedics',       2,  '2018-03-15', 'specialist'),
+  (7,  'Michael',    'Chen',      'm.chen@audittrailhealth.com',      '(214) 555-0303', 'Family Medicine',   7,  '2020-06-01', 'primary'),
+  (8,  'Sarah',      'Kim',       's.kim@audittrailhealth.com',       '(214) 555-0304', 'Internal Medicine', 1,  '2017-09-15', 'primary'),
+  -- Houston (office 2)
+  (3,  'Patricia',   'Moore',     'p.moore@audittrailhealth.com',     '(713) 555-0301', 'Family Medicine',   3,  '2015-04-01', 'primary'),
+  (4,  'Angela',     'White',     'a.white@audittrailhealth.com',     '(713) 555-0302', 'Cardiology',        4,  '2016-09-01', 'specialist'),
+  (9,  'James',      'Martinez',  'j.martinez@audittrailhealth.com',  '(713) 555-0303', 'Family Medicine',   3,  '2021-02-15', 'primary'),
+  (10, 'Karen',      'Thompson',  'k.thompson@audittrailhealth.com',  '(713) 555-0304', 'Internal Medicine', 9,  '2018-11-01', 'primary'),
+  -- Austin (office 3)
+  (5,  'Robert',     'Davis',     'r.davis@audittrailhealth.com',     '(512) 555-0301', 'General Practice',  5,  '2014-04-01', 'primary'),
+  (6,  'Rachel',     'Foster',    'r.foster@audittrailhealth.com',    '(512) 555-0302', 'Neurology',         6,  '2019-06-15', 'specialist'),
+  (11, 'David',      'Lee',       'd.lee@audittrailhealth.com',       '(512) 555-0303', 'Geriatrics',        11, '2016-03-01', 'primary'),
+  (12, 'Susan',      'Nguyen',    's.nguyen@audittrailhealth.com',    '(512) 555-0304', 'General Practice',  5,  '2020-08-01', 'primary'),
+  -- San Antonio (office 4)
+  (13, 'Carlos',     'Rivera',    'c.rivera@audittrailhealth.com',    '(210) 555-0301', 'Family Medicine',   13, '2017-05-01', 'primary'),
+  (14, 'Amanda',     'Scott',     'a.scott@audittrailhealth.com',     '(210) 555-0302', 'Internal Medicine', 14, '2019-03-15', 'primary'),
+  (15, 'Thomas',     'Brown',     't.brown@audittrailhealth.com',     '(210) 555-0303', 'Oncology',          15, '2015-07-01', 'specialist'),
+  (16, 'Nina',       'Patel',     'n.patel@audittrailhealth.com',     '(210) 555-0304', 'Rheumatology',      16, '2018-01-10', 'specialist'),
+  -- Fort Worth (office 5)
+  (17, 'Jennifer',   'Hall',      'j.hall@audittrailhealth.com',      '(817) 555-0301', 'Family Medicine',   17, '2016-10-01', 'primary'),
+  (18, 'Kevin',      'Wright',    'k.wright@audittrailhealth.com',    '(817) 555-0302', 'General Practice',  18, '2020-04-01', 'primary'),
+  (19, 'Robert',     'Chan',      'r.chan@audittrailhealth.com',      '(817) 555-0303', 'Cardiology',        19, '2017-08-15', 'specialist'),
+  (20, 'Lisa',       'Monroe',    'l.monroe@audittrailhealth.com',    '(817) 555-0304', 'Pulmonology',       20, '2019-11-01', 'specialist'),
+  -- Plano (office 6)
+  (21, 'Brian',      'Wilson',    'b.wilson@audittrailhealth.com',    '(972) 555-0301', 'Internal Medicine', 21, '2018-06-01', 'primary'),
+  (22, 'Michelle',   'Clark',     'm.clark@audittrailhealth.com',     '(972) 555-0302', 'Family Medicine',   22, '2021-01-15', 'primary'),
+  (23, 'Steven',     'Lewis',     's.lewis@audittrailhealth.com',     '(972) 555-0303', 'Orthopedics',       23, '2016-05-01', 'specialist'),
+  (24, 'Priya',      'Sharma',    'p.sharma@audittrailhealth.com',    '(972) 555-0304', 'Urology',           24, '2020-09-01', 'specialist'),
+  -- El Paso (office 7)
+  (25, 'Diana',      'Torres',    'd.torres@audittrailhealth.com',    '(915) 555-0301', 'General Practice',  25, '2015-02-01', 'primary'),
+  (26, 'Richard',    'Evans',     'r.evans@audittrailhealth.com',     '(915) 555-0302', 'Family Medicine',   26, '2019-04-15', 'primary'),
+  (27, 'Sandra',     'Collins',   's.collins@audittrailhealth.com',   '(915) 555-0303', 'Neurology',         27, '2017-10-01', 'specialist'),
+  -- Corpus Christi (office 8)
+  (28, 'Christopher','Hill',      'c.hill@audittrailhealth.com',      '(361) 555-0301', 'Family Medicine',   28, '2018-08-01', 'primary'),
+  (29, 'Patricia',   'Baker',     'p.baker@audittrailhealth.com',     '(361) 555-0302', 'Internal Medicine', 29, '2020-03-01', 'primary'),
+  (30, 'Joshua',     'Nelson',    'j.nelson@audittrailhealth.com',    '(361) 555-0303', 'Pulmonology',       30, '2016-12-01', 'specialist');
 
--- ─── Work Schedules (2 days per physician = 12 rows) ────────
+-- ─── Work Schedules ──────────────────────────────────────────
 
 INSERT IGNORE INTO work_schedule (schedule_id, physician_id, office_id, day_of_week, start_time, end_time) VALUES
+  -- Existing (Dallas/Houston/Austin originals)
   (1,  1, 1, 'Monday',    '08:00:00', '17:00:00'),
   (2,  1, 1, 'Wednesday', '08:00:00', '17:00:00'),
   (3,  2, 1, 'Tuesday',   '08:00:00', '17:00:00'),
@@ -82,14 +158,83 @@ INSERT IGNORE INTO work_schedule (schedule_id, physician_id, office_id, day_of_w
   (9,  5, 3, 'Wednesday', '08:00:00', '17:00:00'),
   (10, 5, 3, 'Friday',    '08:00:00', '17:00:00'),
   (11, 6, 3, 'Monday',    '09:00:00', '17:00:00'),
-  (12, 6, 3, 'Thursday',  '09:00:00', '17:00:00');
+  (12, 6, 3, 'Thursday',  '09:00:00', '17:00:00'),
+  -- Dallas new physicians
+  (13, 7, 1, 'Monday',    '08:00:00', '17:00:00'),
+  (14, 7, 1, 'Wednesday', '08:00:00', '17:00:00'),
+  (15, 7, 1, 'Friday',    '08:00:00', '17:00:00'),
+  (16, 8, 1, 'Tuesday',   '08:00:00', '17:00:00'),
+  (17, 8, 1, 'Thursday',  '08:00:00', '17:00:00'),
+  -- Houston new physicians
+  (18, 9,  2, 'Monday',    '08:00:00', '17:00:00'),
+  (19, 9,  2, 'Wednesday', '08:00:00', '17:00:00'),
+  (20, 10, 2, 'Tuesday',   '08:00:00', '17:00:00'),
+  (21, 10, 2, 'Thursday',  '08:00:00', '17:00:00'),
+  (22, 10, 2, 'Friday',    '08:00:00', '17:00:00'),
+  -- Austin new physicians
+  (23, 11, 3, 'Monday',    '09:00:00', '17:00:00'),
+  (24, 11, 3, 'Tuesday',   '09:00:00', '17:00:00'),
+  (25, 11, 3, 'Thursday',  '09:00:00', '17:00:00'),
+  (26, 12, 3, 'Wednesday', '08:00:00', '17:00:00'),
+  (27, 12, 3, 'Friday',    '08:00:00', '17:00:00'),
+  -- San Antonio
+  (28, 13, 4, 'Monday',    '08:00:00', '17:00:00'),
+  (29, 13, 4, 'Wednesday', '08:00:00', '17:00:00'),
+  (30, 13, 4, 'Friday',    '08:00:00', '17:00:00'),
+  (31, 14, 4, 'Tuesday',   '08:00:00', '17:00:00'),
+  (32, 14, 4, 'Thursday',  '08:00:00', '17:00:00'),
+  (33, 15, 4, 'Monday',    '09:00:00', '17:00:00'),
+  (34, 15, 4, 'Wednesday', '09:00:00', '17:00:00'),
+  (35, 16, 4, 'Tuesday',   '09:00:00', '17:00:00'),
+  (36, 16, 4, 'Friday',    '09:00:00', '17:00:00'),
+  -- Fort Worth
+  (37, 17, 5, 'Monday',    '08:00:00', '17:00:00'),
+  (38, 17, 5, 'Wednesday', '08:00:00', '17:00:00'),
+  (39, 17, 5, 'Friday',    '08:00:00', '17:00:00'),
+  (40, 18, 5, 'Tuesday',   '08:00:00', '17:00:00'),
+  (41, 18, 5, 'Thursday',  '08:00:00', '17:00:00'),
+  (42, 19, 5, 'Wednesday', '09:00:00', '17:00:00'),
+  (43, 19, 5, 'Friday',    '09:00:00', '17:00:00'),
+  (44, 20, 5, 'Monday',    '09:00:00', '17:00:00'),
+  (45, 20, 5, 'Thursday',  '09:00:00', '17:00:00'),
+  -- Plano
+  (46, 21, 6, 'Monday',    '08:00:00', '17:00:00'),
+  (47, 21, 6, 'Wednesday', '08:00:00', '17:00:00'),
+  (48, 21, 6, 'Friday',    '08:00:00', '17:00:00'),
+  (49, 22, 6, 'Tuesday',   '08:00:00', '17:00:00'),
+  (50, 22, 6, 'Thursday',  '08:00:00', '17:00:00'),
+  (51, 23, 6, 'Monday',    '09:00:00', '17:00:00'),
+  (52, 23, 6, 'Wednesday', '09:00:00', '17:00:00'),
+  (53, 24, 6, 'Tuesday',   '09:00:00', '17:00:00'),
+  (54, 24, 6, 'Thursday',  '09:00:00', '17:00:00'),
+  -- El Paso
+  (55, 25, 7, 'Monday',    '08:00:00', '17:00:00'),
+  (56, 25, 7, 'Wednesday', '08:00:00', '17:00:00'),
+  (57, 25, 7, 'Friday',    '08:00:00', '17:00:00'),
+  (58, 26, 7, 'Tuesday',   '08:00:00', '17:00:00'),
+  (59, 26, 7, 'Thursday',  '08:00:00', '17:00:00'),
+  (60, 27, 7, 'Monday',    '09:00:00', '17:00:00'),
+  (61, 27, 7, 'Wednesday', '09:00:00', '17:00:00'),
+  -- Corpus Christi
+  (62, 28, 8, 'Monday',    '08:00:00', '17:00:00'),
+  (63, 28, 8, 'Wednesday', '08:00:00', '17:00:00'),
+  (64, 28, 8, 'Friday',    '08:00:00', '17:00:00'),
+  (65, 29, 8, 'Tuesday',   '08:00:00', '17:00:00'),
+  (66, 29, 8, 'Thursday',  '08:00:00', '17:00:00'),
+  (67, 30, 8, 'Monday',    '09:00:00', '17:00:00'),
+  (68, 30, 8, 'Thursday',  '09:00:00', '17:00:00');
 
--- ─── Staff (3 members) ──────────────────────────────────────
+-- ─── Staff (8 members — one per city) ───────────────────────
 
 INSERT IGNORE INTO staff (staff_id, first_name, last_name, date_of_birth, department_id, role, hire_date, phone_number, email, shift_start, shift_end) VALUES
-  (1, 'Nicole', 'Adams',  '1990-04-12', 1, 'Medical Assistant',  '2021-01-10', '(214) 555-0401', 'n.adams@palantirclinic.com',  '08:00:00', '16:00:00'),
-  (2, 'Jordan', 'Brooks', '1988-09-23', 4, 'Billing Specialist', '2019-06-15', '(713) 555-0401', 'j.brooks@palantirclinic.com', '09:00:00', '17:00:00'),
-  (3, 'Morgan', 'Taylor', '1993-02-17', 3, 'Receptionist',       '2020-03-01', '(512) 555-0401', 'm.taylor@palantirclinic.com', '08:00:00', '16:00:00');
+  (1, 'Nicole',   'Adams',   '1990-04-12', 1,  'Medical Assistant',  '2021-01-10', '(214) 555-0401', 'n.adams@audittrailhealth.com',    '08:00:00', '16:00:00'),
+  (2, 'Jordan',   'Brooks',  '1988-09-23', 4,  'Billing Specialist', '2019-06-15', '(713) 555-0401', 'j.brooks@audittrailhealth.com',   '09:00:00', '17:00:00'),
+  (3, 'Morgan',   'Taylor',  '1993-02-17', 3,  'Receptionist',       '2020-03-01', '(512) 555-0401', 'm.taylor@audittrailhealth.com',   '08:00:00', '16:00:00'),
+  (4, 'Maria',    'Gomez',   '1991-07-22', 13, 'Receptionist',       '2021-05-10', '(210) 555-0401', 'm.gomez@audittrailhealth.com',    '08:00:00', '16:00:00'),
+  (5, 'David',    'Kim',     '1989-11-04', 17, 'Medical Assistant',  '2022-01-15', '(817) 555-0401', 'd.kim@audittrailhealth.com',      '08:00:00', '16:00:00'),
+  (6, 'Rachel',   'Lin',     '1994-03-30', 21, 'Billing Specialist', '2020-09-01', '(972) 555-0401', 'r.lin@audittrailhealth.com',      '09:00:00', '17:00:00'),
+  (7, 'Carlos',   'Mendez',  '1987-06-18', 25, 'Receptionist',       '2019-11-01', '(915) 555-0401', 'c.mendez@audittrailhealth.com',   '08:00:00', '16:00:00'),
+  (8, 'Brittany', 'Ross',    '1995-01-09', 28, 'Medical Assistant',  '2023-03-01', '(361) 555-0401', 'b.ross@audittrailhealth.com',     '08:00:00', '16:00:00');
 
 -- ─── Users (login accounts) ─────────────────────────────────
 -- Passwords bcrypt-hashed (10 rounds)
@@ -98,20 +243,54 @@ INSERT IGNORE INTO staff (staff_id, first_name, last_name, date_of_birth, depart
 -- Staff@123    → $2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6
 
 INSERT IGNORE INTO users (user_id, username, password_hash, role, physician_id, staff_id) VALUES
+  -- Patients (1–5)
   (1,  'alex.smith@email.com',    '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
   (2,  'taylor.jones@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
   (3,  'morgan.w@email.com',      '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
   (4,  'jordan.brown@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
   (5,  'casey.davis@email.com',   '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
-  (6,  'dr.johnson',              '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 1,    NULL),
-  (7,  'dr.garcia',               '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 2,    NULL),
-  (8,  'dr.moore',                '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 3,    NULL),
-  (9,  'dr.white',                '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 4,    NULL),
-  (10, 'dr.davis',                '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 5,    NULL),
-  (11, 'dr.foster',               '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 6,    NULL),
-  (12, 'staff.adams',             '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 1),
-  (13, 'staff.brooks',            '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 2),
-  (14, 'staff.taylor',            '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 3);
+  -- Physicians — original 6
+  (6,  'dr.johnson',   '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 1,  NULL),
+  (7,  'dr.garcia',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 2,  NULL),
+  (8,  'dr.moore',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 3,  NULL),
+  (9,  'dr.white',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 4,  NULL),
+  (10, 'dr.davis',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 5,  NULL),
+  (11, 'dr.foster',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 6,  NULL),
+  -- Physicians — new
+  (15, 'dr.chen',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 7,  NULL),
+  (16, 'dr.kim',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 8,  NULL),
+  (17, 'dr.martinez',  '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 9,  NULL),
+  (18, 'dr.thompson',  '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 10, NULL),
+  (19, 'dr.lee',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 11, NULL),
+  (20, 'dr.snguyen',   '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 12, NULL),
+  (21, 'dr.rivera',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 13, NULL),
+  (22, 'dr.scott',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 14, NULL),
+  (23, 'dr.tbrown',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 15, NULL),
+  (24, 'dr.npatel',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 16, NULL),
+  (25, 'dr.hall',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 17, NULL),
+  (26, 'dr.wright',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 18, NULL),
+  (27, 'dr.chan',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 19, NULL),
+  (28, 'dr.monroe',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 20, NULL),
+  (29, 'dr.wilson',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 21, NULL),
+  (30, 'dr.clark',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 22, NULL),
+  (31, 'dr.lewis',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 23, NULL),
+  (32, 'dr.sharma',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 24, NULL),
+  (33, 'dr.torres',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 25, NULL),
+  (34, 'dr.evans',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 26, NULL),
+  (35, 'dr.scollins',  '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 27, NULL),
+  (36, 'dr.chill',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 28, NULL),
+  (37, 'dr.baker',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 29, NULL),
+  (38, 'dr.nelson',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 30, NULL),
+  -- Staff — original 3
+  (12, 'staff.adams',  '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 1),
+  (13, 'staff.brooks', '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 2),
+  (14, 'staff.taylor', '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 3),
+  -- Staff — new
+  (39, 'staff.gomez',  '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 4),
+  (40, 'staff.dkim',   '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 5),
+  (41, 'staff.lin',    '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 6),
+  (42, 'staff.mendez', '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 7),
+  (43, 'staff.bross',  '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 8);
 
 -- ─── Patients (5 — linked to user accounts) ─────────────────
 
@@ -122,7 +301,7 @@ INSERT IGNORE INTO patient (patient_id, user_id, first_name, last_name, date_of_
   (4, 4, 'Jordan', 'Brown',    '1975-07-19', '(214) 555-1003', 'jordan.brown@email.com', '321 Maple Blvd', 'Dallas',  'TX', '75202', 'Male',   'Riley Brown',  '(214) 555-1004', 1, 1),
   (5, 5, 'Casey',  'Davis',    '2000-01-30', '(713) 555-1003', 'casey.davis@email.com',  '654 Cedar Lane', 'Houston', 'TX', '77002', 'Female', 'Quinn Davis',  '(713) 555-1004', 3, 2);
 
--- ─── Appointments (8 — mix of statuses and types) ────────────
+-- ─── Appointments ────────────────────────────────────────────
 
 INSERT IGNORE INTO appointment (appointment_id, patient_id, physician_id, office_id, appointment_date, appointment_time, status_id, booking_method, reason_for_visit, appointment_type, duration_minutes) VALUES
   (1, 1, 1, 1, '2026-04-28', '09:00:00', 1, 'online',    'Annual physical exam',        'Physical',   60),
@@ -134,34 +313,33 @@ INSERT IGNORE INTO appointment (appointment_id, patient_id, physician_id, office
   (7, 4, 1, 1, '2026-04-30', '14:00:00', 1, 'online',    'Diabetes management check',   'Follow-Up',  30),
   (8, 5, 3, 2, '2026-05-08', '13:00:00', 1, 'online',    'New patient visit',           'Physical',   60);
 
--- ─── Medical History (6 entries — includes no-show log) ─────
+-- ─── Medical History ─────────────────────────────────────────
 
 INSERT IGNORE INTO medical_history (medical_history_id, patient_id, physician_id, `condition`, diagnosis_date, status, notes) VALUES
-  (1, 1, 1, 'Hypertension',    '2022-03-10', 'Active',   'Managed with lisinopril 10mg daily. Monitor BP monthly.'),
-  (2, 1, 1, 'Type 2 Diabetes', '2023-07-15', 'Active',   'Diet-controlled. A1C checked quarterly. Last reading: 7.1'),
-  (3, 2, 3, 'Hypertension',    '2021-04-05', 'Active',   'On amlodipine 5mg. BP consistently elevated at visits.'),
-  (4, 3, 5, 'Migraine',        '2020-05-01', 'Active',   'Triggers: stress, dehydration. Prescribed sumatriptan PRN.'),
-  (5, 4, 1, 'Type 2 Diabetes', '2019-11-30', 'Active',   'Metformin 1000mg twice daily. A1C: 7.8 — needs follow-up.'),
-  (6, 3, 5, 'No-Show',         '2025-10-15', 'Active',   'Patient did not attend scheduled appointment on 2025-10-15');
+  (1, 1, 1, 'Hypertension',    '2022-03-10', 'Active', 'Managed with lisinopril 10mg daily. Monitor BP monthly.'),
+  (2, 1, 1, 'Type 2 Diabetes', '2023-07-15', 'Active', 'Diet-controlled. A1C checked quarterly. Last reading: 7.1'),
+  (3, 2, 3, 'Hypertension',    '2021-04-05', 'Active', 'On amlodipine 5mg. BP consistently elevated at visits.'),
+  (4, 3, 5, 'Migraine',        '2020-05-01', 'Active', 'Triggers: stress, dehydration. Prescribed sumatriptan PRN.'),
+  (5, 4, 1, 'Type 2 Diabetes', '2019-11-30', 'Active', 'Metformin 1000mg twice daily. A1C: 7.8 — needs follow-up.'),
+  (6, 3, 5, 'No-Show',         '2025-10-15', 'Active', 'Patient did not attend scheduled appointment on 2025-10-15');
 
--- ─── Diagnosis (3 entries — linked to completed appointments) ──
+-- ─── Diagnosis ───────────────────────────────────────────────
 
 INSERT IGNORE INTO diagnosis (diagnosis_id, appointment_id, physician_id, diagnosis_code, diagnosis_description, diagnosis_date, severity, notes) VALUES
   (1, 2, 1, 'I10',   'Essential Hypertension', '2025-12-05', 'Moderate', 'BP 148/92 at visit. Adjusted lisinopril dosage.'),
   (2, 4, 3, 'I10',   'Essential Hypertension', '2025-11-20', 'Moderate', 'BP stable but still elevated. Continue current regimen.'),
   (3, 4, 3, 'E11.9', 'Type 2 Diabetes',        '2025-11-20', 'Mild',     'A1C within target range. Continue diet management.');
 
--- ─── Treatment (linked to diagnoses) ────────────────────────
+-- ─── Treatment ───────────────────────────────────────────────
 
 INSERT IGNORE INTO treatment (treatment_id, diagnosis_id, treatment_plan, prescribed_medication, follow_up_date, notes) VALUES
-  (1, 1, 'Continue antihypertensive therapy. Reduce sodium intake.',       'Lisinopril 10mg daily',      '2026-03-05', 'Return if BP exceeds 160/100'),
-  (2, 2, 'Continue current antihypertensive. Increase physical activity.', 'Amlodipine 5mg daily',       '2026-02-20', 'Recheck in 3 months'),
+  (1, 1, 'Continue antihypertensive therapy. Reduce sodium intake.',       'Lisinopril 10mg daily',       '2026-03-05', 'Return if BP exceeds 160/100'),
+  (2, 2, 'Continue current antihypertensive. Increase physical activity.', 'Amlodipine 5mg daily',        '2026-02-20', 'Recheck in 3 months'),
   (3, 3, 'Monitor A1C every 3 months. Continue diet and exercise plan.',   'Metformin 500mg twice daily', '2026-02-20', 'Schedule nutritionist consult');
 
--- ─── Billing (5 records — includes math breakdown) ───────────
+-- ─── Billing ─────────────────────────────────────────────────
 -- insurance_paid = total * (coverage% / 100)
 -- patient_owed   = total - insurance_paid
--- BlueCross 80%, Aetna 75%, UnitedHealth 85%
 
 INSERT IGNORE INTO billing (bill_id, appointment_id, patient_id, insurance_id, total_amount, tax_amount, insurance_paid_amount, patient_owed, payment_status, payment_method, payment_date, due_date) VALUES
   (1, 2, 1, 1, 150.00, 0.00, 120.00, 30.00, 'Paid',   'credit card', '2025-12-06', '2026-01-05'),
@@ -170,7 +348,7 @@ INSERT IGNORE INTO billing (bill_id, appointment_id, patient_id, insurance_id, t
   (4, 3, 2, 2, 150.00, 0.00, 112.50, 37.50, 'Unpaid', NULL,          NULL,         '2026-06-06'),
   (5, 7, 4, 1, 150.00, 0.00, 120.00, 30.00, 'Unpaid', NULL,          NULL,         '2026-05-30');
 
--- ─── Referrals (2 — demos the full referral flow) ────────────
+-- ─── Referrals ───────────────────────────────────────────────
 
 INSERT IGNORE INTO referral (referral_id, patient_id, primary_physician_id, specialist_id, date_issued, expiration_date, referral_status_id, referral_reason, specialist_appointment_id) VALUES
   (1, 2, 3, 4, '2026-04-20', '2026-07-20', 5, 'Persistent hypertension with possible cardiac involvement. Cardiology evaluation requested.', 5),
