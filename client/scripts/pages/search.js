@@ -30,10 +30,10 @@ fetch('/api/locations/search')
     locations.forEach(function(l) {
       SEARCH_DATA.push({
         type: 'location',
-        icon: '📍',
+        icon: '&#9675;',
         name: l.city + ', ' + l.state,
         desc: l.departments || 'Multiple departments',
-        url:  '/pages/locations/location_detail.html?city=' + encodeURIComponent(l.city)
+        url:  '/client/pages/locations/location_detail.html?city=' + encodeURIComponent(l.city)
       });
     });
 
@@ -41,10 +41,10 @@ fetch('/api/locations/search')
     physicians.forEach(function(p) {
       SEARCH_DATA.push({
         type: 'doctor',
-        icon: '🩺',
+        icon: '+',
         name: 'Dr. ' + p.first_name + ' ' + p.last_name,
         desc: (p.specialty || 'Physician') + ' \u2014 ' + p.city + ', ' + p.state,
-        url:  '/pages/locations/location_detail.html?city=' + encodeURIComponent(p.city)
+        url:  '/client/pages/locations/location_detail.html?city=' + encodeURIComponent(p.city)
       });
     });
 
@@ -52,10 +52,10 @@ fetch('/api/locations/search')
     specialties.forEach(function(s) {
       SEARCH_DATA.push({
         type: 'specialty',
-        icon: '🏥',
+        icon: '&#10010;',
         name: s.specialty,
         desc: s.locations || '',
-        url:  '/pages/locations/locations.html'
+        url:  '/client/pages/locations/locations.html'
       });
     });
   })

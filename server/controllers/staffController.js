@@ -2,20 +2,21 @@ const db     = require("../db");
 const bcrypt = require("bcryptjs");
 const { auditLog } = require("./authController");
 
-// ── In-memory rate limiter (shared pattern with authController) ──
+// ── In-memory rate limiter — keyed by IP + username ──
 const loginAttempts = new Map();
-function isRateLimited(ip) {
+function isRateLimited(ip, username) {
+  const key = `${ip}:${(username || "").toLowerCase()}`;
   const now = Date.now();
   const windowMs = 15 * 60 * 1000;
-  if (!loginAttempts.has(ip)) loginAttempts.set(ip, []);
-  const attempts = loginAttempts.get(ip).filter(t => now - t < windowMs);
-  loginAttempts.set(ip, attempts);
+  if (!loginAttempts.has(key)) loginAttempts.set(key, []);
+  const attempts = loginAttempts.get(key).filter(t => now - t < windowMs);
+  loginAttempts.set(key, attempts);
   if (attempts.length >= 5) return true;
   attempts.push(now);
-  loginAttempts.set(ip, attempts);
+  loginAttempts.set(key, attempts);
   return false;
 }
-function clearRateLimit(ip) { loginAttempts.delete(ip); }
+function clearRateLimit(ip, username) { loginAttempts.delete(`${ip}:${(username || "").toLowerCase()}`); }
 
 /* ─────────────────────────────────────────────
    Staff / Physician Login
@@ -30,9 +31,9 @@ const loginStaff = (req, res) => {
     return res.status(400).json({ message: "Username and password are required" });
   }
 
-  // ── Rate limiting: 5 attempts per IP per 15 min ──
-  if (isRateLimited(ip)) {
-    return res.status(429).json({ message: "Too many login attempts. Please wait 15 minutes and try again." });
+  // ── Rate limiting: 5 attempts per IP+username per 15 min ──
+  if (isRateLimited(ip, username)) {
+    return res.status(429).json({ message: "Too many login attempts for this account. Please wait 15 minutes and try again." });
   }
 
   const sql = "SELECT * FROM users WHERE username = ?";
@@ -56,7 +57,7 @@ const loginStaff = (req, res) => {
     }
 
     // ── Clear rate limit on success + audit log ──
-    clearRateLimit(ip);
+    clearRateLimit(ip, username);
     auditLog(user.user_id, "LOGIN", "user", user.user_id, ip);
 
     res.json({

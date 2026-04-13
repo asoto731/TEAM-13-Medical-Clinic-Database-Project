@@ -31,6 +31,18 @@
         html[data-theme="dark"] .sidebar-logo .clinic-name { color: #b48cff; }
         html[data-theme="dark"] .schedule-card           { background: #1a1028; border-left-color: #9e6afe; }
         html[data-theme="dark"] .schedule-card .day      { color: #b48cff; }
+
+        /* Settings panel */
+        .settings-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 20px; font-size:13px; color:#888; cursor:pointer; font-family:inherit; font-weight:600; transition:color 0.15s,border-color 0.15s; }
+        .settings-tab.active { color:#3a1a6d; border-bottom-color:#9e6afe; }
+        .settings-tab-content { }
+        .settings-tab-content.hidden { display:none; }
+        .settings-row { display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f0f2f8; }
+        .settings-row:last-child { border-bottom:none; }
+        .settings-row-label { font-size:14px; font-weight:600; color:#333; margin-bottom:3px; }
+        .settings-row-sub { font-size:12px; color:#aaa; }
+        .theme-btn { padding:8px 18px; border:1px solid #e0e4f0; border-radius:8px; background:white; font-size:13px; cursor:pointer; font-family:inherit; color:#555; transition:all 0.15s; }
+        .theme-btn.active { background:#4a2c8a; color:white; border-color:#4a2c8a; }
     </style>
     <script>if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark");</script>
 </head>
@@ -50,6 +62,7 @@
             <button class="nav-item" onclick="showSection('appointments')">Appointments</button>
             <button class="nav-item" onclick="showSection('billing')">Billing Queue</button>
             <button class="nav-item" onclick="showSection('profile')">My Profile</button>
+            <button class="nav-item" onclick="showSection('settings')">Settings</button>
         </nav>
         <div class="sidebar-user">
             <div class="user-avatar" id="avatarInitials">ST</div>
@@ -66,7 +79,7 @@
         <div class="topbar">
             <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Overview</span></div>
             <div class="topbar-right">
-                <button id="darkModeToggle" class="dark-mode-toggle">🌙 Dark</button>
+                <button id="darkModeToggle" class="dark-mode-toggle">Dark Mode</button>
                 <button class="logout-btn" id="logoutBtn">Sign Out</button>
             </div>
         </div>
@@ -174,6 +187,54 @@
                 <div class="section-block-header"><div><h3>Staff Profile</h3></div></div>
                 <div style="padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px" id="profileGrid">
                     <p class="loading-msg">Loading…</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Settings Section ── -->
+        <div id="sec-settings" class="page-section hidden">
+            <div class="section-block">
+                <div class="section-block-header"><h3>Settings</h3></div>
+
+                <div style="display:flex;gap:0;border-bottom:1px solid #eef2ff;margin-bottom:28px">
+                    <button class="settings-tab active" onclick="switchSettingsTab('appearance',this)">Appearance</button>
+                    <button class="settings-tab" onclick="switchSettingsTab('about',this)">About</button>
+                </div>
+
+                <!-- Appearance Tab -->
+                <div id="stab-appearance" class="settings-tab-content">
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-row-label">Theme</div>
+                            <div class="settings-row-sub">Choose how the portal looks</div>
+                        </div>
+                        <div style="display:flex;gap:10px">
+                            <button class="theme-btn" id="themeLight" onclick="setTheme('light')">Light</button>
+                            <button class="theme-btn" id="themeDark"  onclick="setTheme('dark')">Dark</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About Tab -->
+                <div id="stab-about" class="settings-tab-content hidden">
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-row-label">Application</div>
+                            <div class="settings-row-sub">Audit Trail Health — Staff Portal</div>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-row-label">Version</div>
+                            <div class="settings-row-sub">1.0.0 — Team 13 Class Project</div>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-row-label">Support</div>
+                            <div class="settings-row-sub">Contact your clinic administrator for account help.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

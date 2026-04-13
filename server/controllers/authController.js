@@ -5,27 +5,26 @@ const { validatePassword } = require("../utils/validatePassword");
 // ── In-memory rate limiter: 5 attempts per IP per 15 minutes ──
 const loginAttempts = new Map();
 
-function isRateLimited(ip) {
+// Key = IP + username so different accounts don't share the same counter
+function isRateLimited(ip, username) {
+  const key = `${ip}:${(username || "").toLowerCase()}`;
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 min
+  const windowMs = 15 * 60 * 1000;
   const maxAttempts = 5;
 
-  if (!loginAttempts.has(ip)) {
-    loginAttempts.set(ip, []);
-  }
-  // Drop attempts outside the current window
-  const attempts = loginAttempts.get(ip).filter(t => now - t < windowMs);
-  loginAttempts.set(ip, attempts);
+  if (!loginAttempts.has(key)) loginAttempts.set(key, []);
+  const attempts = loginAttempts.get(key).filter(t => now - t < windowMs);
+  loginAttempts.set(key, attempts);
 
   if (attempts.length >= maxAttempts) return true;
 
   attempts.push(now);
-  loginAttempts.set(ip, attempts);
+  loginAttempts.set(key, attempts);
   return false;
 }
 
-function clearRateLimit(ip) {
-  loginAttempts.delete(ip);
+function clearRateLimit(ip, username) {
+  loginAttempts.delete(`${ip}:${(username || "").toLowerCase()}`);
 }
 
 // ── Audit log helper ──
@@ -131,9 +130,9 @@ const loginUser = (req, res) => {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
-  // ── Rate limiting: 5 failed attempts per IP per 15 min ──
-  if (isRateLimited(ip)) {
-    return res.status(429).json({ error: "Too many login attempts. Please wait 15 minutes and try again." });
+  // ── Rate limiting: 5 failed attempts per IP+email per 15 min ──
+  if (isRateLimited(ip, email)) {
+    return res.status(429).json({ error: "Too many login attempts for this account. Please wait 15 minutes and try again." });
   }
 
   const sql = "SELECT * FROM users WHERE username = ?";
@@ -159,7 +158,7 @@ const loginUser = (req, res) => {
     }
 
     // ── Clear rate limit on success + audit log ──
-    clearRateLimit(ip);
+    clearRateLimit(ip, email);
     auditLog(user.user_id, "LOGIN", "user", user.user_id, ip);
 
     res.json({

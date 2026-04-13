@@ -51,9 +51,40 @@ function showSection(name) {
     const btn = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
     if (btn) btn.classList.add("active");
 
-    const labels = { overview:"Overview", appointments:"My Appointments", history:"Medical History", billing:"Billing", profile:"My Profile" };
+    const labels = { overview:"Overview", appointments:"My Appointments", history:"Medical History", billing:"Billing", profile:"My Profile", settings:"Settings" };
     document.getElementById("currentSection").textContent = labels[name] || name;
 }
+
+/* ── Settings tabs ── */
+function switchSettingsTab(tab, btn) {
+    document.querySelectorAll(".settings-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".settings-tab-content").forEach(c => c.classList.add("hidden"));
+    if (btn) btn.classList.add("active");
+    const content = document.getElementById("stab-" + tab);
+    if (content) content.classList.remove("hidden");
+}
+
+/* ── Theme buttons sync ── */
+function syncThemeButtons() {
+    const dark = localStorage.getItem("theme") === "dark";
+    document.getElementById("themeLight")?.classList.toggle("active", !dark);
+    document.getElementById("themeDark")?.classList.toggle("active",  dark);
+}
+
+function setTheme(theme) {
+    if (theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        localStorage.setItem("theme", "dark");
+    } else {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("theme", "light");
+    }
+    syncThemeButtons();
+    const btn = document.getElementById("darkModeToggle");
+    if (btn) btn.textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+
+syncThemeButtons();
 
 /* ── Date ── */
 document.getElementById("todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
@@ -147,7 +178,7 @@ async function loadDashboard() {
         if (!patient.primary_physician_id) {
             document.getElementById("careCard").innerHTML = `
                 <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px 0;text-align:center">
-                    <div style="font-size:32px">🏥</div>
+                    <div style="font-size:32px;color:#1f2a6d">&#10010;</div>
                     <div>
                         <div style="font-size:14px;font-weight:700;color:#1f2a6d;margin-bottom:4px">No physician assigned yet</div>
                         <div style="font-size:12px;color:#aaa;font-weight:300;line-height:1.6">Choose a clinic location and primary<br>physician to complete your setup.</div>
@@ -312,7 +343,7 @@ async function openCareModal() {
     const citySelect = document.getElementById("care_city");
     citySelect.innerHTML = '<option value="">Loading…</option>';
     try {
-        const r = await fetch("/api/patient/care/cities");
+        const r = await fetch(`/api/patient/care/cities?user_id=${user.id}`);
         const cities = await r.json();
         citySelect.innerHTML = '<option value="">Select a city…</option>' +
             cities.map(c => `<option value="${c.city}">${c.city}${c.state ? ", " + c.state : ""}</option>`).join("");
@@ -322,7 +353,7 @@ async function openCareModal() {
     const insSelect = document.getElementById("care_insurance");
     insSelect.innerHTML = '<option value="">None / Self-Pay</option>';
     try {
-        const r = await fetch("/api/patient/care/insurance");
+        const r = await fetch(`/api/patient/care/insurance?user_id=${user.id}`);
         const plans = await r.json();
         insSelect.innerHTML += plans.map(p =>
             `<option value="${p.insurance_id}">${p.provider_name}${p.coverage_percentage ? " (" + p.coverage_percentage + "% coverage)" : ""}</option>`
@@ -336,7 +367,7 @@ async function loadPhysiciansForCity() {
     if (!city) { phSelect.innerHTML = '<option value="">Select a city first…</option>'; return; }
     phSelect.innerHTML = '<option value="">Loading…</option>';
     try {
-        const r = await fetch(`/api/patient/care/physicians?city=${encodeURIComponent(city)}`);
+        const r = await fetch(`/api/patient/care/physicians?city=${encodeURIComponent(city)}&user_id=${user.id}`);
         const physicians = await r.json();
         if (physicians.length === 0) {
             phSelect.innerHTML = '<option value="">No physicians at this location</option>';

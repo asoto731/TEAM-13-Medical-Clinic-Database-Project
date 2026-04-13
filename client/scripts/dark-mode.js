@@ -13,12 +13,13 @@
         const btn = document.getElementById("darkModeToggle");
         if (!btn) return;
         if (isDark()) {
-            btn.textContent = "☀ Light";
+            btn.textContent = "Light Mode";
             btn.title = "Switch to light mode";
         } else {
-            btn.textContent = "🌙 Dark";
+            btn.textContent = "Dark Mode";
             btn.title = "Switch to dark mode";
         }
+        if (typeof syncThemeButtons === "function") syncThemeButtons();
     }
 
     function toggle() {

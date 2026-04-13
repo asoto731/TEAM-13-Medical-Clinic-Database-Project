@@ -33,9 +33,40 @@ function showSection(name) {
     if (sec) sec.classList.remove("hidden");
     const btn = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
     if (btn) btn.classList.add("active");
-    const labels = { overview:"Overview", appointments:"Appointments", billing:"Billing Queue", profile:"My Profile" };
+    const labels = { overview:"Overview", appointments:"Appointments", billing:"Billing Queue", profile:"My Profile", settings:"Settings" };
     document.getElementById("currentSection").textContent = labels[name] || name;
 }
+
+/* ── Settings tabs ── */
+function switchSettingsTab(tab, btn) {
+    document.querySelectorAll(".settings-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".settings-tab-content").forEach(c => c.classList.add("hidden"));
+    if (btn) btn.classList.add("active");
+    const content = document.getElementById("stab-" + tab);
+    if (content) content.classList.remove("hidden");
+}
+
+/* ── Theme buttons sync ── */
+function syncThemeButtons() {
+    const dark = localStorage.getItem("theme") === "dark";
+    document.getElementById("themeLight")?.classList.toggle("active", !dark);
+    document.getElementById("themeDark")?.classList.toggle("active",  dark);
+}
+
+function setTheme(theme) {
+    if (theme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        localStorage.setItem("theme", "dark");
+    } else {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("theme", "light");
+    }
+    syncThemeButtons();
+    const btn = document.getElementById("darkModeToggle");
+    if (btn) btn.textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+
+syncThemeButtons();
 
 /* ── Helpers ── */
 document.getElementById("todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" });

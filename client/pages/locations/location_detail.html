@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Clinic Detail - Audit Trail Health</title>
+  <link rel="stylesheet" href="/client/styles/pages/locations.css">
+  <link rel="stylesheet" href="/client/styles/pages/sidebar.css">
+  <style>
+    .detail-wrap { max-width: 900px; margin: 120px auto 80px; padding: 0 32px; }
+    .detail-header { margin-bottom: 40px; }
+    .detail-header h1 { font-size: 28px; color: #1f2a6d; margin-bottom: 8px; }
+    .detail-header p { color: #666; font-size: 14px; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .detail-card { background: white; border-radius: 12px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    .detail-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; margin: 0 0 16px; font-weight: 700; }
+    .detail-card p { font-size: 14px; color: #444; margin: 0 0 8px; line-height: 1.6; }
+    .physician-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f8; }
+    .physician-row:last-child { border-bottom: none; }
+    .ph-avatar { width: 36px; height: 36px; border-radius: 50%; background: #1f2a6d; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .ph-name { font-size: 14px; font-weight: 600; color: #1f2a6d; }
+    .ph-spec { font-size: 12px; color: #888; }
+    .dept-tag { display: inline-block; background: #f0f4ff; color: #1f2a6d; border-radius: 6px; padding: 4px 12px; font-size: 12px; margin: 4px 4px 4px 0; }
+    .back-link { display: inline-block; margin-bottom: 24px; color: #6ea8fe; font-size: 13px; text-decoration: none; font-weight: 600; }
+    .back-link:hover { text-decoration: underline; }
+    @media(max-width:640px){ .detail-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <h2 class="logo">Audit Trail Health</h2>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/client/pages/about.html">About</a></li>
+      <li><a href="/client/pages/locations/locations.html">All Locations</a></li>
+      <li><a href="#" onclick="openSidebar('patient'); return false;">Patient Login</a></li>
+      <li><a href="#" onclick="openSidebar('staff'); return false;">Staff Portal</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="detail-wrap">
+  <a href="/client/pages/locations/locations.html" class="back-link">&larr; Back to All Locations</a>
+  <div id="detailContent">
+    <p style="color:#888;font-size:14px">Loading clinic details&hellip;</p>
+  </div>
+</div>
+
+<script src="/client/scripts/pages/sidebar.js" defer></script>
+<script>
+  var params = new URLSearchParams(window.location.search);
+  var city   = params.get('city');
+
+  if (!city) {
+    document.getElementById('detailContent').innerHTML = '<p style="color:#c00">No city specified.</p>';
+  } else {
+    fetch('/api/locations/detail?city=' + encodeURIComponent(city))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var clinic      = data.clinic      || {};
+        var departments = data.departments || [];
+        var physicians  = data.physicians  || [];
+
+        document.title = (clinic.city || city) + ' - Audit Trail Health';
+
+        var physHtml = physicians.length
+          ? physicians.map(function(p) {
+              var initials = (p.first_name||'')[0] + (p.last_name||'')[0];
+              return '<div class="physician-row">'
+                + '<div class="ph-avatar">' + initials + '</div>'
+                + '<div><div class="ph-name">Dr. ' + p.first_name + ' ' + p.last_name + '</div>'
+                + '<div class="ph-spec">' + (p.specialty || 'General Practice') + '</div></div>'
+                + '</div>';
+            }).join('')
+          : '<p style="color:#aaa;font-size:13px">No physicians listed for this location.</p>';
+
+        var deptsHtml = departments.length
+          ? departments.map(function(d) {
+              return '<span class="dept-tag">' + d.department_name + '</span>';
+            }).join('')
+          : '<p style="color:#aaa;font-size:13px">No departments listed.</p>';
+
+        document.getElementById('detailContent').innerHTML = ''
+          + '<div class="detail-header">'
+          + '<h1>' + (clinic.clinic_name || city) + '</h1>'
+          + '<p>' + [clinic.street_address, clinic.city, clinic.state, clinic.zip_code].filter(Boolean).join(', ') + '</p>'
+          + (clinic.phone_number ? '<p>' + clinic.phone_number + '</p>' : '')
+          + '</div>'
+          + '<div class="detail-grid">'
+          + '<div class="detail-card"><h3>Departments</h3>' + deptsHtml + '</div>'
+          + '<div class="detail-card"><h3>Physicians</h3>' + physHtml + '</div>'
+          + '</div>';
+      })
+      .catch(function() {
+        document.getElementById('detailContent').innerHTML = '<p style="color:#c00">Could not load clinic details.</p>';
+      });
+  }
+</script>
+</body>
+</html>

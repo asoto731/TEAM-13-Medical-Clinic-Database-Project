@@ -14,8 +14,8 @@
     <ul>
       <li><a href="/">Home</a></li>
       <li><a href="/client/pages/about.html">About</a></li>
-      <li><a href="/client/auth/patient_login.html">Patient Login</a></li>
-      <li><a href="/client/auth/staff_login.html">Staff Portal</a></li>
+      <li><a href="#" onclick="openSidebar('patient'); return false;">Patient Login</a></li>
+      <li><a href="#" onclick="openSidebar('staff'); return false;">Staff Portal</a></li>
     </ul>
   </nav>
 </header>
@@ -51,7 +51,7 @@
         var address   = c.street_address ? c.street_address + '<br>' + c.city + ', ' + c.state + ' ' + (c.zip_code || '') : c.city + ', ' + c.state;
         var depts     = c.departments || 'Multiple departments';
 
-        return '<a href="location_detail.html?city=' + citySlug + '" class="location-card">'
+        return '<a href="/client/pages/locations/location_detail.html?city=' + citySlug + '" class="location-card">'
           + '<div class="card-icon">&#43;</div>'
           + '<h3>' + c.city + ', ' + c.state + '</h3>'
           + '<p class="card-address">' + address + '</p>'
