@@ -215,28 +215,20 @@ nav a:hover {
 }
 
 .specialty-card {
-    background: #f8f9ff;
-    border-radius: 12px;
-    padding: 22px 18px;
-    text-align: center;
-    border: 1px solid #eef0f8;
-    transition: box-shadow 0.2s, transform 0.15s;
-    cursor: default;
+    background: white;
+    border-radius: 8px;
+    padding: 16px 18px;
+    border-left: 3px solid #1f2a6d;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    transition: transform 0.15s, box-shadow 0.15s;
 }
-
 .specialty-card:hover {
-    box-shadow: 0 4px 16px rgba(31,42,109,0.1);
     transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
-
-.spec-icon {
-    font-size: 24px;
-    margin-bottom: 10px;
-}
-
 .spec-name {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
     color: #1f2a6d;
 }
 

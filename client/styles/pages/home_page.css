@@ -11,11 +11,15 @@ body {
 }
 
 header {
-    position: absolute;
+    position: fixed;
     width: 100%;
     top: 0;
     left: 0;
-    z-index: 2;
+    z-index: 10;
+    background: rgba(10, 14, 30, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
 nav {
@@ -31,22 +35,9 @@ nav ul {
     list-style: none;
 }
 
-nav a {
-    text-decoration: none;
-    color: white;
-    font-weight: 500;
-    padding: 6px 14px;
-    border-radius: 6px;
-    transition: background 0.2s;
-}
-
-nav a:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.logo {
-    color: white;
-}
+nav a { color: rgba(255,255,255,0.88); text-decoration: none; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: background 0.2s; }
+nav a:hover { background: rgba(255,255,255,0.12); color: white; }
+.logo { color: white; font-size: 18px; letter-spacing: -0.3px; }
 
 .hero {
     height: 100vh;
@@ -57,6 +48,7 @@ nav a:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-top: 72px;
 }
 
 .hero::before {
@@ -253,4 +245,41 @@ nav a:hover {
 
 .btn-book:hover {
     background: #4a90e2;
+}
+
+/* ── Features strip ── */
+.features-strip {
+    background: #0d1420;
+    padding: 64px 80px;
+}
+.features-inner {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+.feature-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.feature-icon {
+    font-size: 22px;
+    color: #6ea8fe;
+    font-weight: 700;
+}
+.feature-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+}
+.feature-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+}
+@media (max-width: 768px) {
+    .features-inner { grid-template-columns: repeat(2, 1fr); }
+    .features-strip { padding: 40px 24px; }
 }

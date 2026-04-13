@@ -5,23 +5,99 @@
   <link rel="stylesheet" href="/client/styles/pages/locations.css">
   <link rel="stylesheet" href="/client/styles/pages/sidebar.css">
   <style>
-    .detail-wrap { max-width: 900px; margin: 120px auto 80px; padding: 0 32px; }
-    .detail-header { margin-bottom: 40px; }
-    .detail-header h1 { font-size: 28px; color: #1f2a6d; margin-bottom: 8px; }
-    .detail-header p { color: #666; font-size: 14px; }
+    .detail-hero {
+        background-image: url("/images/locations.jpg");
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        padding: 120px 80px 60px;
+        min-height: 260px;
+        display: flex;
+        align-items: flex-end;
+    }
+    .detail-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 14, 30, 0.68);
+    }
+    .detail-hero-text { position: relative; z-index: 1; }
+    .detail-hero-text h1 { font-size: 32px; color: white; margin: 0 0 8px; font-weight: 700; }
+    .detail-hero-text p  { font-size: 14px; color: rgba(255,255,255,0.75); margin: 0; }
+    .detail-back {
+        position: absolute;
+        top: 90px;
+        left: 80px;
+        z-index: 2;
+        color: rgba(255,255,255,0.8);
+        font-size: 13px;
+        text-decoration: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .detail-back:hover { color: white; }
+
+    .detail-body { max-width: 1000px; margin: 0 auto; padding: 48px 32px 80px; }
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .detail-card { background: white; border-radius: 12px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
-    .detail-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; margin: 0 0 16px; font-weight: 700; }
-    .detail-card p { font-size: 14px; color: #444; margin: 0 0 8px; line-height: 1.6; }
-    .physician-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f8; }
-    .physician-row:last-child { border-bottom: none; }
-    .ph-avatar { width: 36px; height: 36px; border-radius: 50%; background: #1f2a6d; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-    .ph-name { font-size: 14px; font-weight: 600; color: #1f2a6d; }
-    .ph-spec { font-size: 12px; color: #888; }
-    .dept-tag { display: inline-block; background: #f0f4ff; color: #1f2a6d; border-radius: 6px; padding: 4px 12px; font-size: 12px; margin: 4px 4px 4px 0; }
-    .back-link { display: inline-block; margin-bottom: 24px; color: #6ea8fe; font-size: 13px; text-decoration: none; font-weight: 600; }
-    .back-link:hover { text-decoration: underline; }
-    @media(max-width:640px){ .detail-grid { grid-template-columns: 1fr; } }
+
+    .detail-card {
+        background: white;
+        border-radius: 14px;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+    .detail-card-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #aaa;
+        margin: 0 0 20px;
+    }
+    .info-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px; }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-label { font-size: 11px; color: #bbb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .info-value { font-size: 14px; color: #333; }
+
+    .dept-tag {
+        display: inline-block;
+        background: #f0f4ff;
+        color: #1f2a6d;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 4px 4px 4px 0;
+        border: 1px solid #dce6ff;
+    }
+    .physician-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f2f8;
+    }
+    .physician-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .ph-avatar {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1f2a6d, #3d52a0);
+        color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 700;
+        flex-shrink: 0;
+    }
+    .ph-name { font-size: 14px; font-weight: 600; color: #1f2a6d; margin-bottom: 2px; }
+    .ph-spec { font-size: 12px; color: #999; }
+
+    @media (max-width: 680px) {
+        .detail-grid { grid-template-columns: 1fr; }
+        .detail-hero { padding: 100px 24px 48px; }
+        .detail-back { left: 24px; }
+        .detail-body { padding: 32px 16px 60px; }
+    }
   </style>
 </head>
 <body>
@@ -39,10 +115,17 @@
   </nav>
 </header>
 
-<div class="detail-wrap">
-  <a href="/client/pages/locations/locations.html" class="back-link">&larr; Back to All Locations</a>
-  <div id="detailContent">
-    <p style="color:#888;font-size:14px">Loading clinic details&hellip;</p>
+<div class="detail-hero" id="detailHero">
+  <a href="/client/pages/locations/locations.html" class="detail-back">&larr; All Locations</a>
+  <div class="detail-hero-text">
+    <h1 id="heroTitle">Loading&hellip;</h1>
+    <p id="heroSub"></p>
+  </div>
+</div>
+
+<div class="detail-body">
+  <div class="detail-grid" id="detailGrid">
+    <p style="color:#aaa;font-size:14px;grid-column:1/-1">Loading clinic details&hellip;</p>
   </div>
 </div>
 
@@ -52,7 +135,7 @@
   var city   = params.get('city');
 
   if (!city) {
-    document.getElementById('detailContent').innerHTML = '<p style="color:#c00">No city specified.</p>';
+    document.getElementById('heroTitle').textContent = 'Location not found';
   } else {
     fetch('/api/locations/detail?city=' + encodeURIComponent(city))
       .then(function(r) { return r.json(); })
@@ -61,38 +144,47 @@
         var departments = data.departments || [];
         var physicians  = data.physicians  || [];
 
-        document.title = (clinic.city || city) + ' - Audit Trail Health';
+        // Hero
+        document.title = (clinic.clinic_name || city) + ' - Audit Trail Health';
+        document.getElementById('heroTitle').textContent = clinic.clinic_name || city;
+        document.getElementById('heroSub').textContent  =
+          [clinic.street_address, clinic.city, clinic.state, clinic.zip_code].filter(Boolean).join(', ');
 
-        var physHtml = physicians.length
-          ? physicians.map(function(p) {
-              var initials = (p.first_name||'')[0] + (p.last_name||'')[0];
-              return '<div class="physician-row">'
-                + '<div class="ph-avatar">' + initials + '</div>'
-                + '<div><div class="ph-name">Dr. ' + p.first_name + ' ' + p.last_name + '</div>'
-                + '<div class="ph-spec">' + (p.specialty || 'General Practice') + '</div></div>'
-                + '</div>';
-            }).join('')
-          : '<p style="color:#aaa;font-size:13px">No physicians listed for this location.</p>';
-
-        var deptsHtml = departments.length
-          ? departments.map(function(d) {
-              return '<span class="dept-tag">' + d.department_name + '</span>';
-            }).join('')
-          : '<p style="color:#aaa;font-size:13px">No departments listed.</p>';
-
-        document.getElementById('detailContent').innerHTML = ''
-          + '<div class="detail-header">'
-          + '<h1>' + (clinic.clinic_name || city) + '</h1>'
-          + '<p>' + [clinic.street_address, clinic.city, clinic.state, clinic.zip_code].filter(Boolean).join(', ') + '</p>'
-          + (clinic.phone_number ? '<p>' + clinic.phone_number + '</p>' : '')
-          + '</div>'
-          + '<div class="detail-grid">'
-          + '<div class="detail-card"><h3>Departments</h3>' + deptsHtml + '</div>'
-          + '<div class="detail-card"><h3>Physicians</h3>' + physHtml + '</div>'
+        // Clinic info card
+        var infoHtml = '<div class="detail-card">'
+          + '<div class="detail-card-title">Clinic Information</div>'
+          + '<div class="info-row"><div class="info-label">Address</div><div class="info-value">'
+          + (clinic.street_address || '—') + '<br>'
+          + (clinic.city || '') + ', ' + (clinic.state || '') + ' ' + (clinic.zip_code || '')
+          + '</div></div>'
+          + '<div class="info-row"><div class="info-label">Phone</div><div class="info-value">' + (clinic.phone_number || '—') + '</div></div>'
+          + '<div class="info-row"><div class="info-label">Departments</div><div class="info-value" style="margin-top:4px">'
+          + (departments.length
+              ? departments.map(function(d){ return '<span class="dept-tag">' + d.department_name + '</span>'; }).join('')
+              : '<span style="color:#aaa;font-size:13px">None listed</span>')
+          + '</div></div>'
           + '</div>';
+
+        // Physicians card
+        var physHtml = '<div class="detail-card">'
+          + '<div class="detail-card-title">Physicians at this Location</div>'
+          + (physicians.length
+              ? physicians.map(function(p){
+                  var initials = ((p.first_name||'')[0]||'') + ((p.last_name||'')[0]||'');
+                  return '<div class="physician-row">'
+                    + '<div class="ph-avatar">' + initials.toUpperCase() + '</div>'
+                    + '<div><div class="ph-name">Dr. ' + p.first_name + ' ' + p.last_name + '</div>'
+                    + '<div class="ph-spec">' + (p.specialty || 'General Practice') + '</div></div>'
+                    + '</div>';
+                }).join('')
+              : '<p style="color:#aaa;font-size:13px">No physicians listed.</p>')
+          + '</div>';
+
+        document.getElementById('detailGrid').innerHTML = infoHtml + physHtml;
       })
       .catch(function() {
-        document.getElementById('detailContent').innerHTML = '<p style="color:#c00">Could not load clinic details.</p>';
+        document.getElementById('heroTitle').textContent = 'Could not load clinic';
+        document.getElementById('detailGrid').innerHTML = '<p style="color:#c00;font-size:14px;grid-column:1/-1">Could not load clinic details. Please try again.</p>';
       });
   }
 </script>
