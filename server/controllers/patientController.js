@@ -63,11 +63,16 @@ const getPatientDashboard = (req, res) => {
       ORDER BY diagnosis_date DESC`;
 
     const billingSql = `
-      SELECT b.bill_id, b.total_amount, b.tax_amount,
-             b.payment_status, b.payment_method, b.payment_date,
-             ins.provider_name
+      SELECT b.bill_id, b.total_amount, b.insurance_paid_amount,
+             b.patient_owed, b.payment_status, b.payment_method,
+             b.payment_date, b.due_date,
+             ins.provider_name,
+             a.appointment_date, a.appointment_type,
+             ph.first_name AS doc_first, ph.last_name AS doc_last
       FROM billing b
       LEFT JOIN insurance ins ON b.insurance_id = ins.insurance_id
+      LEFT JOIN appointment a  ON b.appointment_id = a.appointment_id
+      LEFT JOIN physician ph   ON a.physician_id = ph.physician_id
       WHERE b.patient_id = ?
       ORDER BY b.bill_id DESC
       LIMIT 10`;
@@ -84,14 +89,21 @@ const getPatientDashboard = (req, res) => {
       WHERE r.patient_id = ?
       ORDER BY r.date_issued DESC`;
 
+    // Check if patient has at least one completed appointment with their primary physician
+    const eligibilitySql = `
+      SELECT COUNT(*) AS cnt FROM appointment
+      WHERE patient_id = ? AND physician_id = ? AND status_id = 2`;
+
     let data = { patient };
     let completed = 0;
-    function finish() { completed++; if (completed === 4) res.json(data); }
+    function finish() { completed++; if (completed === 5) res.json(data); }
 
     db.query(appointmentsSql, [patient_id], (e, r) => { data.appointments = e ? [] : r; finish(); });
     db.query(historySQL,      [patient_id], (e, r) => { data.history      = e ? [] : r; finish(); });
     db.query(billingSql,      [patient_id], (e, r) => { data.billing      = e ? [] : r; finish(); });
     db.query(referralSql,     [patient_id], (e, r) => { data.referrals    = e ? [] : r; finish(); });
+    db.query(eligibilitySql,  [patient_id, patient.primary_physician_id || 0],
+        (e, r) => { data.referralEligible = !e && r[0].cnt > 0; finish(); });
   });
 };
 
@@ -217,4 +229,65 @@ const assignCare = (req, res) => {
     );
 };
 
-module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare };
+/* GET /api/patient/referral/specialists?city=X */
+const getSpecialistsByCity = (req, res) => {
+    const { city } = req.query;
+    if (!city) return res.status(400).json({ message: "city required" });
+    const sql = `
+        SELECT DISTINCT ph.physician_id, ph.first_name, ph.last_name, ph.specialty
+        FROM physician ph
+        JOIN work_schedule ws ON ph.physician_id = ws.physician_id
+        JOIN office o ON ws.office_id = o.office_id
+        WHERE o.city = ? AND ph.physician_type = 'specialist'
+        ORDER BY ph.specialty, ph.last_name`;
+    db.query(sql, [city], (err, rows) => {
+        if (err) return res.status(500).json({ message: "Query failed" });
+        res.json(rows);
+    });
+};
+
+/* POST /api/patient/referral/request */
+const requestReferral = (req, res) => {
+    const { user_id, specialist_id, referral_reason } = req.body;
+    if (!user_id || !specialist_id || !referral_reason)
+        return res.status(400).json({ message: "user_id, specialist_id, and referral_reason are required" });
+
+    // Get patient + primary_physician_id
+    db.query(
+        "SELECT patient_id, primary_physician_id FROM patient WHERE user_id = ?",
+        [user_id],
+        (err, rows) => {
+            if (err || rows.length === 0)
+                return res.status(400).json({ message: "Patient not found" });
+
+            const { patient_id, primary_physician_id } = rows[0];
+            if (!primary_physician_id)
+                return res.status(400).json({ message: "You must have a primary physician assigned before requesting a referral" });
+
+            // Verify eligibility: at least one completed appointment with primary
+            db.query(
+                "SELECT COUNT(*) AS cnt FROM appointment WHERE patient_id = ? AND physician_id = ? AND status_id = 2",
+                [patient_id, primary_physician_id],
+                (e2, r2) => {
+                    if (e2 || r2[0].cnt === 0)
+                        return res.status(403).json({ message: "You must have at least one completed appointment with your primary physician before requesting a specialist referral" });
+
+                    const today = new Date().toISOString().split("T")[0];
+                    const expiry = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+                    db.query(
+                        `INSERT INTO referral (patient_id, primary_physician_id, specialist_id, date_issued, expiration_date, referral_status_id, referral_reason)
+                         VALUES (?, ?, ?, ?, ?, 1, ?)`,
+                        [patient_id, primary_physician_id, specialist_id, today, expiry, referral_reason],
+                        (e3) => {
+                            if (e3) return res.status(500).json({ message: "Could not create referral request" });
+                            res.json({ message: "Referral request submitted successfully" });
+                        }
+                    );
+                }
+            );
+        }
+    );
+};
+
+module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare, getSpecialistsByCity, requestReferral };

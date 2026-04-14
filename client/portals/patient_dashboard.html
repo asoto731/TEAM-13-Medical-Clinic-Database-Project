@@ -357,7 +357,7 @@
                 </div>
                 <table class="data-table">
                     <thead>
-                        <tr><th>Bill #</th><th>Total</th><th>Tax</th><th>Insurance</th><th>Method</th><th>Date Paid</th><th>Status</th></tr>
+                        <tr><th>Date</th><th>Physician</th><th>Charge</th><th>Insurance Paid</th><th>You Owe</th><th>Due Date</th><th>Status</th></tr>
                     </thead>
                     <tbody id="billingBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
                 </table>
@@ -391,9 +391,36 @@
                         <h3>My Referrals</h3>
                         <p class="section-block-sub">Specialist referrals issued by your primary physician.</p>
                     </div>
+                    <button class="profile-edit-btn" id="requestReferralBtn" onclick="openReferralModal()" style="display:none">Request Referral</button>
+                </div>
+                <div id="referralGateMsg" style="display:none;padding:16px 24px">
+                    <div style="background:#fef9ec;border:1px solid #f59e0b44;border-radius:10px;padding:14px 18px;font-size:13px;color:#92400e;line-height:1.6">
+                        You need at least one completed appointment with your primary physician before you can request a specialist referral.
+                    </div>
                 </div>
                 <div id="referralsList" style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
                     <p class="table-empty">Loading…</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Request Referral Modal ── -->
+        <div class="modal-overlay hidden" id="referralModal">
+            <div class="modal-box" style="max-width:480px">
+                <div class="modal-header"><h3>Request a Specialist Referral</h3><button class="modal-close" onclick="closeReferralModal()">&#10005;</button></div>
+                <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+                    <div class="form-group">
+                        <label class="form-label">Specialist</label>
+                        <select class="form-input" id="rf_specialist">
+                            <option value="">Loading specialists…</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reason for Referral</label>
+                        <textarea class="form-input" id="rf_reason" rows="4" placeholder="Describe your symptoms or reason for requesting a specialist…" style="resize:vertical"></textarea>
+                    </div>
+                    <div id="referralFormError" style="color:#e05c5c;font-size:13px;display:none"></div>
+                    <button class="btn-primary" onclick="submitReferralRequest()">Submit Request</button>
                 </div>
             </div>
         </div>
