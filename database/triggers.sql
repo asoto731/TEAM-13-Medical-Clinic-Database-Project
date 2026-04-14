@@ -132,3 +132,32 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- ─────────────────────────────────────────────────────────────
+-- Trigger 3: Block patient double-booking
+--
+-- Prevents a patient from booking two appointments at the exact
+-- same date and time (even with different physicians).
+-- Fires at the DB level — error is returned to the booking UI.
+-- ─────────────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS before_appointment_double_book;
+
+DELIMITER $$
+
+CREATE TRIGGER before_appointment_double_book
+BEFORE INSERT ON appointment
+FOR EACH ROW
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM appointment
+    WHERE patient_id       = NEW.patient_id
+      AND appointment_date = NEW.appointment_date
+      AND appointment_time = NEW.appointment_time
+      AND status_id        != 3  -- ignore Cancelled slots
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Patient already has an appointment at this date and time.';
+  END IF;
+END$$
+
+DELIMITER ;
