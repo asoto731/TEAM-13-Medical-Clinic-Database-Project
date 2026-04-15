@@ -436,6 +436,27 @@ async function submitCareSetup() {
         return;
     }
 
+    // If patient already has a physician assigned, show confirmation
+    const confirmEl = document.getElementById("careChangeConfirm");
+    if (confirmEl && confirmEl.dataset.shown !== "true") {
+        // Check if they're actually changing physicians
+        const dashRes = await fetch(`/api/patient/dashboard?user_id=${user.id}`);
+        const dashData = await dashRes.json();
+        const currentPhysicianId = dashData.patient && dashData.patient.primary_physician_id;
+
+        if (currentPhysicianId && String(currentPhysicianId) !== String(physician_id)) {
+            // Show inline confirmation warning
+            confirmEl.style.display = "";
+            confirmEl.dataset.shown = "true";
+            msg.className = "modal-save-msg";
+            msg.textContent = "";
+            return; // wait for user to confirm
+        }
+    }
+
+    // Reset confirm state
+    if (confirmEl) { confirmEl.style.display = "none"; confirmEl.dataset.shown = "false"; }
+
     msg.className = "modal-save-msg";
     msg.textContent = "Saving…";
 
@@ -448,15 +469,29 @@ async function submitCareSetup() {
         const data = await r.json();
         if (!r.ok) throw new Error(data.message || "Failed to assign care team");
         msg.className = "modal-save-msg success";
-        msg.textContent = "Care team set! Loading your dashboard…";
+        msg.textContent = data.physicianChanged
+            ? "Physician changed. Any pending referral requests have been cancelled."
+            : "Care team set! Loading your dashboard…";
         setTimeout(() => {
             closeCareModal();
             loadDashboard();
-        }, 1000);
+        }, 1500);
     } catch(err) {
         msg.className = "modal-save-msg error";
         msg.textContent = err.message || "Something went wrong. Please try again.";
     }
+}
+
+function confirmCareChange() {
+    // User clicked "Yes, change physician" — force through
+    const confirmEl = document.getElementById("careChangeConfirm");
+    if (confirmEl) { confirmEl.dataset.shown = "true"; }
+    submitCareSetup();
+}
+
+function cancelCareChange() {
+    const confirmEl = document.getElementById("careChangeConfirm");
+    if (confirmEl) { confirmEl.style.display = "none"; confirmEl.dataset.shown = "false"; }
 }
 
 /* ── Referral Request Modal ── */

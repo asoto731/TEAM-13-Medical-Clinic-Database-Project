@@ -80,7 +80,8 @@ const getPatientDashboard = (req, res) => {
 
     const referralSql = `
       SELECT r.referral_id, r.date_issued, r.expiration_date, r.referral_reason,
-             rs.status_name,
+             r.specialist_id,
+             rs.referral_status_name AS status_name,
              ph1.first_name AS ref_first, ph1.last_name AS ref_last, ph1.specialty AS ref_specialty,
              ph2.first_name AS spec_first, ph2.last_name AS spec_last, ph2.specialty AS spec_specialty
       FROM referral r
@@ -220,14 +221,39 @@ const getInsuranceOptions = (req, res) => {
 const assignCare = (req, res) => {
     const { user_id, physician_id, insurance_id } = req.body;
     if (!user_id || !physician_id) return res.status(400).json({ message: "user_id and physician_id required" });
-    db.query(
-        "UPDATE patient SET primary_physician_id = ?, insurance_id = ? WHERE user_id = ?",
-        [physician_id, insurance_id || null, user_id],
-        (err) => {
-            if (err) return res.status(500).json({ message: "Could not assign care team" });
-            res.json({ message: "Care team assigned successfully" });
-        }
-    );
+
+    // Get current physician so we know if this is a change
+    db.query("SELECT patient_id, primary_physician_id FROM patient WHERE user_id = ?", [user_id], (err, rows) => {
+        if (err || !rows.length) return res.status(500).json({ message: "Patient not found" });
+
+        const { patient_id, primary_physician_id: oldPhysicianId } = rows[0];
+        const isChanging = oldPhysicianId && String(oldPhysicianId) !== String(physician_id);
+
+        // Update the physician + insurance
+        db.query(
+            "UPDATE patient SET primary_physician_id = ?, insurance_id = ? WHERE user_id = ?",
+            [physician_id, insurance_id || null, user_id],
+            (err2) => {
+                if (err2) return res.status(500).json({ message: "Could not assign care team" });
+
+                // If changing physicians, cancel any Requested referrals (not yet issued)
+                // Issued/Accepted/Scheduled referrals stay valid — already in progress
+                if (isChanging) {
+                    db.query(
+                        `UPDATE referral
+                         SET referral_status_id = (SELECT referral_status_id FROM referral_status WHERE referral_status_name = 'Expired')
+                         WHERE patient_id = ?
+                           AND primary_physician_id = ?
+                           AND referral_status_id = (SELECT referral_status_id FROM referral_status WHERE referral_status_name = 'Requested')`,
+                        [patient_id, oldPhysicianId],
+                        () => {} // fire and forget — don't block the response
+                    );
+                }
+
+                res.json({ message: "Care team assigned successfully", physicianChanged: isChanging });
+            }
+        );
+    });
 };
 
 /* GET /api/patient/referral/specialists?city=X */
