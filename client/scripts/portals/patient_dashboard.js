@@ -156,15 +156,18 @@ async function loadDashboard() {
         document.getElementById("avatarInitials").textContent = (firstName[0] || "") + (lastName[0] || "");
 
         /* ── Stats ── */
-        const upcoming   = appointments.filter(a => new Date(a.appointment_date) >= new Date()).length;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const upcoming   = appointments.filter(a => a.status_name === "Scheduled" && new Date(a.appointment_date) >= today).length;
         const unpaidBills = billing.filter(b => !b.payment_status || b.payment_status.toLowerCase() !== "paid").length;
         document.getElementById("statAppts").textContent      = appointments.length;
         document.getElementById("statUpcoming").textContent   = upcoming;
         document.getElementById("statConditions").textContent = history.length;
         document.getElementById("statBills").textContent      = unpaidBills;
 
-        /* ── Overview: upcoming appointments ── */
-        const overviewAppts = appointments.filter(a => a.status_name !== "Cancelled").slice(0, 5);
+        /* ── Overview: upcoming appointments (Scheduled only, future dates) ── */
+        const overviewAppts = appointments
+            .filter(a => a.status_name === "Scheduled" && new Date(a.appointment_date) >= today)
+            .slice(0, 5);
         const oBody = document.getElementById("overviewApptBody");
         oBody.innerHTML = overviewAppts.length
             ? overviewAppts.map(a => `<tr>
@@ -197,21 +200,39 @@ async function loadDashboard() {
                 <button class="profile-edit-btn" onclick="openCareModal()" style="margin-top:8px">Change Care Team</button>`;
         }
 
-        /* ── Appointments table ── */
-        const aBody = document.getElementById("apptBody");
-        aBody.innerHTML = appointments.length
-            ? appointments.map(a => `<tr>
+        /* ── Appointments: split into upcoming and past ── */
+        const upcomingAppts = appointments.filter(a =>
+            a.status_name === "Scheduled" && new Date(a.appointment_date) >= today
+        ).sort((a,b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+
+        const pastAppts = appointments.filter(a =>
+            a.status_name !== "Scheduled" || new Date(a.appointment_date) < today
+        ).sort((a,b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
+        const upBody = document.getElementById("apptUpcomingBody");
+        upBody.innerHTML = upcomingAppts.length
+            ? upcomingAppts.map(a => `<tr>
                 <td class="primary">${fmt(a.appointment_date)}</td>
                 <td>${timeFmt(a.appointment_time)}</td>
                 <td>Dr. ${a.doc_first} ${a.doc_last}</td>
                 <td>${a.city || "—"}</td>
                 <td>${a.reason_for_visit || "—"}</td>
                 <td>${pill(a.status_name)}</td>
-                <td>${a.status_name === "Scheduled"
-                    ? `<button onclick="cancelAppointment(${a.appointment_id})" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #e05c5c;color:#e05c5c;border-radius:6px;cursor:pointer;font-family:inherit">Cancel</button>`
-                    : "—"}</td>
+                <td><button onclick="cancelAppointment(${a.appointment_id})" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #e05c5c;color:#e05c5c;border-radius:6px;cursor:pointer;font-family:inherit">Cancel</button></td>
             </tr>`).join("")
-            : `<tr><td colspan="7" class="table-empty">No appointments found</td></tr>`;
+            : `<tr><td colspan="7" class="table-empty">No upcoming appointments</td></tr>`;
+
+        const pastBody = document.getElementById("apptPastBody");
+        pastBody.innerHTML = pastAppts.length
+            ? pastAppts.map(a => `<tr>
+                <td class="primary">${fmt(a.appointment_date)}</td>
+                <td>${timeFmt(a.appointment_time)}</td>
+                <td>Dr. ${a.doc_first} ${a.doc_last}</td>
+                <td>${a.city || "—"}</td>
+                <td>${a.reason_for_visit || "—"}</td>
+                <td>${pill(a.status_name)}</td>
+            </tr>`).join("")
+            : `<tr><td colspan="6" class="table-empty">No past appointments on record</td></tr>`;
 
         /* ── Medical history table ── */
         const hBody = document.getElementById("historyBody");

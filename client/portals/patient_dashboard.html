@@ -340,16 +340,29 @@
 
         <!-- ── Appointments Section ── -->
         <div class="page-section hidden" id="sec-appointments">
-            <div class="section-block">
+            <!-- Upcoming -->
+            <div class="section-block" style="margin-bottom:24px">
                 <div class="section-block-header">
-                    <div><h3>My Appointments</h3><p>All appointments on file</p></div>
+                    <div><h3>Upcoming Appointments</h3><p>Scheduled visits</p></div>
                     <button class="profile-edit-btn" onclick="openBookingModal()">+ Book Appointment</button>
                 </div>
                 <table class="data-table">
                     <thead>
                         <tr><th>Date</th><th>Time</th><th>Physician</th><th>Location</th><th>Reason</th><th>Status</th><th>Action</th></tr>
                     </thead>
-                    <tbody id="apptBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    <tbody id="apptUpcomingBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                </table>
+            </div>
+            <!-- Past -->
+            <div class="section-block">
+                <div class="section-block-header">
+                    <div><h3>Past Appointments</h3><p>Completed, no-shows, and cancelled visits</p></div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Date</th><th>Time</th><th>Physician</th><th>Location</th><th>Reason</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="apptPastBody"><tr><td colspan="6" class="table-empty">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
