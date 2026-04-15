@@ -231,46 +231,61 @@ async function submitNote() {
 /* ── Referral Modal (context-aware: PCP issues, Specialist accepts) ── */
 function openReferralModal(referral, context) {
     // context = "pcp" (primary issuing) or "specialist" (specialist accepting)
-    document.getElementById("refModalPatient").textContent   = `${referral.patient_first} ${referral.patient_last}`;
-    document.getElementById("refModalPrimary").textContent   = `Dr. ${referral.primary_first} ${referral.primary_last} (${referral.primary_specialty || "—"})`;
-    document.getElementById("refModalReason").textContent    = referral.referral_reason || "—";
-    document.getElementById("refModalIssued").textContent    = fmt(referral.date_issued);
-    document.getElementById("refModalExpires").textContent   = fmt(referral.expiration_date);
-    document.getElementById("refModalStatus").innerHTML      = pill(referral.referral_status_name);
-
-    const acceptBtn = document.getElementById("refModalAccept");
-    const rejectBtn = document.getElementById("refModalReject");
-    const statusNote = document.getElementById("refModalNote");
-
     const status = referral.referral_status_name;
 
+    document.getElementById("refModalPatient").textContent = `${referral.patient_first} ${referral.patient_last}`;
+    document.getElementById("refModalReason").textContent  = referral.referral_reason || "—";
+    document.getElementById("refModalIssued").textContent  = fmt(referral.date_issued);
+    document.getElementById("refModalExpires").textContent = fmt(referral.expiration_date);
+    document.getElementById("refModalStatus").innerHTML    = pill(status);
+
+    // Context-specific second row label + value
+    const secondLabel = document.getElementById("refModalSecondLabel");
+    const secondVal   = document.getElementById("refModalSecondVal");
+
     if (context === "pcp") {
-        // PCP sees patient requests — can Issue or Reject
+        // PCP sees: who the patient wants to see
+        if (secondLabel) secondLabel.textContent = "Specialist Requested";
+        if (secondVal)   secondVal.textContent   = referral.spec_first
+            ? `Dr. ${referral.spec_first} ${referral.spec_last} — ${referral.specialty || referral.spec_specialty || "—"}`
+            : "—";
+    } else {
+        // Specialist sees: who referred this patient
+        if (secondLabel) secondLabel.textContent = "Referred By";
+        if (secondVal)   secondVal.textContent   = referral.primary_first
+            ? `Dr. ${referral.primary_first} ${referral.primary_last}`
+            : "—";
+    }
+
+    const acceptBtn  = document.getElementById("refModalAccept");
+    const rejectBtn  = document.getElementById("refModalReject");
+    const statusNote = document.getElementById("refModalNote");
+
+    if (context === "pcp") {
         if (status === "Requested") {
             acceptBtn.style.display = "";
             rejectBtn.style.display = "";
             acceptBtn.textContent = "Issue to Specialist";
             acceptBtn.onclick = () => updateReferralStatus(referral.referral_id, "Issued", "pcp");
             rejectBtn.onclick = () => updateReferralStatus(referral.referral_id, "Rejected", "pcp");
-            if (statusNote) statusNote.textContent = "Review the patient's request and issue it to the specialist, or reject it.";
+            if (statusNote) statusNote.textContent = "Review the patient's request and forward it to the specialist, or decline it.";
         } else {
             acceptBtn.style.display = "none";
             rejectBtn.style.display = "none";
-            if (statusNote) statusNote.textContent = `This referral is currently: ${status}. No action required.`;
+            if (statusNote) statusNote.textContent = `Status: ${status} — no action required.`;
         }
     } else {
-        // Specialist sees issued referrals — can Accept or Reject
         if (status === "Issued") {
             acceptBtn.style.display = "";
             rejectBtn.style.display = "";
             acceptBtn.textContent = "Accept Patient";
             acceptBtn.onclick = () => updateReferralStatus(referral.referral_id, "Accepted", "specialist");
             rejectBtn.onclick = () => updateReferralStatus(referral.referral_id, "Rejected", "specialist");
-            if (statusNote) statusNote.textContent = "Review this referral and accept or decline the patient.";
+            if (statusNote) statusNote.textContent = "Review this referral and decide whether to accept this patient.";
         } else {
             acceptBtn.style.display = "none";
             rejectBtn.style.display = "none";
-            if (statusNote) statusNote.textContent = `This referral is currently: ${status}. No action required.`;
+            if (statusNote) statusNote.textContent = `Status: ${status} — no action required.`;
         }
     }
 
@@ -286,7 +301,7 @@ async function updateReferralStatus(referral_id, status_name, context) {
         const res = await fetch(`/api/staff/referral/${referral_id}/status`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status_name })
+            body: JSON.stringify({ status_name, user_id: user.id })
         });
         const data = await res.json();
         if (res.ok) {
