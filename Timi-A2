@@ -1,0 +1,228 @@
+-- =====================================================
+-- Medical Clinic Database Seed Data
+-- Team 13 - Medical Clinic Database Project
+-- =====================================================
+
+USE medical_clinic;
+
+-- =====================================================
+-- 1. Appointment Status Lookup
+-- =====================================================
+INSERT INTO appointment_status (status_name) VALUES
+('Scheduled'),
+('Completed'),
+('Cancelled'),
+('No-Show');
+
+-- =====================================================
+-- 2. Insurance Providers
+-- =====================================================
+INSERT INTO insurance (provider_name, coverage_percentage, contact_phone) VALUES
+('Blue Cross Blue Shield', 80.00, '800-123-4567'),
+('Aetna', 75.00, '800-234-5678'),
+('United Healthcare', 85.00, '800-345-6789'),
+('Cigna', 70.00, '800-456-7890'),
+('Medicare', 80.00, '800-567-8901'),
+('Medicaid', 90.00, '800-678-9012'),
+('Humana', 75.00, '800-789-0123'),
+('Kaiser Permanente', 85.00, '800-890-1234');
+
+-- =====================================================
+-- 3. Office Locations
+-- =====================================================
+INSERT INTO office (street_address, city, state, zip_code, phone_number) VALUES
+('123 Main Street', 'Houston', 'TX', '77001', '713-555-1000'),
+('456 Medical Center Blvd', 'Dallas', 'TX', '75201', '214-555-2000'),
+('789 Healthcare Ave', 'Austin', 'TX', '78701', '512-555-3000'),
+('321 Wellness Drive', 'San Antonio', 'TX', '78201', '210-555-4000'),
+('555 Clinic Road', 'Fort Worth', 'TX', '76101', '817-555-5000');
+
+-- =====================================================
+-- 4. Physicians
+-- =====================================================
+INSERT INTO physician (first_name, last_name, specialty, license_number, email, phone_number, is_primary_care) VALUES
+('Sarah', 'Johnson', 'Family Medicine', 'TX12345', 'dr.johnson@medicalclinic.com', '713-555-1001', TRUE),
+('Michael', 'Moore', 'Internal Medicine', 'TX12346', 'dr.moore@medicalclinic.com', '713-555-1002', TRUE),
+('Emily', 'White', 'Cardiology', 'TX12347', 'dr.white@medicalclinic.com', '713-555-1003', FALSE),
+('James', 'Foster', 'Dermatology', 'TX12348', 'dr.foster@medicalclinic.com', '713-555-1004', FALSE),
+('Lisa', 'Chen', 'Pediatrics', 'TX12349', 'dr.chen@medicalclinic.com', '214-555-2001', TRUE),
+('Robert', 'Patel', 'Orthopedics', 'TX12350', 'dr.patel@medicalclinic.com', '214-555-2002', FALSE),
+('Maria', 'Garcia', 'Neurology', 'TX12351', 'dr.garcia@medicalclinic.com', '512-555-3001', FALSE),
+('David', 'Kim', 'Ophthalmology', 'TX12352', 'dr.kim@medicalclinic.com', '512-555-3002', FALSE),
+('Jennifer', 'Williams', 'Obstetrics', 'TX12353', 'dr.williams@medicalclinic.com', '210-555-4001', TRUE),
+('Thomas', 'Brown', 'Psychiatry', 'TX12354', 'dr.brown@medicalclinic.com', '210-555-4002', FALSE);
+
+-- =====================================================
+-- 5. Patients
+-- =====================================================
+INSERT INTO patient (first_name, last_name, date_of_birth, email, phone_number, street_address, city, state, zip_code, insurance_id, emergency_contact_name, emergency_contact_phone) VALUES
+('Alex', 'Smith', '1985-03-15', 'alex.smith@email.com', '281-555-0101', '100 Oak Street', 'Houston', 'TX', '77001', 1, 'Jane Smith', '281-555-0202'),
+('Taylor', 'Jones', '1990-07-22', 'taylor.jones@email.com', '832-555-0202', '200 Pine Avenue', 'Dallas', 'TX', '75201', 2, 'Chris Jones', '832-555-0303'),
+('Morgan', 'Williams', '1978-11-30', 'morgan.w@email.com', '713-555-0303', '300 Elm Street', 'Austin', 'TX', '78701', 3, 'Pat Williams', '713-555-0404'),
+('Jordan', 'Brown', '1995-02-10', 'jordan.brown@email.com', '214-555-0404', '400 Maple Drive', 'Houston', 'TX', '77002', 1, 'Casey Brown', '214-555-0505'),
+('Casey', 'Davis', '1982-09-05', 'casey.davis@email.com', '512-555-0505', '500 Cedar Lane', 'San Antonio', 'TX', '78201', 4, 'Riley Davis', '512-555-0606'),
+('Riley', 'Miller', '2000-01-20', 'riley.miller@email.com', '817-555-0606', '600 Birch Road', 'Fort Worth', 'TX', '76101', 5, 'Sam Miller', '817-555-0707'),
+('Jamie', 'Wilson', '1975-06-18', 'jamie.wilson@email.com', '281-555-0707', '700 Walnut Court', 'Dallas', 'TX', '75202', 2, 'Alex Wilson', '281-555-0808'),
+('Dakota', 'Martinez', '1988-12-12', 'dakota.martinez@email.com', '713-555-0808', '800 Spruce Way', 'Austin', 'TX', '78702', 3, 'Taylor Martinez', '713-555-0909');
+
+-- =====================================================
+-- 6. Patient-Physician Assignments
+-- =====================================================
+INSERT INTO patient_physician (patient_id, physician_id, is_primary, requires_specialist_approval, approval_status) VALUES
+-- Alex Smith (patient_id=1)
+(1, 1, TRUE, FALSE, 'Approved'),  -- Dr. Johnson (Primary)
+(1, 3, FALSE, TRUE, 'Approved'),  -- Dr. White (Cardiology - approved)
+-- Taylor Jones (patient_id=2)
+(2, 2, TRUE, FALSE, 'Approved'),  -- Dr. Moore (Primary)
+(2, 4, FALSE, TRUE, 'Pending'),   -- Dr. Foster (Dermatology - pending)
+-- Morgan Williams (patient_id=3)
+(3, 1, TRUE, FALSE, 'Approved'),  -- Dr. Johnson (Primary)
+(3, 6, FALSE, TRUE, 'Approved'),  -- Dr. Patel (Orthopedics)
+-- Jordan Brown (patient_id=4)
+(4, 5, TRUE, FALSE, 'Approved'),  -- Dr. Chen (Primary)
+-- Casey Davis (patient_id=5)
+(5, 7, FALSE, TRUE, 'Approved'),  -- Dr. Garcia (Neurology)
+(5, 2, TRUE, FALSE, 'Approved'),  -- Dr. Moore (Primary)
+-- Riley Miller (patient_id=6)
+(6, 5, TRUE, FALSE, 'Approved'),  -- Dr. Chen (Primary)
+-- Jamie Wilson (patient_id=7)
+(7, 8, FALSE, TRUE, 'Pending'),   -- Dr. Kim (Ophthalmology)
+(7, 9, TRUE, FALSE, 'Approved'),  -- Dr. Williams (Primary)
+-- Dakota Martinez (patient_id=8)
+(8, 10, TRUE, FALSE, 'Approved'); -- Dr. Brown (Primary)
+
+-- =====================================================
+-- 7. Work Schedules
+-- =====================================================
+INSERT INTO work_schedule (physician_id, office_id, weekday, start_time, end_time) VALUES
+-- Dr. Johnson (works at Houston office M-Th)
+(1, 1, 'Monday', '09:00:00', '17:00:00'),
+(1, 1, 'Tuesday', '09:00:00', '17:00:00'),
+(1, 1, 'Wednesday', '09:00:00', '17:00:00'),
+(1, 1, 'Thursday', '09:00:00', '17:00:00'),
+-- Dr. Johnson also works at Austin office on Fridays
+(1, 3, 'Friday', '10:00:00', '16:00:00'),
+
+-- Dr. Moore (Dallas office M-W, Houston Th-F)
+(2, 2, 'Monday', '08:00:00', '16:00:00'),
+(2, 2, 'Tuesday', '08:00:00', '16:00:00'),
+(2, 2, 'Wednesday', '08:00:00', '16:00:00'),
+(2, 1, 'Thursday', '09:00:00', '17:00:00'),
+(2, 1, 'Friday', '09:00:00', '17:00:00'),
+
+-- Dr. White (Cardiology - Houston only)
+(3, 1, 'Monday', '10:00:00', '18:00:00'),
+(3, 1, 'Wednesday', '10:00:00', '18:00:00'),
+(3, 1, 'Friday', '10:00:00', '18:00:00'),
+
+-- Dr. Foster (Dermatology - Dallas)
+(4, 2, 'Tuesday', '09:00:00', '17:00:00'),
+(4, 2, 'Thursday', '09:00:00', '17:00:00'),
+
+-- Dr. Chen (Pediatrics - Dallas M-W, Fort Worth Th-F)
+(5, 2, 'Monday', '08:30:00', '16:30:00'),
+(5, 2, 'Tuesday', '08:30:00', '16:30:00'),
+(5, 2, 'Wednesday', '08:30:00', '16:30:00'),
+(5, 5, 'Thursday', '09:00:00', '17:00:00'),
+(5, 5, 'Friday', '09:00:00', '17:00:00'),
+
+-- Dr. Patel (Orthopedics - Austin)
+(6, 3, 'Monday', '09:00:00', '17:00:00'),
+(6, 3, 'Wednesday', '09:00:00', '17:00:00'),
+(6, 3, 'Friday', '09:00:00', '17:00:00'),
+
+-- Dr. Garcia (Neurology - San Antonio)
+(7, 4, 'Tuesday', '10:00:00', '18:00:00'),
+(7, 4, 'Thursday', '10:00:00', '18:00:00'),
+
+-- Dr. Kim (Ophthalmology - Austin)
+(8, 3, 'Monday', '09:00:00', '15:00:00'),
+(8, 3, 'Wednesday', '09:00:00', '15:00:00'),
+
+-- Dr. Williams (Obstetrics - San Antonio)
+(9, 4, 'Monday', '08:00:00', '16:00:00'),
+(9, 4, 'Tuesday', '08:00:00', '16:00:00'),
+(9, 4, 'Wednesday', '08:00:00', '16:00:00'),
+(9, 4, 'Thursday', '08:00:00', '16:00:00'),
+
+-- Dr. Brown (Psychiatry - San Antonio)
+(10, 4, 'Friday', '09:00:00', '15:00:00');
+
+-- =====================================================
+-- 8. Appointments
+-- =====================================================
+INSERT INTO appointment (patient_id, physician_id, office_id, appointment_date, appointment_time, duration_minutes, appointment_type, reason_for_visit, status_id) VALUES
+-- Past appointments (Completed)
+(1, 1, 1, '2026-03-15', '10:00:00', 30, 'Physical', 'Annual physical exam', 2),  -- Completed
+(2, 2, 2, '2026-03-20', '14:30:00', 30, 'Follow-Up', 'Follow-up on blood work', 2),  -- Completed
+(3, 1, 3, '2026-03-25', '11:00:00', 30, 'General', 'Cough and fever', 2),  -- Completed
+(4, 5, 2, '2026-04-01', '09:30:00', 30, 'Physical', 'School physical', 2),  -- Completed
+(1, 3, 1, '2026-04-05', '13:00:00', 45, 'Specialist', 'Chest pain evaluation', 2),  -- Completed (Specialist - approved)
+
+-- No-Show appointments (for trigger demo)
+(2, 4, 2, '2026-04-08', '15:00:00', 30, 'Specialist', 'Rash evaluation', 4),  -- No-Show
+
+-- Upcoming appointments (Scheduled)
+(5, 2, 1, '2026-04-20', '10:30:00', 30, 'Follow-Up', 'Medication review', 1),
+(6, 5, 5, '2026-04-21', '14:00:00', 30, 'Physical', 'Well-child visit', 1),
+(7, 9, 4, '2026-04-22', '11:30:00', 30, 'General', 'Prenatal checkup', 1),
+(8, 10, 4, '2026-04-23', '13:30:00', 45, 'Specialist', 'Anxiety consultation', 1),
+(3, 6, 3, '2026-04-25', '09:00:00', 45, 'Specialist', 'Knee pain', 1),
+(1, 1, 1, '2026-04-28', '15:00:00', 30, 'Follow-Up', 'Lab results review', 1),
+(2, 2, 2, '2026-04-29', '10:00:00', 30, 'General', 'Cold symptoms', 1),
+
+-- Cancelled appointment
+(4, 5, 2, '2026-04-10', '09:00:00', 30, 'Follow-Up', 'Vaccine follow-up', 3);  -- Cancelled
+
+-- =====================================================
+-- 9. Medical History
+-- =====================================================
+INSERT INTO medical_history (patient_id, physician_id, condition, diagnosis_date, status, notes) VALUES
+(1, 1, 'Hypertension', '2025-06-10', 'Active', 'Patient diagnosed with stage 1 hypertension. Prescribed lisinopril.'),
+(1, 1, 'High Cholesterol', '2025-06-10', 'Active', 'LDL elevated at 160. Recommended dietary changes and atorvastatin.'),
+(2, 2, 'Allergic Rhinitis', '2025-08-15', 'Active', 'Seasonal allergies. Prescribed cetirizine.'),
+(3, 1, 'Asthma', '2025-03-20', 'Active', 'Mild persistent asthma. Prescribed albuterol inhaler PRN.'),
+(4, 5, 'Eczema', '2025-11-05', 'Resolved', 'Topical cream prescribed. Condition resolved.'),
+(5, 2, 'Migraine', '2025-12-01', 'Active', 'Intermittent migraines. Sumatriptan prescribed.'),
+(5, 7, 'Tension Headaches', '2026-01-15', 'Active', 'Referred by Dr. Moore for neurological evaluation.'),
+(6, 5, 'ADHD', '2025-09-10', 'Active', 'Inattentive type. Behavioral therapy recommended.'),
+(7, 9, 'Pregnancy', '2026-02-01', 'Active', 'First trimester, due October 2026.'),
+(8, 10, 'Anxiety', '2025-10-20', 'Active', 'Generalized anxiety disorder. CBT recommended.');
+
+-- =====================================================
+-- 10. User Accounts (for web app authentication)
+-- Passwords: 
+--   Patient@123 for patients
+--   Doctor@123 for physicians
+--   Staff@123 for staff
+-- =====================================================
+
+-- Patient Users (password_hash = SHA2('Patient@123', 256))
+INSERT INTO users (username, email, password_hash, role, related_id, is_active) VALUES
+('alex.smith', 'alex.smith@email.com', SHA2('Patient@123', 256), 'patient', 1, TRUE),
+('taylor.jones', 'taylor.jones@email.com', SHA2('Patient@123', 256), 'patient', 2, TRUE),
+('morgan.w', 'morgan.w@email.com', SHA2('Patient@123', 256), 'patient', 3, TRUE),
+('jordan.brown', 'jordan.brown@email.com', SHA2('Patient@123', 256), 'patient', 4, TRUE),
+('casey.davis', 'casey.davis@email.com', SHA2('Patient@123', 256), 'patient', 5, TRUE),
+('riley.miller', 'riley.miller@email.com', SHA2('Patient@123', 256), 'patient', 6, TRUE),
+('jamie.wilson', 'jamie.wilson@email.com', SHA2('Patient@123', 256), 'patient', 7, TRUE),
+('dakota.martinez', 'dakota.martinez@email.com', SHA2('Patient@123', 256), 'patient', 8, TRUE);
+
+-- Physician Users (password_hash = SHA2('Doctor@123', 256))
+INSERT INTO users (username, email, password_hash, role, related_id, is_active) VALUES
+('dr.johnson', 'dr.johnson@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 1, TRUE),
+('dr.moore', 'dr.moore@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 2, TRUE),
+('dr.white', 'dr.white@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 3, TRUE),
+('dr.foster', 'dr.foster@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 4, TRUE),
+('dr.chen', 'dr.chen@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 5, TRUE),
+('dr.patel', 'dr.patel@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 6, TRUE),
+('dr.garcia', 'dr.garcia@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 7, TRUE),
+('dr.kim', 'dr.kim@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 8, TRUE),
+('dr.williams', 'dr.williams@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 9, TRUE),
+('dr.brown', 'dr.brown@medicalclinic.com', SHA2('Doctor@123', 256), 'physician', 10, TRUE);
+
+-- Staff Users (password_hash = SHA2('Staff@123', 256))
+INSERT INTO users (username, email, password_hash, role, related_id, is_active) VALUES
+('staff.adams', 'staff.adams@medicalclinic.com', SHA2('Staff@123', 256), 'staff', NULL, TRUE),
+('staff.brooks', 'staff.brooks@medicalclinic.com', SHA2('Staff@123', 256), 'staff', NULL, TRUE),
+('staff.clark', 'staff.clark@medicalclinic.com', SHA2('Staff@123', 256), 'staff', NULL, TRUE);
