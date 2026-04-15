@@ -335,9 +335,9 @@
                 </div>
                 <table class="data-table">
                     <thead>
-                        <tr><th>Patient</th><th>Specialist</th><th>Specialty</th><th>Reason</th><th>Issued</th><th>Expires</th><th>Status</th></tr>
+                        <tr><th>Patient</th><th>Specialist</th><th>Specialty</th><th>Reason</th><th>Issued</th><th>Expires</th><th>Status</th><th>Action</th></tr>
                     </thead>
-                    <tbody id="referralsBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    <tbody id="referralsBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -507,10 +507,11 @@
             <label>Current Status</label>
             <div class="modal-val" id="refModalStatus">—</div>
         </div>
+        <div id="refModalNote" style="font-size:12px;color:#6b7280;margin:8px 0 4px;line-height:1.5"></div>
         <div class="modal-actions">
             <button class="btn-accept" id="refModalAccept">Accept</button>
             <button class="btn-reject" id="refModalReject">Reject</button>
-            <button class="btn-cancel" onclick="closeReferralModal()">Cancel</button>
+            <button class="btn-cancel" onclick="closeReferralModal()">Close</button>
         </div>
     </div>
 </div>

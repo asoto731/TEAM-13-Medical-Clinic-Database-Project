@@ -228,8 +228,9 @@ async function submitNote() {
     }
 }
 
-/* ── Referral Modal ── */
-function openReferralModal(referral) {
+/* ── Referral Modal (context-aware: PCP issues, Specialist accepts) ── */
+function openReferralModal(referral, context) {
+    // context = "pcp" (primary issuing) or "specialist" (specialist accepting)
     document.getElementById("refModalPatient").textContent   = `${referral.patient_first} ${referral.patient_last}`;
     document.getElementById("refModalPrimary").textContent   = `Dr. ${referral.primary_first} ${referral.primary_last} (${referral.primary_specialty || "—"})`;
     document.getElementById("refModalReason").textContent    = referral.referral_reason || "—";
@@ -239,9 +240,39 @@ function openReferralModal(referral) {
 
     const acceptBtn = document.getElementById("refModalAccept");
     const rejectBtn = document.getElementById("refModalReject");
+    const statusNote = document.getElementById("refModalNote");
 
-    acceptBtn.onclick = () => updateReferralStatus(referral.referral_id, "Approved");
-    rejectBtn.onclick = () => updateReferralStatus(referral.referral_id, "Rejected");
+    const status = referral.referral_status_name;
+
+    if (context === "pcp") {
+        // PCP sees patient requests — can Issue or Reject
+        if (status === "Requested") {
+            acceptBtn.style.display = "";
+            rejectBtn.style.display = "";
+            acceptBtn.textContent = "Issue to Specialist";
+            acceptBtn.onclick = () => updateReferralStatus(referral.referral_id, "Issued", "pcp");
+            rejectBtn.onclick = () => updateReferralStatus(referral.referral_id, "Rejected", "pcp");
+            if (statusNote) statusNote.textContent = "Review the patient's request and issue it to the specialist, or reject it.";
+        } else {
+            acceptBtn.style.display = "none";
+            rejectBtn.style.display = "none";
+            if (statusNote) statusNote.textContent = `This referral is currently: ${status}. No action required.`;
+        }
+    } else {
+        // Specialist sees issued referrals — can Accept or Reject
+        if (status === "Issued") {
+            acceptBtn.style.display = "";
+            rejectBtn.style.display = "";
+            acceptBtn.textContent = "Accept Patient";
+            acceptBtn.onclick = () => updateReferralStatus(referral.referral_id, "Accepted", "specialist");
+            rejectBtn.onclick = () => updateReferralStatus(referral.referral_id, "Rejected", "specialist");
+            if (statusNote) statusNote.textContent = "Review this referral and accept or decline the patient.";
+        } else {
+            acceptBtn.style.display = "none";
+            rejectBtn.style.display = "none";
+            if (statusNote) statusNote.textContent = `This referral is currently: ${status}. No action required.`;
+        }
+    }
 
     document.getElementById("referralModal").classList.remove("hidden");
 }
@@ -250,7 +281,7 @@ function closeReferralModal() {
     document.getElementById("referralModal").classList.add("hidden");
 }
 
-async function updateReferralStatus(referral_id, status_name) {
+async function updateReferralStatus(referral_id, status_name, context) {
     try {
         const res = await fetch(`/api/staff/referral/${referral_id}/status`, {
             method: "PUT",
@@ -260,7 +291,11 @@ async function updateReferralStatus(referral_id, status_name) {
         const data = await res.json();
         if (res.ok) {
             closeReferralModal();
-            loadIncomingReferrals(window._currentPhysicianId);
+            if (context === "pcp") {
+                loadDashboard(); // reload to refresh outgoing referrals table
+            } else {
+                loadIncomingReferrals(window._currentPhysicianId);
+            }
         } else {
             alert("Failed to update status: " + (data.message || "Unknown error"));
         }
@@ -274,7 +309,7 @@ async function loadIncomingReferrals(physician_id) {
     if (!container) return;
     container.innerHTML = '<p class="loading-msg">Loading incoming referrals…</p>';
     try {
-        const res = await fetch(`/api/staff/physician/referrals?physician_id=${physician_id}`);
+        const res = await fetch(`/api/staff/physician/referrals?physician_id=${physician_id}&user_id=${user.id}`);
         const referrals = await res.json();
 
         if (!referrals || referrals.length === 0) {
@@ -283,7 +318,7 @@ async function loadIncomingReferrals(physician_id) {
         }
 
         container.innerHTML = referrals.map(r => `
-            <div class="referral-card" onclick="openReferralModal(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+            <div class="referral-card" onclick="openReferralModal(${JSON.stringify(r).replace(/"/g, '&quot;')}, 'specialist')">
                 <div class="referral-card-header">
                     <span class="referral-card-patient">${r.patient_first} ${r.patient_last}</span>
                     ${pill(r.referral_status_name)}
@@ -291,6 +326,7 @@ async function loadIncomingReferrals(physician_id) {
                 <div class="referral-card-meta">Referred by Dr. ${r.primary_first} ${r.primary_last}</div>
                 <div class="referral-card-reason">${r.referral_reason || "—"}</div>
                 <div class="referral-card-dates">Issued: ${fmt(r.date_issued)} &bull; Expires: ${fmt(r.expiration_date)}</div>
+                ${r.referral_status_name === "Issued" ? `<div style="font-size:12px;color:#f59e0b;margin-top:6px">⏳ Awaiting your review</div>` : ""}
             </div>
         `).join('');
     } catch (err) {
@@ -383,7 +419,7 @@ async function loadDashboard() {
         const officeId = schedule && schedule.length > 0 ? schedule[0].office_id : null;
         buildMemberCalendar(physician ? physician.physician_id : null, schedule, officeId);
 
-        /* Referrals table (issued by this physician) */
+        /* Referrals table (issued by this physician — PCP view) */
         document.getElementById("referralsBody").innerHTML = referrals.length
             ? referrals.map(r => `<tr>
                 <td class="primary">${r.patient_first} ${r.patient_last}</td>
@@ -393,8 +429,11 @@ async function loadDashboard() {
                 <td>${fmt(r.date_issued)}</td>
                 <td>${fmt(r.expiration_date)}</td>
                 <td>${pill(r.referral_status_name)}</td>
+                <td>${r.referral_status_name === "Requested"
+                    ? `<button class="profile-edit-btn" style="font-size:11px;padding:4px 10px" onclick="openReferralModal(${JSON.stringify(r).replace(/"/g, '&quot;')}, 'pcp')">Review →</button>`
+                    : "—"}</td>
             </tr>`).join("")
-            : `<tr><td colspan="7" class="table-empty">No referrals on record</td></tr>`;
+            : `<tr><td colspan="8" class="table-empty">No referrals on record</td></tr>`;
 
         /* Load incoming referrals (where this physician is the specialist) */
         if (physician) {

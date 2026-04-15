@@ -288,6 +288,15 @@ async function loadDashboard() {
                     Requested:"#6ea8fe", Issued:"#f59e0b", Accepted:"#10b981",
                     Rejected:"#ef4444", Scheduled:"#a78bfa", Completed:"#10b981", Expired:"#9ca3af"
                 };
+                const statusNote = {
+                    Requested:  "Waiting for your primary physician to review and issue.",
+                    Issued:     "Your physician has sent this referral to the specialist. Awaiting specialist review.",
+                    Accepted:   "The specialist has accepted you as a patient — book your appointment below.",
+                    Rejected:   "This referral was declined. Contact your primary physician for next steps.",
+                    Scheduled:  "Your specialist appointment is scheduled.",
+                    Completed:  "This referral has been completed.",
+                    Expired:    "This referral has expired. Request a new one if needed."
+                };
                 refList.innerHTML = referrals.map(r => `
                     <div class="referral-card">
                         <div class="referral-card-header">
@@ -301,9 +310,14 @@ async function loadDashboard() {
                         </div>
                         <div class="referral-reason">"${r.referral_reason}"</div>
                         <div class="referral-meta">
-                            <span>Referred by Dr. ${r.ref_first} ${r.ref_last} (${r.ref_specialty})</span>
+                            <span>Referred by Dr. ${r.ref_first} ${r.ref_last}</span>
                             <span>Issued ${fmt(r.date_issued)} &nbsp;·&nbsp; Expires ${fmt(r.expiration_date)}</span>
                         </div>
+                        <div style="font-size:12px;color:#6b7280;margin-top:6px">${statusNote[r.status_name] || ""}</div>
+                        ${r.status_name === "Accepted" ? `
+                        <button class="profile-edit-btn" style="margin-top:10px;width:100%" onclick="bookWithSpecialist(${r.specialist_id}, 'Dr. ${r.spec_first} ${r.spec_last}')">
+                            Book Appointment with Dr. ${r.spec_last} →
+                        </button>` : ""}
                     </div>`).join("");
             }
         }
@@ -504,6 +518,32 @@ async function submitReferralRequest() {
         errEl.textContent = err.message || "Could not submit request. Please try again.";
         errEl.style.display = "";
     }
+}
+
+/* ── Book with specialist from accepted referral ── */
+async function bookWithSpecialist(specialist_id, label) {
+    // Open the booking modal but force-load just this specialist regardless of city
+    document.getElementById("bookingModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    document.getElementById("bookingError").style.display = "none";
+
+    // Reset to step 1
+    ["bstep1","bstep2","bstep3"].forEach((id,i) => {
+        document.getElementById(id).classList.toggle("hidden", i !== 0);
+    });
+
+    // Load ONLY this specialist into the dropdown — no city filter
+    const phSelect = document.getElementById("b_physician");
+    phSelect.innerHTML = `<option value="${specialist_id}">${label}</option>`;
+    phSelect.value = specialist_id;
+    phSelect.disabled = true; // locked — they're booking this specific specialist
+
+    // Set min date
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateInput = document.getElementById("b_date");
+    dateInput.min = tomorrow.toISOString().split("T")[0];
+    dateInput.value = "";
+    document.getElementById("b_slot").innerHTML = '<option value="">Pick a date first…</option>';
 }
 
 function openProfileModal() {
@@ -778,6 +818,9 @@ async function openBookingModal() {
 function closeBookingModal() {
     document.getElementById("bookingModal").classList.add("hidden");
     document.body.style.overflow = "";
+    // Re-enable physician dropdown in case it was locked by bookWithSpecialist
+    const phSelect = document.getElementById("b_physician");
+    if (phSelect) phSelect.disabled = false;
 }
 
 function bookingStep2() {
