@@ -14,6 +14,7 @@ const getPatientDashboard = (req, res) => {
            p.phone_number, p.email, p.gender,
            p.street_address, p.city, p.state, p.zip_code,
            p.emergency_contact_name, p.emergency_contact_phone,
+           p.primary_physician_id, p.insurance_id,
            ph.first_name AS doc_first, ph.last_name AS doc_last, ph.specialty,
            ph.phone_number AS doc_phone,
            ins.provider_name, ins.policy_number, ins.coverage_percentage

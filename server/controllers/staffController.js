@@ -53,7 +53,7 @@ const loginStaff = (req, res) => {
     }
 
     if (user.role === "patient") {
-      return res.status(403).json({ message: "Please use the patient login portal." });
+      return res.status(401).json({ message: "Invalid username or password." });
     }
 
     // ── Clear rate limit on success + audit log ──

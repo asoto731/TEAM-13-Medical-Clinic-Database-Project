@@ -150,7 +150,7 @@ async function loadDashboard() {
         const lastName  = patient.last_name  || "";
         document.getElementById("greetName").textContent = firstName;
         document.getElementById("greetSub").textContent = patient.doc_last
-            ? `Primary Physician: Dr. ${patient.doc_last} · ${patient.specialty}`
+            ? `Primary Physician: Dr. ${patient.doc_last}`
             : "No primary physician assigned yet — choose your care team below";
         document.getElementById("sidebarName").textContent = `${firstName} ${lastName}`;
         document.getElementById("avatarInitials").textContent = (firstName[0] || "") + (lastName[0] || "");
