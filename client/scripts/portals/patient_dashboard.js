@@ -51,7 +51,7 @@ function showSection(name) {
     const btn = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
     if (btn) btn.classList.add("active");
 
-    const labels = { overview:"Overview", appointments:"My Appointments", history:"Medical History", billing:"Billing", profile:"My Profile", settings:"Settings" };
+    const labels = { overview:"Overview", appointments:"My Appointments", history:"Health Records", billing:"Billing & Payments", profile:"My Profile", settings:"Settings" };
     document.getElementById("currentSection").textContent = labels[name] || name;
 }
 
@@ -222,28 +222,103 @@ async function loadDashboard() {
             </tr>`).join("")
             : `<tr><td colspan="7" class="table-empty">No upcoming appointments</td></tr>`;
 
+        /* ── Past appointments — with billing link ── */
         const pastBody = document.getElementById("apptPastBody");
         pastBody.innerHTML = pastAppts.length
-            ? pastAppts.map(a => `<tr>
-                <td class="primary">${fmt(a.appointment_date)}</td>
-                <td>${timeFmt(a.appointment_time)}</td>
-                <td>Dr. ${a.doc_first} ${a.doc_last}</td>
-                <td>${a.city || "—"}</td>
-                <td>${a.reason_for_visit || "—"}</td>
-                <td>${pill(a.status_name)}</td>
-            </tr>`).join("")
-            : `<tr><td colspan="6" class="table-empty">No past appointments on record</td></tr>`;
+            ? pastAppts.map(a => {
+                // Find a matching billing record by date + physician
+                const bill = billing.find(b =>
+                    b.appointment_date && a.appointment_date &&
+                    b.appointment_date.toString().split("T")[0] === a.appointment_date.toString().split("T")[0] &&
+                    (b.doc_last === a.doc_last || !b.doc_last)
+                );
+                let billCell = "—";
+                if (a.status_name === "Completed") {
+                    if (bill) {
+                        const isPaid = (bill.payment_status || "").toLowerCase() === "paid";
+                        billCell = isPaid
+                            ? `<span style="color:#10b981;font-size:12px;font-weight:600">✓ Paid</span>`
+                            : `<button onclick="showSection('billing')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #f59e0b;color:#d97706;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600">Pay $${parseFloat(bill.patient_owed||0).toFixed(2)} →</button>`;
+                    } else {
+                        billCell = `<button onclick="showSection('billing')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #e0e3ed;color:#888;border-radius:6px;cursor:pointer;font-family:inherit">View Bill</button>`;
+                    }
+                }
+                return `<tr>
+                    <td class="primary">${fmt(a.appointment_date)}</td>
+                    <td>${timeFmt(a.appointment_time)}</td>
+                    <td>Dr. ${a.doc_first} ${a.doc_last}</td>
+                    <td>${a.city || "—"}</td>
+                    <td>${a.appointment_type || "General"}</td>
+                    <td>${pill(a.status_name)}</td>
+                    <td>${billCell}</td>
+                </tr>`;
+            }).join("")
+            : `<tr><td colspan="7" class="table-empty">No past appointments on record</td></tr>`;
 
-        /* ── Medical history table ── */
-        const hBody = document.getElementById("historyBody");
-        hBody.innerHTML = history.length
-            ? history.map(h => `<tr>
+        /* ── Health Records — grouped into 3 sections ── */
+        // Filter out administrative/internal entries patients shouldn't see
+        const adminConditions = ["No-Show", "Appointment Status Correction"];
+        const visibleHistory = history.filter(h =>
+            !adminConditions.some(a => (h.condition || "").startsWith(a))
+        );
+
+        // Group: active conditions (not clinical notes), visit notes, resolved
+        const activeConditions = visibleHistory.filter(h =>
+            (h.status || "").toLowerCase() === "active" &&
+            (h.condition || "").toLowerCase() !== "clinical note"
+        );
+        const visitNotes = visibleHistory.filter(h =>
+            (h.condition || "").toLowerCase() === "clinical note"
+        );
+        const resolved = visibleHistory.filter(h =>
+            (h.status || "").toLowerCase() !== "active"
+        );
+
+        // Active conditions — card layout
+        const activeEl = document.getElementById("activeConditionsBody");
+        if (activeConditions.length === 0) {
+            activeEl.innerHTML = `<p class="table-empty" style="padding:8px 0">No active conditions on record.</p>`;
+        } else {
+            activeEl.innerHTML = activeConditions.map(h => `
+                <div style="border:1px solid #e0e4f0;border-left:4px solid #6ea8fe;border-radius:10px;padding:16px 20px;background:white">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+                        <div style="font-size:15px;font-weight:700;color:#1f2a6d">${h.condition || "—"}</div>
+                        ${pill(h.status || "Active")}
+                    </div>
+                    <div style="font-size:12px;color:#888;margin-bottom:${h.notes ? "10px" : "0"}">
+                        Recorded ${fmt(h.diagnosis_date)}${h.physician_name ? ` &nbsp;·&nbsp; Added by ${h.physician_name}` : ""}
+                    </div>
+                    ${h.notes ? `<div style="font-size:13px;color:#555;line-height:1.6;background:#f8fbff;border-radius:7px;padding:10px 14px;border:1px solid #e8ecf8">${h.notes}</div>` : ""}
+                </div>`).join("");
+        }
+
+        // Visit notes — list layout
+        const notesEl = document.getElementById("visitNotesBody");
+        if (visitNotes.length === 0) {
+            notesEl.innerHTML = `<p class="table-empty" style="padding:8px 0">No visit notes on record yet. Notes are added after completed appointments.</p>`;
+        } else {
+            notesEl.innerHTML = visitNotes.map(h => `
+                <div style="border:1px solid #f0f2f8;border-radius:10px;padding:14px 18px;background:white">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px">
+                            ${h.physician_name || "Your Care Team"} &nbsp;·&nbsp; ${fmt(h.diagnosis_date)}
+                        </div>
+                        <span style="font-size:11px;background:#f0f4ff;color:#1f2a6d;border-radius:20px;padding:2px 10px;font-weight:600">Visit Note</span>
+                    </div>
+                    <div style="font-size:13px;color:#444;line-height:1.7">${h.notes || "—"}</div>
+                </div>`).join("");
+        }
+
+        // Resolved — table layout
+        const resolvedEl = document.getElementById("resolvedHistoryBody");
+        resolvedEl.innerHTML = resolved.length
+            ? resolved.map(h => `<tr>
                 <td class="primary">${h.condition || "—"}</td>
                 <td>${fmt(h.diagnosis_date)}</td>
-                <td>${pill(h.status)}</td>
-                <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.notes || "—"}</td>
+                <td>${pill(h.status || "Resolved")}</td>
+                <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#888">${h.notes || "—"}</td>
             </tr>`).join("")
-            : `<tr><td colspan="4" class="table-empty">No medical history on record</td></tr>`;
+            : `<tr><td colspan="4" class="table-empty">No resolved conditions on record</td></tr>`;
 
         /* ── Billing table ── */
         const bBody = document.getElementById("billingBody");
@@ -279,6 +354,33 @@ async function loadDashboard() {
         document.getElementById("emergencyInfo").innerHTML = `
             ${infoRow("Emergency Contact", patient.emergency_contact_name)}
             ${infoRow("Contact Phone", patient.emergency_contact_phone)}`;
+
+        /* ── Profile: Care team card ── */
+        const careTeamEl = document.getElementById("profileCareTeam");
+        if (careTeamEl) {
+            if (patient.primary_physician_id) {
+                careTeamEl.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:14px;padding-bottom:14px;border-bottom:1px solid #f0f2f8">
+                        <div style="width:44px;height:44px;background:#1f2a6d;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;font-weight:700;flex-shrink:0">
+                            ${(patient.doc_first||"")[0]||""}${(patient.doc_last||"")[0]||""}
+                        </div>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:#1f2a6d">Dr. ${patient.doc_first} ${patient.doc_last}</div>
+                            <div style="font-size:12px;color:#888;margin-top:2px">${patient.specialty || "Primary Care"}</div>
+                        </div>
+                    </div>
+                    ${infoRow("Clinic Location", patient.office_city ? patient.office_city + (patient.office_state ? ", " + patient.office_state : "") : (patient.city || "—"))}
+                    ${infoRow("Insurance", patient.provider_name || "No Insurance / Self-Pay")}
+                    ${patient.coverage_percentage ? infoRow("Coverage", patient.coverage_percentage + "% of covered services") : ""}
+                    <button class="profile-edit-btn" onclick="openCareModal()" style="margin-top:8px;width:100%">Change Care Team</button>`;
+            } else {
+                careTeamEl.innerHTML = `
+                    <div style="text-align:center;padding:8px 0">
+                        <div style="font-size:13px;color:#aaa;margin-bottom:12px">No primary physician assigned yet.</div>
+                        <button class="profile-edit-btn" onclick="openCareModal()">Choose My Care Team →</button>
+                    </div>`;
+            }
+        }
 
         /* ── Edit button ── */
         const editWrap = document.getElementById("profileEditBtn");

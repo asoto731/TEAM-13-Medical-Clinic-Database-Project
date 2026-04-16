@@ -177,9 +177,9 @@
                 </div>
                 <table class="data-table">
                     <thead>
-                        <tr><th>Bill #</th><th>Patient</th><th>Total</th><th>Tax</th><th>Method</th><th>Date Paid</th><th>Status</th><th>Action</th></tr>
+                        <tr><th>Bill #</th><th>Patient</th><th>Total Billed</th><th>Insurance Paid</th><th>Patient Owes</th><th>Method</th><th>Date Paid</th><th>Status</th><th>Action</th></tr>
                     </thead>
-                    <tbody id="billingBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    <tbody id="billingBody"><tr><td colspan="9" class="table-empty">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -288,6 +288,61 @@
             <div style="display:flex;justify-content:flex-end;gap:10px">
                 <button onclick="closeStaffBookingModal()" style="padding:9px 18px;background:none;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer">Cancel</button>
                 <button onclick="submitStaffBooking()" style="padding:9px 22px;background:#4a2c8a;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Book Appointment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Mark Billing Paid Modal ── -->
+<div class="modal-overlay hidden" id="paymentModal">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-header">
+            <div>
+                <h3>Record Payment</h3>
+                <p id="paymentModalSub" style="color:#888;font-size:13px;margin-top:4px"></p>
+            </div>
+            <button class="modal-close" onclick="closePaymentModal()">&#10005;</button>
+        </div>
+        <div style="padding:20px 24px">
+            <!-- Amount summary -->
+            <div style="background:#f8faff;border:1px solid #e0e4f0;border-radius:10px;padding:14px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+                <div>
+                    <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Billed</div>
+                    <div id="payTotal" style="font-size:18px;font-weight:700;color:#222;margin-top:4px">—</div>
+                </div>
+                <div>
+                    <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Insurance</div>
+                    <div id="payInsurance" style="font-size:18px;font-weight:700;color:#10b981;margin-top:4px">—</div>
+                </div>
+                <div>
+                    <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Patient Owes</div>
+                    <div id="payOwed" style="font-size:18px;font-weight:700;color:#e74c3c;margin-top:4px">—</div>
+                </div>
+            </div>
+
+            <!-- Payment method -->
+            <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:6px">Payment Method</label>
+            <select id="paymentMethod" style="width:100%;padding:10px 12px;border:1px solid #e0e3ed;border-radius:8px;font-size:13px;font-family:inherit;color:#333;background:white;margin-bottom:16px">
+                <option value="">Select method…</option>
+                <option value="Cash">Cash</option>
+                <option value="Check">Check</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Debit Card">Debit Card</option>
+                <option value="Insurance Only">Insurance Only</option>
+            </select>
+
+            <!-- Reference note (optional) -->
+            <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:6px">Reference / Check # <span style="font-weight:400;color:#aaa">(optional)</span></label>
+            <input type="text" id="paymentRef" placeholder="e.g. Check #1042 or transaction ID"
+                style="width:100%;padding:10px 12px;border:1px solid #e0e3ed;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;margin-bottom:6px">
+
+            <p style="font-size:11px;color:#aaa;margin:0 0 18px">Card numbers are never stored. Enter only a reference number if needed.</p>
+
+            <div id="paymentError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:12px;color:#c0392b;margin-bottom:14px"></div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button onclick="closePaymentModal()" style="padding:9px 20px;background:none;border:1px solid #e0e3ed;border-radius:8px;font-size:13px;color:#666;cursor:pointer;font-family:inherit">Cancel</button>
+                <button onclick="confirmPayment()" style="padding:9px 22px;background:#10b981;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Confirm Payment</button>
             </div>
         </div>
     </div>

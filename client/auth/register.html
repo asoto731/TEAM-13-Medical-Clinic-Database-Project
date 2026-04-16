@@ -1,83 +1,813 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Create Account - Audit Trail Health</title>
-    <link rel="stylesheet" href="/client/styles/auth/register.css">
+    <title>Create Your Account - Audit Trail Health</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .pw-rule           { color: #9ca3af; transition: color 0.2s; font-size: 12px; display: flex; align-items: center; gap: 6px; }
-        .pw-rule::before   { content: "○"; font-size: 10px; flex-shrink: 0; }
-        .pw-rule.pass      { color: #16a34a; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Inter", system-ui, sans-serif;
+            background: #f0f4ff;
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+        }
+
+        /* ── Split layout ── */
+        .reg-wrap {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* ── Left panel ── */
+        .reg-left {
+            width: 380px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg, #0f1b5c 0%, #1f2a6d 60%, #2d3b8a 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 48px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reg-left::before {
+            content: "";
+            position: absolute;
+            top: -80px; right: -80px;
+            width: 280px; height: 280px;
+            background: rgba(110, 168, 254, 0.08);
+            border-radius: 50%;
+        }
+
+        .reg-left::after {
+            content: "";
+            position: absolute;
+            bottom: -60px; left: -60px;
+            width: 220px; height: 220px;
+            background: rgba(255,255,255, 0.04);
+            border-radius: 50%;
+        }
+
+        .reg-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 48px;
+            position: relative; z-index: 1;
+        }
+
+        .reg-logo-cross {
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.12);
+            border: 1.5px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: white; font-weight: 300;
+        }
+
+        .reg-logo-name {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.2px;
+        }
+
+        .reg-logo-sub {
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Step indicator */
+        .reg-steps {
+            position: relative; z-index: 1;
+            margin-bottom: 40px;
+        }
+
+        .reg-step-row {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 24px;
+        }
+
+        .reg-step-bubble {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.25);
+            background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700;
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .reg-step-bubble.done {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .reg-step-bubble.active {
+            background: white;
+            border-color: white;
+            color: #1f2a6d;
+        }
+
+        .reg-step-line {
+            width: 2px;
+            height: 24px;
+            background: rgba(255,255,255,0.15);
+            margin: 4px 15px;
+            flex-shrink: 0;
+        }
+
+        .reg-step-line.done { background: #10b981; }
+
+        .reg-step-meta {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .reg-step-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            transition: color 0.3s;
+        }
+
+        .reg-step-title.active { color: white; }
+        .reg-step-title.done   { color: rgba(255,255,255,0.7); }
+
+        .reg-step-desc {
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            margin-top: 2px;
+        }
+
+        .reg-step-desc.active { color: rgba(255,255,255,0.55); }
+
+        /* Trust badges */
+        .reg-trust {
+            position: relative; z-index: 1;
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 28px;
+        }
+
+        .reg-trust-title {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 14px;
+        }
+
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .trust-icon {
+            width: 20px; height: 20px;
+            background: rgba(16,185,129,0.2);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #10b981;
+            font-size: 10px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* ── Right panel ── */
+        .reg-right {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 48px 40px;
+            overflow-y: auto;
+        }
+
+        .reg-form-wrap {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .reg-form-header {
+            margin-bottom: 32px;
+        }
+
+        .reg-step-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #6ea8fe;
+            margin-bottom: 8px;
+        }
+
+        .reg-form-header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #0f1b5c;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+
+        .reg-form-header p {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        /* Form fields */
+        .field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .field-grid.single { grid-template-columns: 1fr; }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-group.span2 { grid-column: 1 / -1; }
+
+        .field-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .field-input, .field-select {
+            padding: 10px 14px;
+            border: 1.5px solid #e0e3ed;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #222;
+            background: #fafbff;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .field-input:focus, .field-select:focus {
+            border-color: #6ea8fe;
+            box-shadow: 0 0 0 3px rgba(110,168,254,0.15);
+            background: white;
+        }
+
+        /* Password strength */
+        .pw-strength-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 8px;
+        }
+
+        .pw-strength-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .pw-rule {
+            font-size: 12px;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+            transition: color 0.2s;
+        }
+
+        .pw-rule::before { content: "○"; font-size: 10px; }
+        .pw-rule.pass { color: #16a34a; }
         .pw-rule.pass::before { content: "✓"; }
+
+        /* Nav buttons */
+        .reg-nav {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            justify-content: flex-end;
+        }
+
+        .reg-btn-back {
+            padding: 11px 24px;
+            background: none;
+            border: 1.5px solid #e0e3ed;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .reg-btn-back:hover { border-color: #aaa; color: #333; }
+
+        .reg-btn-next {
+            padding: 11px 28px;
+            background: #1f2a6d;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .reg-btn-next:hover { background: #0f1b5c; }
+
+        .reg-btn-next.green { background: #10b981; }
+        .reg-btn-next.green:hover { background: #059669; }
+
+        .reg-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #b91c1c;
+            margin-top: 12px;
+            display: none;
+        }
+
+        /* ── Insurance cards ── */
+        .ins-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .ins-card {
+            border: 2px solid #e0e3ed;
+            border-radius: 12px;
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            position: relative;
+        }
+
+        .ins-card:hover { border-color: #6ea8fe; background: #f8fbff; }
+        .ins-card.selected { border-color: #1f2a6d; background: #f0f4ff; }
+
+        .ins-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ins-card-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1f2a6d;
+        }
+
+        .ins-coverage-badge {
+            background: #d1fae5;
+            color: #065f46;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .ins-card-sub {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .ins-card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 12px;
+        }
+
+        .ins-learn-btn {
+            font-size: 12px;
+            color: #6ea8fe;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            padding: 0;
+            text-decoration: underline;
+        }
+
+        .ins-select-indicator {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            border: 2px solid #d0d5e8;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .ins-card.selected .ins-select-indicator {
+            background: #1f2a6d;
+            border-color: #1f2a6d;
+            box-shadow: inset 0 0 0 4px white;
+        }
+
+        .ins-card-selfpay {
+            border: 2px dashed #d0d5e8;
+            background: #fafbff;
+        }
+
+        .ins-card-selfpay.selected { border-color: #1f2a6d; border-style: solid; background: #f0f4ff; }
+
+        /* Insurance info popup */
+        .ins-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .ins-popup-box {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+        }
+
+        .ins-popup-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none; border: none;
+            font-size: 18px; color: #aaa;
+            cursor: pointer;
+        }
+
+        .ins-popup-coverage {
+            font-size: 42px;
+            font-weight: 800;
+            color: #1f2a6d;
+            line-height: 1;
+            margin: 12px 0;
+        }
+
+        .ins-popup-stat-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+            margin-bottom: 20px;
+        }
+
+        .ins-popup-stat {
+            background: #f0f4ff;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .ins-popup-stat-val {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2a6d;
+        }
+
+        .ins-popup-stat-lbl {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        /* Review step */
+        .review-card {
+            background: #f8fbff;
+            border: 1px solid #e0e3ed;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+
+        .review-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #aaa;
+            margin-bottom: 14px;
+        }
+
+        .review-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f2f8;
+        }
+
+        .review-row:last-child { border-bottom: none; }
+        .review-label { color: #888; font-weight: 500; }
+        .review-value { color: #222; font-weight: 600; text-align: right; }
+
+        .review-insurance-card {
+            background: #d1fae5;
+            border-radius: 8px;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: #065f46;
+        }
+
+        .login-link {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-top: 20px;
+        }
+
+        .login-link a { color: #1f2a6d; font-weight: 700; text-decoration: none; }
+        .login-link a:hover { text-decoration: underline; }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            .reg-left { display: none; }
+            .reg-right { padding: 32px 20px; }
+        }
     </style>
 </head>
 <body>
 
-<header>
-    <nav>
-        <h2 class="logo">Audit Trail Health</h2>
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/client/pages/about.html">About</a></li>
-            <li><a href="/client/pages/locations/locations.html">Locations</a></li>
-            <li><a href="/client/auth/staff_login.html">Staff Portal</a></li>
-        </ul>
-    </nav>
-</header>
+<div class="reg-wrap">
 
-<section class="hero">
-    <div class="form-card">
-        <h2>Create Account</h2>
-        <p class="subtitle">Register to book and manage appointments</p>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label>First Name</label>
-                <input type="text" id="fname" placeholder="First name" required>
-            </div>
-            <div class="form-group">
-                <label>Last Name</label>
-                <input type="text" id="lname" placeholder="Last name" required>
-            </div>
-            <div class="form-group full-width">
-                <label>Email</label>
-                <input type="text" id="email" placeholder="Enter your email" required>
-            </div>
-            <div class="form-group full-width">
-                <label>Password</label>
-                <input type="password" id="password" placeholder="Create a password" required autocomplete="new-password">
-                <div id="pwStrength" style="margin-top:10px;display:none;flex-direction:column;gap:5px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;">
-                    <div style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px">Password must include</div>
-                    <div id="pw-len"   class="pw-rule">At least 8 characters</div>
-                    <div id="pw-upper" class="pw-rule">One uppercase letter</div>
-                    <div id="pw-num"   class="pw-rule">One number</div>
-                    <div id="pw-spec"  class="pw-rule">One special character (!@#$…)</div>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Phone Number</label>
-                <input type="tel" id="phonenum" placeholder="(555) 000-0000" required>
-            </div>
-            <div class="form-group">
-                <label>Date of Birth</label>
-                <input type="date" id="DOB" required>
-                <script>
-                    (function(){
-                        const d = document.getElementById("DOB");
-                        const today = new Date().toISOString().split("T")[0];
-                        const min   = new Date(); min.setFullYear(min.getFullYear()-130);
-                        d.max = today;
-                        d.min = min.toISOString().split("T")[0];
-                    })();
-                </script>
+    <!-- ── Left panel ── -->
+    <div class="reg-left">
+        <div class="reg-logo">
+            <div class="reg-logo-cross">&#10010;</div>
+            <div>
+                <div class="reg-logo-name">Audit Trail Health</div>
+                <div class="reg-logo-sub">Patient Registration</div>
             </div>
         </div>
 
-        <button type="button" id="btn">Create Account</button>
-        <p id="message"></p>
+        <div class="reg-steps">
+            <!-- Step 1 -->
+            <div id="ls-row-1" style="display:flex;align-items:flex-start;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center">
+                    <div class="reg-step-bubble active" id="lbubble-1">1</div>
+                    <div class="reg-step-line" id="lline-1"></div>
+                </div>
+                <div class="reg-step-meta" style="padding-top:6px">
+                    <div class="reg-step-title active" id="ltitle-1">Personal Information</div>
+                    <div class="reg-step-desc active" id="ldesc-1">Name, date of birth, gender, phone</div>
+                </div>
+            </div>
 
-        <p class="switch-link">Already have an account? <a href="/client/auth/patient_login.html">Sign in here</a></p>
+            <!-- Step 2 -->
+            <div id="ls-row-2" style="display:flex;align-items:flex-start;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center">
+                    <div class="reg-step-bubble" id="lbubble-2">2</div>
+                    <div class="reg-step-line" id="lline-2"></div>
+                </div>
+                <div class="reg-step-meta" style="padding-top:6px">
+                    <div class="reg-step-title" id="ltitle-2">Account Security</div>
+                    <div class="reg-step-desc" id="ldesc-2">Email address and password</div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div id="ls-row-3" style="display:flex;align-items:flex-start;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center">
+                    <div class="reg-step-bubble" id="lbubble-3">3</div>
+                    <div class="reg-step-line" id="lline-3"></div>
+                </div>
+                <div class="reg-step-meta" style="padding-top:6px">
+                    <div class="reg-step-title" id="ltitle-3">Insurance &amp; Payment</div>
+                    <div class="reg-step-desc" id="ldesc-3">Select your coverage plan</div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div id="ls-row-4" style="display:flex;align-items:flex-start;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center">
+                    <div class="reg-step-bubble" id="lbubble-4">4</div>
+                </div>
+                <div class="reg-step-meta" style="padding-top:6px">
+                    <div class="reg-step-title" id="ltitle-4">Review &amp; Confirm</div>
+                    <div class="reg-step-desc" id="ldesc-4">Confirm and create your account</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="reg-trust">
+            <div class="reg-trust-title">Your health data is protected</div>
+            <div class="trust-item"><div class="trust-icon">&#10003;</div>HIPAA Compliant</div>
+            <div class="trust-item"><div class="trust-icon">&#10003;</div>256-bit Encryption</div>
+            <div class="trust-item"><div class="trust-icon">&#10003;</div>You own your health record</div>
+            <div class="trust-item"><div class="trust-icon">&#10003;</div>Immediate access to results</div>
+        </div>
     </div>
-</section>
+
+    <!-- ── Right panel ── -->
+    <div class="reg-right">
+        <div class="reg-form-wrap">
+
+            <!-- ── Step 1: Personal Information ── -->
+            <div id="step1">
+                <div class="reg-form-header">
+                    <div class="reg-step-label">Step 1 of 4</div>
+                    <h1>Personal Information</h1>
+                    <p>This information is used to create your medical record. Please enter accurate details — your date of birth cannot be changed after registration.</p>
+                </div>
+
+                <div class="field-grid">
+                    <div class="field-group">
+                        <label class="field-label">First Name</label>
+                        <input type="text" class="field-input" id="s1_fname" placeholder="First name" autocomplete="given-name">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Last Name</label>
+                        <input type="text" class="field-input" id="s1_lname" placeholder="Last name" autocomplete="family-name">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Date of Birth</label>
+                        <input type="date" class="field-input" id="s1_dob">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Gender</label>
+                        <select class="field-select" id="s1_gender">
+                            <option value="">Select…</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Non-binary">Non-binary</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
+                    </div>
+                    <div class="field-group span2">
+                        <label class="field-label">Phone Number</label>
+                        <input type="tel" class="field-input" id="s1_phone" placeholder="(555) 000-0000" autocomplete="tel">
+                    </div>
+                </div>
+
+                <div id="step1-error" class="reg-error"></div>
+
+                <div class="reg-nav">
+                    <button class="reg-btn-next" onclick="step1Next()">Next: Account Security &#8594;</button>
+                </div>
+
+                <div class="login-link">Already have an account? <a href="/client/auth/patient_login.html">Sign in</a></div>
+            </div>
+
+            <!-- ── Step 2: Account Security ── -->
+            <div id="step2" class="hidden">
+                <div class="reg-form-header">
+                    <div class="reg-step-label">Step 2 of 4</div>
+                    <h1>Account Security</h1>
+                    <p>Your email will be your login. Your password is hashed with bcrypt and never stored in plain text.</p>
+                </div>
+
+                <div class="field-grid single">
+                    <div class="field-group">
+                        <label class="field-label">Email Address</label>
+                        <input type="email" class="field-input" id="s2_email" placeholder="your@email.com" autocomplete="email">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Password</label>
+                        <input type="password" class="field-input" id="s2_password" placeholder="Create a strong password" autocomplete="new-password">
+                        <div class="pw-strength-box" id="pwStrengthBox" style="display:none">
+                            <div class="pw-strength-title">Password must include</div>
+                            <div id="pw-len"   class="pw-rule">At least 8 characters</div>
+                            <div id="pw-upper" class="pw-rule">One uppercase letter</div>
+                            <div id="pw-num"   class="pw-rule">One number</div>
+                            <div id="pw-spec"  class="pw-rule">One special character (!@#$…)</div>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Confirm Password</label>
+                        <input type="password" class="field-input" id="s2_confirm" placeholder="Re-enter your password" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <div id="step2-error" class="reg-error"></div>
+
+                <div class="reg-nav">
+                    <button class="reg-btn-back" onclick="goStep(1)">&#8592; Back</button>
+                    <button class="reg-btn-next" onclick="step2Next()">Next: Insurance &#8594;</button>
+                </div>
+            </div>
+
+            <!-- ── Step 3: Insurance & Payment ── -->
+            <div id="step3" class="hidden">
+                <div class="reg-form-header">
+                    <div class="reg-step-label">Step 3 of 4</div>
+                    <h1>Insurance &amp; Payment</h1>
+                    <p>Select your insurance plan to have it applied automatically to your bills. You can change this anytime from your profile. Click <strong>Learn more</strong> before selecting to see coverage details.</p>
+                </div>
+
+                <div class="ins-cards" id="insCards">
+                    <div style="color:#aaa;font-size:13px;padding:12px 0">Loading available plans…</div>
+                </div>
+
+                <div id="step3-error" class="reg-error"></div>
+
+                <div class="reg-nav">
+                    <button class="reg-btn-back" onclick="goStep(2)">&#8592; Back</button>
+                    <button class="reg-btn-next" onclick="step3Next()">Review &amp; Confirm &#8594;</button>
+                </div>
+            </div>
+
+            <!-- ── Step 4: Review ── -->
+            <div id="step4" class="hidden">
+                <div class="reg-form-header">
+                    <div class="reg-step-label">Step 4 of 4</div>
+                    <h1>Review &amp; Create Account</h1>
+                    <p>Please confirm your information before creating your account. You can go back to make changes.</p>
+                </div>
+
+                <div id="reviewContent"></div>
+
+                <div id="step4-error" class="reg-error"></div>
+
+                <div class="reg-nav">
+                    <button class="reg-btn-back" onclick="goStep(3)">&#8592; Back</button>
+                    <button class="reg-btn-next green" id="createBtn" onclick="submitRegistration()">Create My Account &#10003;</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── Insurance Info Popup ── -->
+<div class="ins-popup-overlay" id="insPopupOverlay" onclick="closeInsPopup(event)">
+    <div class="ins-popup-box" id="insPopupBox">
+        <button class="ins-popup-close" onclick="closeInsPopup()">&times;</button>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#aaa;margin-bottom:6px">Insurance Plan Details</div>
+        <div id="insPopupName" style="font-size:20px;font-weight:800;color:#1f2a6d"></div>
+        <div class="ins-popup-coverage" id="insPopupCoverage"></div>
+        <div style="font-size:13px;color:#666;margin-bottom:4px" id="insPopupSub"></div>
+
+        <div class="ins-popup-stat-row">
+            <div class="ins-popup-stat">
+                <div class="ins-popup-stat-val" id="insPopupGeneral"></div>
+                <div class="ins-popup-stat-lbl">General Visit</div>
+            </div>
+            <div class="ins-popup-stat">
+                <div class="ins-popup-stat-val" id="insPopupSpecialist"></div>
+                <div class="ins-popup-stat-lbl">Specialist Visit</div>
+            </div>
+        </div>
+
+        <div style="background:#f0f4ff;border-radius:8px;padding:12px 14px;font-size:12px;color:#444;line-height:1.6" id="insPopupNotes"></div>
+
+        <div style="margin-top:16px;font-size:11px;color:#aaa;text-align:center">
+            Medical professional services are not subject to sales tax in TX.
+        </div>
+    </div>
+</div>
 
 <script src="/client/scripts/auth/register.js"></script>
 </body>

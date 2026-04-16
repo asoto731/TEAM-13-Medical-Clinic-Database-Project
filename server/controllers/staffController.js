@@ -213,14 +213,22 @@ const getStaffDashboard = (req, res) => {
         LIMIT 20`;
 
       const billingSql = `
-        SELECT b.bill_id, b.total_amount, b.tax_amount,
+        SELECT b.bill_id,
+               IFNULL(b.total_amount, 0)            AS total_amount,
+               IFNULL(b.insurance_paid_amount, 0)   AS insurance_paid_amount,
+               IFNULL(b.patient_owed, 0)            AS patient_owed,
                b.payment_status, b.payment_method, b.payment_date,
-               p.first_name, p.last_name
+               b.due_date,
+               p.first_name, p.last_name,
+               i.provider_name AS insurance_provider
         FROM billing b
-        JOIN patient p ON b.patient_id = p.patient_id
-        WHERE b.payment_status IS NULL OR b.payment_status != 'Paid'
-        ORDER BY b.bill_id DESC
-        LIMIT 15`;
+        JOIN patient p    ON b.patient_id   = p.patient_id
+        LEFT JOIN insurance i ON b.insurance_id = i.insurance_id
+        ORDER BY
+          CASE WHEN b.payment_status = 'Unpaid' OR b.payment_status IS NULL THEN 0 ELSE 1 END ASC,
+          b.due_date ASC,
+          b.bill_id DESC
+        LIMIT 50`;
 
       let data = {};
       let completed = 0;

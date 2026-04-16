@@ -45,8 +45,19 @@ const testRoute = (req, res) => {
   });
 };
 
+/* ── GET /api/auth/insurance-plans ── */
+const getInsurancePlans = (req, res) => {
+  db.query(
+    "SELECT insurance_id, provider_name, coverage_percentage, policy_number FROM insurance ORDER BY provider_name",
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Failed to load insurance plans" });
+      res.json(rows);
+    }
+  );
+};
+
 const registerUser = (req, res) => {
-  const { name, email, password, role, phone_number, date_of_birth } = req.body;
+  const { name, email, password, role, phone_number, date_of_birth, insurance_id } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Name, email, and password are required" });
@@ -112,10 +123,10 @@ const registerUser = (req, res) => {
         const lastName = nameParts.slice(1).join(" ") || "Patient";
 
         const patientSql = `INSERT INTO patient
-          (patient_id, user_id, first_name, last_name, email, phone_number, date_of_birth)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`;
+          (patient_id, user_id, first_name, last_name, email, phone_number, date_of_birth, insurance_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-        db.query(patientSql, [newUserId, newUserId, firstName, lastName, email || null, phone_number || null, date_of_birth || null], (patErr) => {
+        db.query(patientSql, [newUserId, newUserId, firstName, lastName, email || null, phone_number || null, date_of_birth || null, insurance_id || null], (patErr) => {
           if (patErr) {
             console.error("Patient row creation failed:", patErr.message);
             // User was created — still return success, profile just incomplete
@@ -178,4 +189,4 @@ const loginUser = (req, res) => {
   });
 };
 
-module.exports = { testRoute, registerUser, loginUser, auditLog };
+module.exports = { testRoute, registerUser, loginUser, auditLog, getInsurancePlans };

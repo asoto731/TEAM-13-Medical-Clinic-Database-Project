@@ -164,13 +164,17 @@ async function loadDashboard() {
                 <td class="primary">#${b.bill_id}</td>
                 <td>${b.first_name} ${b.last_name}</td>
                 <td>$${parseFloat(b.total_amount || 0).toFixed(2)}</td>
-                <td>$${parseFloat(b.tax_amount || 0).toFixed(2)}</td>
+                <td style="color:#10b981">$${parseFloat(b.insurance_paid_amount || 0).toFixed(2)}</td>
+                <td style="color:#e74c3c;font-weight:600">$${parseFloat(b.patient_owed || 0).toFixed(2)}</td>
                 <td style="text-transform:capitalize">${b.payment_method || "—"}</td>
                 <td>${fmt(b.payment_date)}</td>
                 <td>${pill(b.payment_status || "Unpaid")}</td>
-                <td>${b.payment_status !== 'Paid' ? `<button onclick="markBillingPaid(${b.bill_id})" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #10b981;color:#10b981;border-radius:6px;cursor:pointer;font-family:inherit">Mark Paid</button>` : '—'}</td>
+                <td>${b.payment_status !== 'Paid'
+                    ? `<button onclick="openPaymentModal(${b.bill_id},'${b.first_name} ${b.last_name}',${parseFloat(b.total_amount||0).toFixed(2)},${parseFloat(b.insurance_paid_amount||0).toFixed(2)},${parseFloat(b.patient_owed||0).toFixed(2)})"
+                        style="padding:4px 10px;font-size:11px;background:none;border:1px solid #10b981;color:#10b981;border-radius:6px;cursor:pointer;font-family:inherit">Mark Paid</button>`
+                    : '<span style="color:#10b981;font-size:12px;font-weight:600">✓ Paid</span>'}</td>
             </tr>`).join("")
-            : `<tr><td colspan="8" class="table-empty">No billing records</td></tr>`;
+            : `<tr><td colspan="9" class="table-empty">No billing records</td></tr>`;
 
         /* Profile */
         document.getElementById("profileGrid").innerHTML = `
@@ -286,21 +290,54 @@ async function submitStaffBooking() {
     }
 }
 
-/* ── Staff: Mark Billing Paid ── */
-async function markBillingPaid(bill_id) {
-    const method = prompt("Payment method (e.g. cash, credit card, insurance):");
-    if (!method) return;
+/* ── Staff: Mark Billing Paid — Modal ── */
+let _payBillId = null;
+
+function openPaymentModal(bill_id, patientName, total, insurancePaid, patientOwed) {
+    _payBillId = bill_id;
+    document.getElementById("paymentModalSub").textContent = `Bill #${bill_id} — ${patientName}`;
+    document.getElementById("payTotal").textContent     = `$${parseFloat(total).toFixed(2)}`;
+    document.getElementById("payInsurance").textContent = `−$${parseFloat(insurancePaid).toFixed(2)}`;
+    document.getElementById("payOwed").textContent      = `$${parseFloat(patientOwed).toFixed(2)}`;
+    document.getElementById("paymentMethod").value = "";
+    document.getElementById("paymentRef").value    = "";
+    document.getElementById("paymentError").style.display = "none";
+    document.getElementById("paymentModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+
+function closePaymentModal() {
+    document.getElementById("paymentModal").classList.add("hidden");
+    document.body.style.overflow = "";
+    _payBillId = null;
+}
+
+async function confirmPayment() {
+    const method = document.getElementById("paymentMethod").value;
+    const ref    = document.getElementById("paymentRef").value.trim();
+    const errEl  = document.getElementById("paymentError");
+
+    if (!method) {
+        errEl.textContent = "Please select a payment method.";
+        errEl.style.display = "block";
+        return;
+    }
+
+    const methodLabel = ref ? `${method} (${ref})` : method;
+
     try {
-        const r = await fetch(`/api/staff/billing/${bill_id}/pay`, {
+        const r = await fetch(`/api/staff/billing/${_payBillId}/pay`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: user.id, payment_method: method })
+            body: JSON.stringify({ user_id: user.id, payment_method: methodLabel })
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.message);
+        closePaymentModal();
         loadDashboard();
     } catch(err) {
-        alert(err.message || "Could not mark as paid.");
+        errEl.textContent = err.message || "Could not record payment. Please try again.";
+        errEl.style.display = "block";
     }
 }
 

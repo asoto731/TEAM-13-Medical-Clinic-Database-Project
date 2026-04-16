@@ -59,9 +59,8 @@
             <div class="nav-section-label">Menu</div>
             <button class="nav-item active" onclick="showSection('overview')">Overview</button>
             <button class="nav-item" onclick="showSection('appointments')">My Appointments</button>
-            <button class="nav-item" onclick="showSection('history')">Medical History</button>
-            <button class="nav-item" onclick="showSection('billing')">Billing</button>
-            <button class="nav-item" onclick="showSection('referrals')">My Referrals</button>
+            <button class="nav-item" onclick="showSection('history')">Health Records</button>
+            <button class="nav-item" onclick="showSection('billing')">Billing &amp; Payments</button>
             <div class="nav-section-label">Account</div>
             <button class="nav-item" onclick="showSection('profile')">My Profile</button>
             <button class="nav-item" onclick="showSection('settings')">Settings</button>
@@ -353,31 +352,72 @@
                     <tbody id="apptUpcomingBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
                 </table>
             </div>
+
             <!-- Past -->
-            <div class="section-block">
+            <div class="section-block" style="margin-bottom:24px">
                 <div class="section-block-header">
-                    <div><h3>Past Appointments</h3><p>Completed, no-shows, and cancelled visits</p></div>
+                    <div><h3>Past Appointments</h3><p>Completed, cancelled, and no-show visits</p></div>
                 </div>
                 <table class="data-table">
                     <thead>
-                        <tr><th>Date</th><th>Time</th><th>Physician</th><th>Location</th><th>Reason</th><th>Status</th></tr>
+                        <tr><th>Date</th><th>Time</th><th>Physician</th><th>Location</th><th>Type</th><th>Status</th><th>Billing</th></tr>
                     </thead>
-                    <tbody id="apptPastBody"><tr><td colspan="6" class="table-empty">Loading…</td></tr></tbody>
+                    <tbody id="apptPastBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
                 </table>
+            </div>
+
+            <!-- Referrals (merged from old nav) -->
+            <div class="section-block">
+                <div class="section-block-header">
+                    <div>
+                        <h3>Specialist Referrals</h3>
+                        <p>Referrals issued by your primary physician</p>
+                    </div>
+                    <button class="profile-edit-btn" id="requestReferralBtn" onclick="openReferralModal()" style="display:none">+ Request Referral</button>
+                </div>
+                <div id="referralGateMsg" style="display:none;padding:16px 24px">
+                    <div style="background:#fef9ec;border:1px solid #f59e0b44;border-radius:10px;padding:14px 18px;font-size:13px;color:#92400e;line-height:1.6">
+                        You need at least one completed appointment with your primary physician before you can request a specialist referral.
+                    </div>
+                </div>
+                <div id="referralsList" style="padding:16px;display:flex;flex-direction:column;gap:14px">
+                    <p class="table-empty">Loading…</p>
+                </div>
             </div>
         </div>
 
-        <!-- ── Medical History Section ── -->
+        <!-- ── Health Records Section (was Medical History) ── -->
         <div class="page-section hidden" id="sec-history">
+            <!-- Active conditions -->
+            <div class="section-block" style="margin-bottom:24px">
+                <div class="section-block-header">
+                    <div><h3>Active Conditions</h3><p>Current health conditions on your record</p></div>
+                </div>
+                <div id="activeConditionsBody" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+                    <p class="table-empty">Loading…</p>
+                </div>
+            </div>
+
+            <!-- Physician notes / visit summaries -->
+            <div class="section-block" style="margin-bottom:24px">
+                <div class="section-block-header">
+                    <div><h3>Visit Notes &amp; Clinical Summaries</h3><p>Notes added by your care team after visits</p></div>
+                </div>
+                <div id="visitNotesBody" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+                    <p class="table-empty">Loading…</p>
+                </div>
+            </div>
+
+            <!-- Resolved -->
             <div class="section-block">
                 <div class="section-block-header">
-                    <div><h3>Medical History</h3><p>Conditions and diagnoses on record</p></div>
+                    <div><h3>Resolved Conditions</h3><p>Past conditions no longer active</p></div>
                 </div>
                 <table class="data-table">
                     <thead>
-                        <tr><th>Condition</th><th>Diagnosed</th><th>Status</th><th>Notes</th></tr>
+                        <tr><th>Condition</th><th>Date Added</th><th>Status</th><th>Notes</th></tr>
                     </thead>
-                    <tbody id="historyBody"><tr><td colspan="4" class="table-empty">Loading…</td></tr></tbody>
+                    <tbody id="resolvedHistoryBody"><tr><td colspan="4" class="table-empty">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -408,31 +448,40 @@
                     </div>
                 </div>
                 <div class="section-block">
-                    <div class="section-block-header"><div><h3>Emergency Contacts</h3></div></div>
+                    <div class="section-block-header"><div><h3>Emergency Contact</h3></div></div>
                     <div style="padding:20px;display:flex;flex-direction:column;gap:12px" id="emergencyInfo">
                         <p class="table-empty">Loading…</p>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- ── Referrals Section ── -->
-        <div class="page-section hidden" id="sec-referrals">
-            <div class="section-block">
-                <div class="section-block-header">
-                    <div>
-                        <h3>My Referrals</h3>
-                        <p class="section-block-sub">Specialist referrals issued by your primary physician.</p>
-                    </div>
-                    <button class="profile-edit-btn" id="requestReferralBtn" onclick="openReferralModal()" style="display:none">Request Referral</button>
-                </div>
-                <div id="referralGateMsg" style="display:none;padding:16px 24px">
-                    <div style="background:#fef9ec;border:1px solid #f59e0b44;border-radius:10px;padding:14px 18px;font-size:13px;color:#92400e;line-height:1.6">
-                        You need at least one completed appointment with your primary physician before you can request a specialist referral.
+            <!-- Care team + support — full width below -->
+            <div class="sections-grid" style="margin-top:24px">
+                <div class="section-block">
+                    <div class="section-block-header"><div><h3>My Care Team</h3></div></div>
+                    <div style="padding:20px;display:flex;flex-direction:column;gap:12px" id="profileCareTeam">
+                        <p class="table-empty">Loading…</p>
                     </div>
                 </div>
-                <div id="referralsList" style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
-                    <p class="table-empty">Loading…</p>
+                <div class="section-block">
+                    <div class="section-block-header"><div><h3>Need Assistance?</h3></div></div>
+                    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+                        <div style="font-size:13px;color:#555;line-height:1.6">Our staff can assist with appointment changes, billing questions, and account updates during business hours <strong>(Mon–Fri, 8 AM – 5 PM CT)</strong>.</div>
+                        <div style="display:flex;flex-direction:column;gap:10px" id="supportContacts">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f8fbff;border:1px solid #e0e4f0;border-radius:8px">
+                                <span style="font-size:13px;font-weight:600;color:#1f2a6d">Dallas, TX</span>
+                                <a href="tel:+12145550200" style="font-size:13px;color:#6ea8fe;font-weight:600;text-decoration:none">(214) 555-0200</a>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f8fbff;border:1px solid #e0e4f0;border-radius:8px">
+                                <span style="font-size:13px;font-weight:600;color:#1f2a6d">Houston, TX</span>
+                                <a href="tel:+17135550200" style="font-size:13px;color:#6ea8fe;font-weight:600;text-decoration:none">(713) 555-0200</a>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f8fbff;border:1px solid #e0e4f0;border-radius:8px">
+                                <span style="font-size:13px;font-weight:600;color:#1f2a6d">Austin, TX</span>
+                                <a href="tel:+15125550200" style="font-size:13px;color:#6ea8fe;font-weight:600;text-decoration:none">(512) 555-0200</a>
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:#aaa;text-align:center">For medical emergencies, call <strong style="color:#e05c5c">911</strong></div>
+                    </div>
                 </div>
             </div>
         </div>

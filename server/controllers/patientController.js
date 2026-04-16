@@ -17,11 +17,15 @@ const getPatientDashboard = (req, res) => {
            p.primary_physician_id, p.insurance_id,
            ph.first_name AS doc_first, ph.last_name AS doc_last, ph.specialty,
            ph.phone_number AS doc_phone,
-           ins.provider_name, ins.policy_number, ins.coverage_percentage
+           ins.provider_name, ins.policy_number, ins.coverage_percentage,
+           o.city AS office_city, o.state AS office_state
     FROM patient p
     LEFT JOIN physician ph ON p.primary_physician_id = ph.physician_id
     LEFT JOIN insurance ins ON p.insurance_id = ins.insurance_id
-    WHERE p.user_id = ?`;
+    LEFT JOIN work_schedule ws ON ws.physician_id = ph.physician_id
+    LEFT JOIN office o ON ws.office_id = o.office_id
+    WHERE p.user_id = ?
+    LIMIT 1`;
 
   db.query(patientSql, [user_id], (err, rows) => {
     if (err) return res.status(500).json({ message: "Query failed" });
@@ -58,10 +62,16 @@ const getPatientDashboard = (req, res) => {
       LIMIT 20`;
 
     const historySQL = `
-      SELECT medical_history_id, \`condition\`, diagnosis_date, status, notes
-      FROM medical_history
-      WHERE patient_id = ?
-      ORDER BY diagnosis_date DESC`;
+      SELECT mh.medical_history_id, mh.\`condition\`, mh.diagnosis_date, mh.status, mh.notes,
+             mh.physician_id,
+             CASE WHEN ph.physician_id IS NOT NULL
+               THEN CONCAT('Dr. ', ph.first_name, ' ', ph.last_name)
+               ELSE NULL
+             END AS physician_name
+      FROM medical_history mh
+      LEFT JOIN physician ph ON mh.physician_id = ph.physician_id
+      WHERE mh.patient_id = ?
+      ORDER BY mh.diagnosis_date DESC`;
 
     const billingSql = `
       SELECT b.bill_id, b.total_amount, b.insurance_paid_amount,
