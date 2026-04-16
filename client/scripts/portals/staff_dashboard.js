@@ -312,6 +312,14 @@ async function loadDailySchedule() {
     }
     const date = dateInput.value;
 
+    // Update header label with human-readable date
+    const [y,m,d] = date.split("-").map(Number);
+    const labelDate = new Date(y, m-1, d);
+    const isToday = labelDate.toDateString() === new Date().toDateString();
+    const dateLabel = labelDate.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
+    const labelEl = document.getElementById("scheduleDateLabel");
+    if (labelEl) labelEl.textContent = isToday ? `Today, ${dateLabel}` : dateLabel;
+
     document.getElementById("scheduleModal").classList.remove("hidden");
     document.body.style.overflow = "hidden";
     document.getElementById("scheduleBody").innerHTML = `<tr><td colspan="7" class="table-empty">Loading…</td></tr>`;

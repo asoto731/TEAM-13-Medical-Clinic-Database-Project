@@ -975,13 +975,6 @@ async function openBookingModal() {
         }
     } catch(e) { phSelect.innerHTML = '<option value="">Could not load physician</option>'; }
 
-    // Set min date on date picker
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateInput = document.getElementById("b_date");
-    dateInput.min = tomorrow.toISOString().split("T")[0];
-    const maxDate = new Date(); maxDate.setFullYear(maxDate.getFullYear() + 2);
-    dateInput.max = maxDate.toISOString().split("T")[0];
-    dateInput.value = "";
     document.getElementById("b_slot").innerHTML = '<option value="">Pick a date first…</option>';
 }
 
