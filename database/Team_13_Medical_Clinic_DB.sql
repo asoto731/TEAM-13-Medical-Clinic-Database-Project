@@ -55,6 +55,7 @@ CREATE TABLE work_schedule (
     day_of_week  VARCHAR(10),
     start_time   TIME,
     end_time     TIME,
+    UNIQUE KEY uq_physician_day (physician_id, day_of_week),   -- one schedule row per physician per weekday
     FOREIGN KEY (physician_id) REFERENCES physician(physician_id) ON DELETE CASCADE,
     FOREIGN KEY (office_id)    REFERENCES office(office_id)       ON DELETE CASCADE
 ) ENGINE=InnoDB;

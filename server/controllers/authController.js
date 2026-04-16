@@ -52,6 +52,11 @@ const registerUser = (req, res) => {
     return res.status(400).json({ error: "Name, email, and password are required" });
   }
 
+  // ── Phone validation: required for patient registration ──
+  if (!phone_number || phone_number.replace(/\D/g, "").length !== 10) {
+    return res.status(400).json({ error: "A valid 10-digit phone number is required." });
+  }
+
   // ── Password strength (uses shared utility) ──
   const pwError = validatePassword(password);
   if (pwError) return res.status(400).json({ error: pwError });

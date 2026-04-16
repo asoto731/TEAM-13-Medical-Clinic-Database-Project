@@ -194,6 +194,9 @@ body {
     gap: 28px;
 }
 
+/* Global hidden utility — applies to any element with class="hidden" */
+.hidden { display: none !important; }
+
 .page-section.hidden { display: none; }
 
 /* ── Greeting card ── */

@@ -57,6 +57,14 @@ registerButton.addEventListener("click", async function (event) {
         return;
     }
 
+    // ── Phone validation: required, must be 10 digits ──
+    const phoneDigits = phone_number.replace(/\D/g, "");
+    if (!phone_number || phoneDigits.length !== 10) {
+        message.style.color = "#c0392b";
+        message.textContent = "Please enter a valid 10-digit phone number.";
+        return;
+    }
+
     // ── Age validation: required, 18+, no future dates ──
     if (!date_of_birth) {
         message.style.color = "#c0392b";

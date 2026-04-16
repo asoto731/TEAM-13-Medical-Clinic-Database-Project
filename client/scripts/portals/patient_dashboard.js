@@ -350,12 +350,15 @@ async function loadDashboard() {
 }
 
 /* ── Profile completeness check ── */
-let _patientId   = null;
-let _patientCity = null;
+let _patientId         = null;
+let _patientCity       = null;
+let _patientDOB        = null; // stored on dashboard load, used for age-aware physician labels
+let _physicianWorkDays = [];   // ["Monday","Wednesday"] — loaded when entering booking step 2
 
 function checkProfileCompleteness(patient) {
     _patientId   = patient.patient_id;
     _patientCity = patient.city || null;
+    _patientDOB  = patient.date_of_birth || null;
 
     const missing = [];
     if (!patient.first_name)              missing.push("first name");
@@ -431,8 +434,27 @@ async function loadPhysiciansForCity() {
         if (physicians.length === 0) {
             phSelect.innerHTML = '<option value="">No physicians at this location</option>';
         } else {
+            // Calculate patient age for specialty hints
+            let patientAge = null;
+            if (_patientDOB) {
+                const dob = new Date(_patientDOB);
+                patientAge = Math.floor((new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000));
+            }
             phSelect.innerHTML = '<option value="">Choose a physician…</option>' +
-                physicians.map(p => `<option value="${p.physician_id}">Dr. ${p.first_name} ${p.last_name}${p.specialty ? " — " + p.specialty : ""}</option>`).join("");
+                physicians.map(p => {
+                    const sp = p.specialty || "";
+                    let hint = "";
+                    if (/geriatric/i.test(sp)) {
+                        hint = patientAge !== null && patientAge >= 65
+                            ? " — Recommended for your age"
+                            : " — Typically for patients 65+";
+                    } else if (/pediatric/i.test(sp)) {
+                        hint = " — For patients under 18";
+                    } else if (/family|general|internal medicine/i.test(sp)) {
+                        hint = " — All ages welcome";
+                    }
+                    return `<option value="${p.physician_id}">Dr. ${p.first_name} ${p.last_name} — ${sp}${hint}</option>`;
+                }).join("");
         }
     } catch(e) { phSelect.innerHTML = '<option value="">Could not load physicians</option>'; }
 }
@@ -629,28 +651,60 @@ async function submitReferralRequest() {
 
 /* ── Book with specialist from accepted referral ── */
 async function bookWithSpecialist(specialist_id, label) {
-    // Open the booking modal but force-load just this specialist regardless of city
+    // Open the booking modal, skip step 1, go straight to step 2 with specialist locked
     document.getElementById("bookingModal").classList.remove("hidden");
     document.body.style.overflow = "hidden";
     document.getElementById("bookingError").style.display = "none";
 
-    // Reset to step 1
+    // Jump directly to step 2 (skip physician selection)
     ["bstep1","bstep2","bstep3"].forEach((id,i) => {
-        document.getElementById(id).classList.toggle("hidden", i !== 0);
+        document.getElementById(id).classList.toggle("hidden", i !== 1);
     });
 
-    // Load ONLY this specialist into the dropdown — no city filter
+    // Lock physician dropdown to this specialist
     const phSelect = document.getElementById("b_physician");
     phSelect.innerHTML = `<option value="${specialist_id}">${label}</option>`;
     phSelect.value = specialist_id;
-    phSelect.disabled = true; // locked — they're booking this specific specialist
+    phSelect.disabled = true;
 
     // Set min date
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const dateInput = document.getElementById("b_date");
     dateInput.min = tomorrow.toISOString().split("T")[0];
+    const maxDate2 = new Date(); maxDate2.setFullYear(maxDate2.getFullYear() + 2);
+    dateInput.max = maxDate2.toISOString().split("T")[0];
     dateInput.value = "";
+    document.getElementById("b_date_dayname").textContent = "";
+    document.getElementById("b_day_error").style.display = "none";
     document.getElementById("b_slot").innerHTML = '<option value="">Pick a date first…</option>';
+    _physicianWorkDays = [];
+
+    // Load schedule hint for specialist
+    try {
+        const r = await fetch(`/api/patient/appointments/physician-schedule?physician_id=${specialist_id}&user_id=${user.id}`);
+        const data = await r.json();
+        const schedules = data.schedules || [];
+        _physicianWorkDays = schedules.map(s => s.day_of_week);
+
+        const hintEl  = document.getElementById("b_schedule_hint");
+        const daysEl  = document.getElementById("b_schedule_days");
+        const hoursEl = document.getElementById("b_schedule_hours");
+        if (schedules.length) {
+            const dayColors = { Monday:"#6ea8fe", Tuesday:"#a78bfa", Wednesday:"#34d399",
+                                Thursday:"#f59e0b", Friday:"#f87171", Saturday:"#fb923c", Sunday:"#94a3b8" };
+            daysEl.innerHTML = schedules.map(s => {
+                const c = dayColors[s.day_of_week] || "#9ca3af";
+                const fmtTime = t => { const [h,m] = t.toString().split(":").slice(0,2); const hn=parseInt(h); return `${hn%12||12}:${m} ${hn>=12?"PM":"AM"}`; };
+                return `<span style="background:${c}22;color:${c};border:1px solid ${c}55;padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px">${s.day_of_week}</span>
+                         <span style="font-size:11px;color:#6b7280">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}</span>`;
+            }).join("&nbsp;&nbsp;");
+            const cities = [...new Set(schedules.map(s => s.city).filter(Boolean))];
+            hoursEl.textContent = cities.length ? `Office: ${cities.join(", ")}` : "";
+            hintEl.style.display = "block";
+        } else {
+            hintEl.style.display = "none";
+        }
+    } catch(e) { document.getElementById("b_schedule_hint").style.display = "none"; }
 }
 
 function openProfileModal() {
@@ -894,6 +948,14 @@ async function openBookingModal() {
     ["bstep1","bstep2","bstep3"].forEach((id,i) => {
         document.getElementById(id).classList.toggle("hidden", i !== 0);
     });
+    // Set minimum date to tomorrow (no same-day booking)
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const minDate = tomorrow.toISOString().split("T")[0];
+    const dateInput = document.getElementById("b_date");
+    dateInput.min = minDate;
+    const maxDate = new Date(); maxDate.setFullYear(maxDate.getFullYear() + 2);
+    dateInput.max = maxDate.toISOString().split("T")[0];
+    if (!dateInput.value || dateInput.value < minDate) dateInput.value = "";
 
     // Only show the patient's assigned primary physician
     // Specialists can only be booked through an accepted referral
@@ -917,6 +979,8 @@ async function openBookingModal() {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const dateInput = document.getElementById("b_date");
     dateInput.min = tomorrow.toISOString().split("T")[0];
+    const maxDate = new Date(); maxDate.setFullYear(maxDate.getFullYear() + 2);
+    dateInput.max = maxDate.toISOString().split("T")[0];
     dateInput.value = "";
     document.getElementById("b_slot").innerHTML = '<option value="">Pick a date first…</option>';
 }
@@ -924,34 +988,105 @@ async function openBookingModal() {
 function closeBookingModal() {
     document.getElementById("bookingModal").classList.add("hidden");
     document.body.style.overflow = "";
-    // Re-enable physician dropdown in case it was locked by bookWithSpecialist
     const phSelect = document.getElementById("b_physician");
     if (phSelect) phSelect.disabled = false;
+    document.getElementById("b_schedule_hint").style.display = "none";
+    document.getElementById("b_day_error").style.display = "none";
+    document.getElementById("b_date_dayname").textContent = "";
+    _physicianWorkDays = [];
 }
 
-function bookingStep2() {
+async function bookingStep2() {
     const ph = document.getElementById("b_physician").value;
     if (!ph) { alert("Please select a physician."); return; }
     document.getElementById("bstep1").classList.add("hidden");
     document.getElementById("bstep2").classList.remove("hidden");
+
+    // Reset date + slot + error state
+    document.getElementById("b_date").value = "";
+    document.getElementById("b_date_dayname").textContent = "";
+    document.getElementById("b_slot").innerHTML = '<option value="">Pick a date first…</option>';
+    document.getElementById("b_day_error").style.display = "none";
+    _physicianWorkDays = [];
+
+    // Fetch physician's working schedule and surface it above the date picker
+    try {
+        const r = await fetch(`/api/patient/appointments/physician-schedule?physician_id=${ph}&user_id=${user.id}`);
+        const data = await r.json();
+        const schedules = data.schedules || [];
+        _physicianWorkDays = schedules.map(s => s.day_of_week);
+
+        const hintEl   = document.getElementById("b_schedule_hint");
+        const daysEl   = document.getElementById("b_schedule_days");
+        const hoursEl  = document.getElementById("b_schedule_hours");
+
+        if (schedules.length) {
+            // Render day pills
+            const dayColors = { Monday:"#6ea8fe", Tuesday:"#a78bfa", Wednesday:"#34d399",
+                                Thursday:"#f59e0b", Friday:"#f87171", Saturday:"#fb923c", Sunday:"#94a3b8" };
+            daysEl.innerHTML = schedules.map(s => {
+                const c = dayColors[s.day_of_week] || "#9ca3af";
+                const fmtTime = t => {
+                    const [h,m] = t.toString().split(":").slice(0,2);
+                    const hn = parseInt(h); return `${hn%12||12}:${m} ${hn>=12?"PM":"AM"}`;
+                };
+                return `<span style="background:${c}22;color:${c};border:1px solid ${c}55;padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px">${s.day_of_week}</span>
+                         <span style="font-size:11px;color:#6b7280">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}</span>`;
+            }).join("&nbsp;&nbsp;");
+
+            // Group by city if multiple
+            const cities = [...new Set(schedules.map(s => s.city).filter(Boolean))];
+            hoursEl.textContent = cities.length ? `Office: ${cities.join(", ")}` : "";
+            hintEl.style.display = "block";
+        } else {
+            hintEl.style.display = "none";
+        }
+    } catch(e) {
+        // Non-fatal — hint just won't show
+        document.getElementById("b_schedule_hint").style.display = "none";
+    }
 }
 
 function bookingBack1() {
     document.getElementById("bstep2").classList.add("hidden");
     document.getElementById("bstep1").classList.remove("hidden");
+    // Clear schedule hint so it reloads fresh if they pick a different physician
+    document.getElementById("b_schedule_hint").style.display = "none";
+    document.getElementById("b_day_error").style.display = "none";
+    document.getElementById("b_date_dayname").textContent = "";
+    _physicianWorkDays = [];
 }
 
 async function loadSlots() {
     const physician_id = document.getElementById("b_physician").value;
     const date = document.getElementById("b_date").value;
     const slotSelect = document.getElementById("b_slot");
+    const dayNameEl  = document.getElementById("b_date_dayname");
+    const dayErrEl   = document.getElementById("b_day_error");
     if (!date) return;
+
+    // Show day of week on the date input
+    const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const [y,mo,d] = date.split("-").map(Number);
+    const pickedDay = dayNames[new Date(y, mo-1, d).getDay()];
+    dayNameEl.textContent = pickedDay;
+
+    // Validate against physician's working days (if we loaded them)
+    dayErrEl.style.display = "none";
+    if (_physicianWorkDays.length && !_physicianWorkDays.includes(pickedDay)) {
+        const availList = _physicianWorkDays.join(", ");
+        dayErrEl.textContent = `This physician doesn't work on ${pickedDay}s. Available days: ${availList}.`;
+        dayErrEl.style.display = "block";
+        slotSelect.innerHTML = '<option value="">Not a working day</option>';
+        return;
+    }
+
     slotSelect.innerHTML = '<option value="">Loading…</option>';
     try {
         const r = await fetch(`/api/patient/appointments/slots?physician_id=${physician_id}&date=${date}&user_id=${user.id}`);
         const data = await r.json();
         if (!data.slots || !data.slots.length) {
-            slotSelect.innerHTML = '<option value="">No slots available on this day</option>';
+            slotSelect.innerHTML = '<option value="">No available slots on this day</option>';
         } else {
             _bookingOfficeId = data.office_id;
             slotSelect.innerHTML = '<option value="">Choose a time…</option>' +

@@ -71,7 +71,13 @@ syncThemeButtons();
 /* ── Helpers ── */
 document.getElementById("todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
 
-function fmt(d) { return d ? new Date(d).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }) : "—"; }
+function fmt(d) {
+    if (!d) return "—";
+    const s = d.toString().split("T")[0];
+    const [y, mo, dy] = s.split("-").map(Number);
+    if (!y || !mo || !dy) return "—";
+    return new Date(y, mo - 1, dy).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+}
 function timeFmt(t) {
     if (!t) return "—";
     const [h, m] = t.toString().split(":");
@@ -215,7 +221,7 @@ async function submitNote() {
         const r = await fetch("/api/staff/physician/note", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ patient_id: _notePatientId, condition, status, notes })
+            body: JSON.stringify({ patient_id: _notePatientId, condition, status, notes, user_id: user.id })
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.message || "Failed to save note");
@@ -341,7 +347,7 @@ async function loadIncomingReferrals(physician_id) {
                 <div class="referral-card-meta">Referred by Dr. ${r.primary_first} ${r.primary_last}</div>
                 <div class="referral-card-reason">${r.referral_reason || "—"}</div>
                 <div class="referral-card-dates">Issued: ${fmt(r.date_issued)} &bull; Expires: ${fmt(r.expiration_date)}</div>
-                ${r.referral_status_name === "Issued" ? `<div style="font-size:12px;color:#f59e0b;margin-top:6px">⏳ Awaiting your review</div>` : ""}
+                ${r.referral_status_name === "Issued" ? `<div style="font-size:12px;color:#f59e0b;font-weight:600;margin-top:6px;padding:3px 8px;background:#fef9ec;border:1px solid #f59e0b44;border-radius:4px;display:inline-block">Awaiting your review</div>` : ""}
             </div>
         `).join('');
     } catch (err) {
@@ -414,9 +420,22 @@ async function loadDashboard() {
                 <td>${a.reason_for_visit || "—"}</td>
                 <td>${pill(a.status_name)}</td>
                 <td><button onclick='openNoteModal(${a.patient_id},"${a.patient_first} ${a.patient_last}")' style="padding:5px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;color:#15803d;cursor:pointer;font-family:inherit">+ Note</button></td>
-                <td>${a.status_name === 'Scheduled' ? `<button onclick="openStatusModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${a.appointment_date}')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #1f6d45;color:#1f6d45;border-radius:6px;cursor:pointer;font-family:inherit">Update</button>` : '—'}</td>
+                <td>${
+    a.status_name === 'Scheduled'
+        ? `<button onclick="openStatusModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${(a.appointment_date||'').toString().split('T')[0]}')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #1f6d45;color:#1f6d45;border-radius:6px;cursor:pointer;font-family:inherit">Update</button>`
+    : (a.status_name === 'No-Show' || a.status_name === 'Cancelled')
+        ? `<button onclick="openUndoModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${(a.appointment_date||'').toString().split('T')[0]}', '${a.status_name}')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #f59e0b;color:#b45309;border-radius:6px;cursor:pointer;font-family:inherit">Undo</button>`
+    : '—'
+}</td>
             </tr>`).join("")
             : `<tr><td colspan="8" class="table-empty">No appointments found</td></tr>`;
+
+        /* Store appointments globally for calendar view */
+        _allAppointments = appointments;
+        if (document.getElementById("apptCalendarContainer") &&
+            document.getElementById("apptCalendarContainer").style.display !== "none") {
+            renderWeekCalendar();
+        }
 
         /* Patients table */
         document.getElementById("patientsBody").innerHTML = patients.length
@@ -465,6 +484,8 @@ loadDashboard();
 
 /* ── Update Appointment Status ── */
 let _statusAppointmentId = null;
+let _allAppointments = [];
+let _calWeekOffset = 0; // 0 = current week, 1 = next week, -1 = last week
 
 function openStatusModal(appointment_id, patientName, date) {
     _statusAppointmentId = appointment_id;
@@ -534,4 +555,177 @@ async function loadActivityReport() {
     } catch(err) {
         document.getElementById("reportBody").innerHTML = `<tr><td colspan="6" class="table-empty">Could not load report</td></tr>`;
     }
+}
+
+/* ── Undo Appointment Status (No-Show / Cancelled → Scheduled) ── */
+let _undoAppointmentId = null;
+
+function openUndoModal(appointment_id, patientName, date, currentStatus) {
+    _undoAppointmentId = appointment_id;
+
+    // Fill in context
+    document.getElementById("undoModalInfo").innerHTML =
+        `<strong>Patient:</strong> ${patientName}<br>
+         <strong>Date:</strong> ${fmt(date)}<br>
+         <strong>Current status:</strong> <span style="font-weight:700;color:${currentStatus === 'No-Show' ? '#b45309' : '#6b7280'}">${currentStatus}</span>`;
+
+    // Adjust copy based on status
+    const noteEl = document.getElementById("undoModalNote");
+    if (currentStatus === "No-Show") {
+        noteEl.textContent = "In most clinical systems, reversing a No-Show requires a brief justification (e.g. patient called in late, entry error). This action will be recorded in the appointment history.";
+    } else {
+        noteEl.textContent = "Restoring a Cancelled appointment sets it back to Scheduled. The patient will need to be notified separately. This action will be recorded.";
+    }
+
+    document.getElementById("undoReason").value = "";
+    document.getElementById("undoModalError").style.display = "none";
+    document.getElementById("undoModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+
+function closeUndoModal() {
+    document.getElementById("undoModal").classList.add("hidden");
+    document.body.style.overflow = "";
+    _undoAppointmentId = null;
+}
+
+async function confirmUndoStatus() {
+    const reason = document.getElementById("undoReason").value.trim();
+    const errEl  = document.getElementById("undoModalError");
+    errEl.style.display = "none";
+
+    if (!reason) {
+        errEl.textContent = "Please enter a reason before restoring the appointment.";
+        errEl.style.display = "block";
+        return;
+    }
+
+    try {
+        const r = await fetch(`/api/staff/appointment/${_undoAppointmentId}/undo-status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user.id, reason })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        closeUndoModal();
+        loadDashboard();
+    } catch(err) {
+        errEl.textContent = err.message || "Could not restore appointment. Please try again.";
+        errEl.style.display = "block";
+    }
+}
+
+/* ── Appointment Calendar View ── */
+function setApptView(view) {
+    const listBtn = document.getElementById("apptViewList");
+    const calBtn  = document.getElementById("apptViewCal");
+    const calContainer = document.getElementById("apptCalendarContainer");
+    const tableWrap    = document.querySelector("#sec-appointments .data-table")?.closest("div.table-wrapper") || document.querySelector("#sec-appointments table.data-table")?.parentElement;
+
+    if (view === "calendar") {
+        if (listBtn) { listBtn.style.background="#fff"; listBtn.style.color="#3a9e6a"; }
+        if (calBtn)  { calBtn.style.background="#3a9e6a"; calBtn.style.color="#fff"; }
+        if (calContainer) calContainer.style.display = "block";
+        if (tableWrap) tableWrap.style.display = "none";
+        renderWeekCalendar();
+    } else {
+        if (listBtn) { listBtn.style.background="#3a9e6a"; listBtn.style.color="#fff"; }
+        if (calBtn)  { calBtn.style.background="#fff"; calBtn.style.color="#3a9e6a"; }
+        if (calContainer) calContainer.style.display = "none";
+        if (tableWrap) tableWrap.style.display = "";
+    }
+}
+
+function shiftCalWeek(dir) {
+    _calWeekOffset += dir;
+    renderWeekCalendar();
+}
+
+function renderWeekCalendar() {
+    const cal = document.getElementById("apptCalendar");
+    if (!cal) return;
+
+    // Compute the Monday of the target week
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dayOfWeek = today.getDay(); // 0=Sun
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset + (_calWeekOffset * 7));
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
+        days.push(d);
+    }
+
+    // Update week label
+    const opts = { month:"short", day:"numeric" };
+    const labelEl = document.getElementById("calWeekLabel");
+    if (labelEl) {
+        labelEl.textContent = `Week of ${days[0].toLocaleDateString("en-US", opts)} – ${days[6].toLocaleDateString("en-US", opts)}, ${days[0].getFullYear()}`;
+    }
+
+    // Index appointments by date string YYYY-MM-DD
+    const apptsByDate = {};
+    (_allAppointments || []).forEach(a => {
+        const ds = (a.appointment_date || "").toString().split("T")[0];
+        if (!apptsByDate[ds]) apptsByDate[ds] = [];
+        apptsByDate[ds].push(a);
+    });
+
+    const statusColors = {
+        Scheduled: { bg:"#dbeafe", border:"#3b82f6", text:"#1e40af" },
+        Completed:  { bg:"#d1fae5", border:"#10b981", text:"#065f46" },
+        "No-Show":  { bg:"#fef3c7", border:"#f59e0b", text:"#92400e" },
+        Cancelled:  { bg:"#f3f4f6", border:"#9ca3af", text:"#374151" }
+    };
+
+    const dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const todayStr = today.toISOString().split("T")[0];
+
+    let html = `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <thead>
+        <tr>`;
+    days.forEach((d, i) => {
+        const ds = d.toISOString().split("T")[0];
+        const isToday = ds === todayStr;
+        const count = (apptsByDate[ds] || []).length;
+        html += `<th style="padding:8px 6px;font-size:11px;font-weight:700;text-align:center;border:1px solid #e5e7eb;
+            background:${isToday ? "#f0fdf4" : "#f9fafb"};
+            color:${isToday ? "#1a4731" : "#4b5563"};
+            border-bottom:${isToday ? "2px solid #3a9e6a" : "1px solid #e5e7eb"}">
+            <div>${dayNames[i]}</div>
+            <div style="font-size:14px;font-weight:${isToday?"800":"600"};color:${isToday?"#1a4731":"#111"}">${d.getDate()}</div>
+            <div style="font-size:10px;color:#9ca3af">${d.toLocaleDateString("en-US",{month:"short"})}</div>
+            ${count ? `<div style="margin-top:3px;font-size:10px;background:#3a9e6a;color:#fff;border-radius:10px;padding:1px 5px;display:inline-block">${count} appt${count>1?"s":""}</div>` : ""}
+        </th>`;
+    });
+    html += `</tr></thead><tbody><tr>`;
+
+    days.forEach(d => {
+        const ds = d.toISOString().split("T")[0];
+        const isToday = ds === todayStr;
+        const dayAppts = (apptsByDate[ds] || []).sort((a,b) => (a.appointment_time||"") < (b.appointment_time||"") ? -1 : 1);
+        html += `<td style="vertical-align:top;padding:6px;border:1px solid #e5e7eb;background:${isToday?"#f7fff7":"#fff"};min-height:80px">`;
+        if (dayAppts.length === 0) {
+            html += `<div style="color:#d1d5db;font-size:11px;text-align:center;padding-top:8px">—</div>`;
+        } else {
+            dayAppts.forEach(a => {
+                const sc = statusColors[a.status_name] || statusColors["Scheduled"];
+                const timeStr = timeFmt(a.appointment_time);
+                html += `<div style="margin-bottom:5px;padding:5px 7px;border-radius:5px;border-left:3px solid ${sc.border};
+                    background:${sc.bg};cursor:pointer;font-size:11px"
+                    onclick="openStatusModal(${a.appointment_id},'${a.patient_first} ${a.patient_last}','${ds}')">
+                    <div style="font-weight:700;color:${sc.text}">${timeStr}</div>
+                    <div style="color:#374151;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.patient_first} ${a.patient_last}</div>
+                    <div style="color:#6b7280;font-size:10px">${a.reason_for_visit || a.appointment_type || "—"}</div>
+                </div>`;
+            });
+        }
+        html += `</td>`;
+    });
+
+    html += `</tr></tbody></table>`;
+    cal.innerHTML = html;
 }

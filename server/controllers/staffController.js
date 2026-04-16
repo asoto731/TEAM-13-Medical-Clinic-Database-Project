@@ -363,15 +363,21 @@ const updateReferralStatus = (req, res) => {
 
 /* POST /api/staff/physician/note */
 const addPhysicianNote = (req, res) => {
-    const { patient_id, condition, notes, status } = req.body;
+    const { patient_id, condition, notes, status, user_id } = req.body;
     if (!patient_id || !condition) {
         return res.status(400).json({ message: "patient_id and condition are required" });
     }
-    const sql = `INSERT INTO medical_history (patient_id, \`condition\`, diagnosis_date, status, notes)
-                 VALUES (?, ?, CURDATE(), ?, ?)`;
-    db.query(sql, [patient_id, condition, status || "Active", notes || null], (err) => {
-        if (err) return res.status(500).json({ message: "Could not add note: " + err.message });
-        res.json({ message: "Note added successfully" });
+
+    // Look up physician_id from the logged-in user
+    db.query("SELECT physician_id FROM users WHERE user_id = ?", [user_id || 0], (err, rows) => {
+        const physician_id = (!err && rows.length) ? rows[0].physician_id : null;
+
+        const sql = `INSERT INTO medical_history (patient_id, physician_id, \`condition\`, diagnosis_date, status, notes)
+                     VALUES (?, ?, ?, CURDATE(), ?, ?)`;
+        db.query(sql, [patient_id, physician_id, condition, status || "Active", notes || null], (err2) => {
+            if (err2) return res.status(500).json({ message: "Could not add note: " + err2.message });
+            res.json({ message: "Note added successfully" });
+        });
     });
 };
 
@@ -393,6 +399,59 @@ const updateAppointmentStatus = (req, res) => {
             if (err) return res.status(500).json({ message: "Could not update appointment status" });
             if (result.affectedRows === 0) return res.status(404).json({ message: "Appointment not found" });
             res.json({ message: "Appointment status updated successfully" });
+        }
+    );
+};
+
+/* PUT /api/staff/appointment/:id/undo-status — revert No-Show or Cancelled back to Scheduled */
+const undoAppointmentStatus = (req, res) => {
+    const { id } = req.params;
+    const { user_id, reason } = req.body;
+    if (!user_id) return res.status(400).json({ message: "user_id required" });
+    if (!reason || !reason.trim()) return res.status(400).json({ message: "A reason is required to reverse this status." });
+
+    // Fetch appointment + current status before changing
+    db.query(
+        `SELECT a.status_id, a.patient_id, a.appointment_date,
+                s.status_name
+         FROM appointment a
+         JOIN appointment_status s ON a.status_id = s.status_id
+         WHERE a.appointment_id = ?`,
+        [id],
+        (err, rows) => {
+            if (err || !rows.length) return res.status(404).json({ message: "Appointment not found" });
+            const { status_id, patient_id, appointment_date, status_name } = rows[0];
+            if (status_id !== 3 && status_id !== 4) {
+                return res.status(400).json({ message: "Can only undo Cancelled or No-Show appointments" });
+            }
+
+            // Get physician_id from user_id for the audit note
+            db.query("SELECT physician_id FROM users WHERE user_id = ?", [user_id], (e0, uRows) => {
+                const physician_id = (!e0 && uRows.length) ? uRows[0].physician_id : null;
+
+                // Revert status to Scheduled
+                db.query(
+                    "UPDATE appointment SET status_id = 1 WHERE appointment_id = ?",
+                    [id],
+                    (e2) => {
+                        if (e2) return res.status(500).json({ message: "Could not revert status" });
+
+                        // Log the reversal to medical_history as an audit note
+                        const apptDate = appointment_date
+                            ? appointment_date.toString().split("T")[0]
+                            : "unknown date";
+                        const auditNote = `Status reversed from "${status_name}" to Scheduled. Reason: ${reason.trim()}`;
+                        db.query(
+                            `INSERT INTO medical_history (patient_id, physician_id, \`condition\`, diagnosis_date, status, notes)
+                             VALUES (?, ?, 'Appointment Status Correction', CURDATE(), 'Resolved', ?)`,
+                            [patient_id, physician_id, auditNote],
+                            () => {} // non-fatal — don't block response
+                        );
+
+                        res.json({ message: "Appointment restored to Scheduled" });
+                    }
+                );
+            });
         }
     );
 };
@@ -508,4 +567,4 @@ const getAllPhysicians = (req, res) => {
     );
 };
 
-module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians };
+module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians };

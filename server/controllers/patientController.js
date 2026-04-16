@@ -331,6 +331,27 @@ const requestReferral = (req, res) => {
     );
 };
 
+/* GET /api/patient/appointments/physician-schedule?physician_id=X
+   Returns which days of the week the physician works + their hours.
+   Used by the booking modal to display available days before the patient picks a date. */
+const getPhysicianSchedule = (req, res) => {
+    const { physician_id } = req.query;
+    if (!physician_id) return res.status(400).json({ message: "physician_id required" });
+
+    const sql = `
+        SELECT day_of_week, start_time, end_time, o.city
+        FROM work_schedule ws
+        JOIN office o ON ws.office_id = o.office_id
+        WHERE ws.physician_id = ?
+        ORDER BY FIELD(day_of_week,
+            'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')`;
+
+    db.query(sql, [physician_id], (err, rows) => {
+        if (err) return res.status(500).json({ message: "Query failed" });
+        res.json({ schedules: rows });
+    });
+};
+
 /* GET /api/patient/appointments/slots?physician_id=X&date=YYYY-MM-DD */
 const getAvailableSlots = (req, res) => {
     const { physician_id, date } = req.query;
@@ -453,4 +474,4 @@ const cancelAppointment = (req, res) => {
     });
 };
 
-module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare, getSpecialistsByCity, requestReferral, getAvailableSlots, bookAppointment, cancelAppointment };
+module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare, getSpecialistsByCity, requestReferral, getPhysicianSchedule, getAvailableSlots, bookAppointment, cancelAppointment };
