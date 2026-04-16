@@ -104,8 +104,9 @@ const getPhysicianDashboard = (req, res) => {
 
       const appointmentsSql = `
         SELECT a.appointment_id, a.appointment_date, a.appointment_time,
+               a.patient_id,
                p.first_name AS patient_first, p.last_name AS patient_last,
-               a.reason_for_visit, s.status_name,
+               a.reason_for_visit, a.appointment_type, s.status_name,
                o.city, o.street_address
         FROM appointment a
         JOIN patient p ON a.patient_id = p.patient_id
@@ -113,16 +114,16 @@ const getPhysicianDashboard = (req, res) => {
         JOIN office o ON a.office_id = o.office_id
         WHERE a.physician_id = ?
         ORDER BY a.appointment_date DESC, a.appointment_time ASC
-        LIMIT 20`;
+        LIMIT 200`;
 
       const patientsSql = `
         SELECT p.patient_id, p.first_name, p.last_name, p.date_of_birth,
                p.phone_number, p.email, p.gender,
                ins.provider_name
         FROM patient p
-        JOIN insurance ins ON p.insurance_id = ins.insurance_id
+        LEFT JOIN insurance ins ON p.insurance_id = ins.insurance_id
         WHERE p.primary_physician_id = ?
-        LIMIT 20`;
+        ORDER BY p.last_name, p.first_name`;
 
       const scheduleSql = `
         SELECT ws.office_id, ws.day_of_week, ws.start_time, ws.end_time,

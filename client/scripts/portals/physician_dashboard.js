@@ -76,7 +76,7 @@ function fmt(d) {
     const s = d.toString().split("T")[0];
     const [y, mo, dy] = s.split("-").map(Number);
     if (!y || !mo || !dy) return "—";
-    return new Date(y, mo - 1, dy).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+    return new Date(y, mo - 1, dy).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" });
 }
 function timeFmt(t) {
     if (!t) return "—";
@@ -178,6 +178,120 @@ async function buildMemberCalendar(currentPhysicianId, ownSchedule, officeId) {
 
     html += `</tbody></table>`;
     container.innerHTML = html;
+}
+
+/* ── Personal Weekly Schedule View ── */
+let _schedWeekOffset = 0;
+let _ownSchedule     = [];   // physician's work_schedule rows, set in loadDashboard
+let _ownAppointments = [];   // all appointments, set in loadDashboard
+
+function shiftSchedWeek(dirOrReset) {
+    if (dirOrReset === 0) _schedWeekOffset = 0;
+    else _schedWeekOffset += dirOrReset;
+    renderMyWeek();
+}
+
+function renderMyWeek() {
+    const grid    = document.getElementById("myWeekGrid");
+    const label   = document.getElementById("schedWeekLabel");
+    if (!grid) return;
+
+    // Build Monday of target week
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dow   = today.getDay();
+    const mondayDelta = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayDelta + (_schedWeekOffset * 7));
+
+    // Week label
+    const wkEnd = new Date(monday); wkEnd.setDate(monday.getDate() + 6);
+    const lo = { month:"short", day:"numeric" };
+    if (label) label.textContent =
+        `${monday.toLocaleDateString("en-US", lo)} – ${wkEnd.toLocaleDateString("en-US", lo)}, ${monday.getFullYear()}`;
+
+    // Index own schedule by day name
+    const schedByDay = {};
+    (_ownSchedule || []).forEach(s => { schedByDay[s.day_of_week] = s; });
+
+    // Index appointments by YYYY-MM-DD
+    const apptsByDate = {};
+    (_ownAppointments || []).forEach(a => {
+        const ds = (a.appointment_date||'').toString().split('T')[0];
+        if (!apptsByDate[ds]) apptsByDate[ds] = [];
+        apptsByDate[ds].push(a);
+    });
+
+    const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const dayShort = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    function fmtTime(t) {
+        if (!t) return '';
+        const parts = t.toString().split(':');
+        const h = parseInt(parts[0]), m = parts[1] || '00';
+        return `${h%12||12}:${m} ${h<12?'AM':'PM'}`;
+    }
+
+    grid.innerHTML = dayNames.map((dayName, i) => {
+        const date = new Date(monday); date.setDate(monday.getDate() + i);
+        const ds   = date.toISOString().split('T')[0];
+        const isToday  = ds === today.toISOString().split('T')[0];
+        const sched    = schedByDay[dayName];
+        const dayAppts = apptsByDate[ds] || [];
+        const working  = !!sched;
+
+        const completedCount  = dayAppts.filter(a => a.status_name === 'Completed').length;
+        const scheduledCount  = dayAppts.filter(a => a.status_name === 'Scheduled').length;
+        const noShowCount     = dayAppts.filter(a => a.status_name === 'No-Show').length;
+
+        const bg     = isToday  ? '#f0fdf4' : working ? '#fff'   : '#f9fafb';
+        const border = isToday  ? '2px solid #3a9e6a'
+                     : working  ? '1px solid #d1fae5'
+                     :            '1px solid #e5e7eb';
+        const dayColor = isToday ? '#1a4731' : working ? '#1f2a6d' : '#9ca3af';
+
+        return `<div style="border:${border};border-radius:10px;padding:12px 10px;background:${bg};min-height:110px">
+            <div style="font-size:11px;font-weight:700;color:${dayColor};text-transform:uppercase;letter-spacing:0.5px">${dayShort[i]}</div>
+            <div style="font-size:20px;font-weight:800;color:${dayColor};line-height:1.1;margin:2px 0 6px">${date.getDate()}</div>
+            ${working ? `
+                <div style="font-size:11px;color:#3a9e6a;font-weight:600;margin-bottom:4px">${fmtTime(sched.start_time)}–${fmtTime(sched.end_time)}</div>
+                <div style="font-size:10px;color:#6b7280">${sched.city || ''}</div>
+                ${dayAppts.length ? `
+                    <div style="margin-top:6px;display:flex;flex-direction:column;gap:2px">
+                        ${scheduledCount  ? `<span style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 5px">${scheduledCount} scheduled</span>` : ''}
+                        ${completedCount  ? `<span style="font-size:10px;background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 5px">${completedCount} completed</span>` : ''}
+                        ${noShowCount     ? `<span style="font-size:10px;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px">${noShowCount} no-show</span>`   : ''}
+                    </div>` : `<div style="font-size:10px;color:#9ca3af;margin-top:6px">No appointments</div>`}
+            ` : `<div style="font-size:11px;color:#d1d5db;margin-top:4px">Off</div>`}
+        </div>`;
+    }).join('');
+}
+
+function renderRecurringSchedule(schedule) {
+    const el = document.getElementById('recurringSchedule');
+    if (!el) return;
+    if (!schedule || !schedule.length) {
+        el.innerHTML = '<p class="loading-msg">No recurring schedule on record</p>';
+        return;
+    }
+
+    function fmtTime(t) {
+        if (!t) return '';
+        const parts = t.toString().split(':');
+        const h = parseInt(parts[0]), m = parts[1] || '00';
+        return `${h%12||12}:${m} ${h<12?'AM':'PM'}`;
+    }
+
+    const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const sorted = [...schedule].sort((a,b) => dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week));
+
+    el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0">` +
+        sorted.map(s => `
+            <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #d1fae5;border-radius:8px;padding:10px 16px">
+                <div style="font-weight:700;font-size:13px;color:#1a4731;min-width:90px">${s.day_of_week}</div>
+                <div style="font-size:13px;color:#374151">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}</div>
+                <div style="font-size:12px;color:#6b7280;border-left:1px solid #d1fae5;padding-left:10px">${s.city || ''}${s.state ? ', '+s.state : ''}</div>
+            </div>`
+        ).join('') + `</div>`;
 }
 
 /* ── Clinical Note Modal ── */
@@ -410,28 +524,68 @@ async function loadDashboard() {
             </tr>`).join("")
             : `<tr><td colspan="3" class="table-empty">No referrals on record</td></tr>`;
 
-        /* Appointments table */
-        document.getElementById("apptBody").innerHTML = appointments.length
-            ? appointments.map(a => `<tr>
-                <td class="primary">${fmt(a.appointment_date)}</td>
-                <td>${timeFmt(a.appointment_time)}</td>
-                <td>${a.patient_first} ${a.patient_last}</td>
-                <td>${a.city || "—"}</td>
-                <td>${a.reason_for_visit || "—"}</td>
-                <td>${pill(a.status_name)}</td>
-                <td><button onclick='openNoteModal(${a.patient_id},"${a.patient_first} ${a.patient_last}")' style="padding:5px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;color:#15803d;cursor:pointer;font-family:inherit">+ Note</button></td>
-                <td>${
-    a.status_name === 'Scheduled'
-        ? `<button onclick="openStatusModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${(a.appointment_date||'').toString().split('T')[0]}')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #1f6d45;color:#1f6d45;border-radius:6px;cursor:pointer;font-family:inherit">Update</button>`
-    : (a.status_name === 'No-Show' || a.status_name === 'Cancelled')
-        ? `<button onclick="openUndoModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${(a.appointment_date||'').toString().split('T')[0]}', '${a.status_name}')" style="padding:4px 10px;font-size:11px;background:none;border:1px solid #f59e0b;color:#b45309;border-radius:6px;cursor:pointer;font-family:inherit">Undo</button>`
-    : '—'
-}</td>
-            </tr>`).join("")
-            : `<tr><td colspan="8" class="table-empty">No appointments found</td></tr>`;
+        /* Appointments — split into upcoming and past */
+        const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
 
-        /* Store appointments globally for calendar view */
+        const upcomingAppts = appointments.filter(a => {
+            const ds = (a.appointment_date||'').toString().split('T')[0];
+            const [y,mo,dy] = ds.split('-').map(Number);
+            return a.status_name === 'Scheduled' && new Date(y, mo-1, dy) >= todayMidnight;
+        }).sort((a,b) => a.appointment_date < b.appointment_date ? -1 : 1);
+
+        const pastAppts = appointments.filter(a => {
+            const ds = (a.appointment_date||'').toString().split('T')[0];
+            const [y,mo,dy] = ds.split('-').map(Number);
+            return a.status_name !== 'Scheduled' || new Date(y, mo-1, dy) < todayMidnight;
+        }).sort((a,b) => a.appointment_date > b.appointment_date ? -1 : 1);
+
+        // Upcoming table — Update button only, no notes (appointment hasn't happened yet)
+        document.getElementById("apptUpcomingBody").innerHTML = upcomingAppts.length
+            ? upcomingAppts.map(a => {
+                const ds = (a.appointment_date||'').toString().split('T')[0];
+                return `<tr>
+                    <td class="primary">${fmt(a.appointment_date)}</td>
+                    <td>${timeFmt(a.appointment_time)}</td>
+                    <td>${a.patient_first} ${a.patient_last}</td>
+                    <td>${a.city || "—"}</td>
+                    <td>${a.appointment_type || "General"}</td>
+                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.reason_for_visit || "—"}</td>
+                    <td>${pill(a.status_name)}</td>
+                    <td><button onclick="openStatusModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${ds}')"
+                        style="padding:4px 10px;font-size:11px;background:none;border:1px solid #1f6d45;color:#1f6d45;border-radius:6px;cursor:pointer;font-family:inherit">Update</button></td>
+                </tr>`;
+            }).join("")
+            : `<tr><td colspan="8" class="table-empty">No upcoming appointments</td></tr>`;
+
+        // Past table — Note button only on Completed; Undo on No-Show/Cancelled
+        document.getElementById("apptPastBody").innerHTML = pastAppts.length
+            ? pastAppts.map(a => {
+                const ds = (a.appointment_date||'').toString().split('T')[0];
+                const noteBtn = a.status_name === 'Completed'
+                    ? `<button onclick='openNoteModal(${a.patient_id},"${a.patient_first} ${a.patient_last}")'
+                        style="padding:5px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;color:#15803d;cursor:pointer;font-family:inherit">+ Note</button>`
+                    : '<span style="font-size:11px;color:#9ca3af">—</span>';
+                const actionBtn = (a.status_name === 'No-Show' || a.status_name === 'Cancelled')
+                    ? `<button onclick="openUndoModal(${a.appointment_id}, '${a.patient_first} ${a.patient_last}', '${ds}', '${a.status_name}')"
+                        style="padding:4px 10px;font-size:11px;background:none;border:1px solid #f59e0b;color:#b45309;border-radius:6px;cursor:pointer;font-family:inherit">Undo</button>`
+                    : '—';
+                return `<tr>
+                    <td class="primary">${fmt(a.appointment_date)}</td>
+                    <td>${timeFmt(a.appointment_time)}</td>
+                    <td>${a.patient_first} ${a.patient_last}</td>
+                    <td>${a.city || "—"}</td>
+                    <td>${a.appointment_type || "General"}</td>
+                    <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.reason_for_visit || "—"}</td>
+                    <td>${pill(a.status_name)}</td>
+                    <td>${noteBtn}</td>
+                    <td>${actionBtn}</td>
+                </tr>`;
+            }).join("")
+            : `<tr><td colspan="9" class="table-empty">No past appointments</td></tr>`;
+
+        /* Store appointments globally for calendar + schedule views */
         _allAppointments = appointments;
+        _ownAppointments = appointments;
         if (document.getElementById("apptCalendarContainer") &&
             document.getElementById("apptCalendarContainer").style.display !== "none") {
             renderWeekCalendar();
@@ -449,7 +603,11 @@ async function loadDashboard() {
             </tr>`).join("")
             : `<tr><td colspan="6" class="table-empty">No patients found</td></tr>`;
 
-        /* Work schedule — member roster calendar filtered by office */
+        /* Work schedule — personal weekly view + recurring + team roster */
+        _ownSchedule     = schedule || [];
+        _ownAppointments = appointments || [];
+        renderMyWeek();
+        renderRecurringSchedule(schedule);
         const officeId = schedule && schedule.length > 0 ? schedule[0].office_id : null;
         buildMemberCalendar(physician ? physician.physician_id : null, schedule, officeId);
 
@@ -618,22 +776,22 @@ async function confirmUndoStatus() {
 
 /* ── Appointment Calendar View ── */
 function setApptView(view) {
-    const listBtn = document.getElementById("apptViewList");
-    const calBtn  = document.getElementById("apptViewCal");
+    const listBtn      = document.getElementById("apptViewList");
+    const calBtn       = document.getElementById("apptViewCal");
     const calContainer = document.getElementById("apptCalendarContainer");
-    const tableWrap    = document.querySelector("#sec-appointments .data-table")?.closest("div.table-wrapper") || document.querySelector("#sec-appointments table.data-table")?.parentElement;
+    const listContainer = document.getElementById("apptListContainer");
 
     if (view === "calendar") {
-        if (listBtn) { listBtn.style.background="#fff"; listBtn.style.color="#3a9e6a"; }
-        if (calBtn)  { calBtn.style.background="#3a9e6a"; calBtn.style.color="#fff"; }
-        if (calContainer) calContainer.style.display = "block";
-        if (tableWrap) tableWrap.style.display = "none";
+        if (listBtn)  { listBtn.style.background="#fff";     listBtn.style.color="#3a9e6a"; }
+        if (calBtn)   { calBtn.style.background="#3a9e6a";   calBtn.style.color="#fff"; }
+        if (calContainer)  calContainer.style.display = "block";
+        if (listContainer) listContainer.style.display = "none";
         renderWeekCalendar();
     } else {
-        if (listBtn) { listBtn.style.background="#3a9e6a"; listBtn.style.color="#fff"; }
-        if (calBtn)  { calBtn.style.background="#fff"; calBtn.style.color="#3a9e6a"; }
-        if (calContainer) calContainer.style.display = "none";
-        if (tableWrap) tableWrap.style.display = "";
+        if (listBtn)  { listBtn.style.background="#3a9e6a";  listBtn.style.color="#fff"; }
+        if (calBtn)   { calBtn.style.background="#fff";      calBtn.style.color="#3a9e6a"; }
+        if (calContainer)  calContainer.style.display = "none";
+        if (listContainer) listContainer.style.display = "";
     }
 }
 
