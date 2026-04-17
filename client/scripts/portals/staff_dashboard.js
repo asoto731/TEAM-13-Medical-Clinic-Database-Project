@@ -396,3 +396,263 @@ function closeScheduleModal() {
     document.getElementById("scheduleModal").classList.add("hidden");
     document.body.style.overflow = "";
 }
+
+/* ── Staff: Onboard New Patient Modal ── */
+let _onboardStep = 1;
+let _onboardInsuranceList = [];
+let _acceptingPhysicians  = [];
+
+async function openOnboardModal() {
+    _onboardStep = 1;
+    renderOnboardStep();
+    document.getElementById("onboardModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    document.getElementById("onboardError").style.display = "none";
+
+    // Reset all fields
+    ["ob_first","ob_last","ob_email","ob_phone","ob_street","ob_city","ob_state","ob_zip","ob_ec_name","ob_ec_phone","ob_reason","ob_member_id"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+    ["ob_dob","ob_date"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    ["ob_gender"].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+    document.getElementById("ob_slot").innerHTML = '<option value="">Pick physician &amp; date first</option>';
+    document.getElementById("ob_physician_schedule").textContent = "";
+    document.getElementById("ob_coverage_badge").style.display = "none";
+
+    // Set min date for appointment to tomorrow
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById("ob_date").min = tomorrow.toISOString().split("T")[0];
+
+    // Load insurance options
+    const insSelect = document.getElementById("ob_insurance");
+    insSelect.innerHTML = '<option value="">None / Self-Pay</option>';
+    try {
+        const r = await fetch(`/api/patient/care/insurance?user_id=${user.id}`);
+        _onboardInsuranceList = await r.json();
+        insSelect.innerHTML = '<option value="">None / Self-Pay</option>' +
+            _onboardInsuranceList.map(i => `<option value="${i.insurance_id}" data-cov="${i.coverage_percentage}">${i.provider_name} (${i.coverage_percentage}% coverage)</option>`).join("");
+    } catch(e) { /* non-fatal */ }
+
+    // Load accepting physicians for step 3
+    try {
+        const r2 = await fetch(`/api/staff/physicians/accepting?user_id=${user.id}`);
+        _acceptingPhysicians = await r2.json();
+    } catch(e) { _acceptingPhysicians = []; }
+}
+
+function closeOnboardModal() {
+    document.getElementById("onboardModal").classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
+function showInsuranceCoverage() {
+    const sel = document.getElementById("ob_insurance");
+    const badge = document.getElementById("ob_coverage_badge");
+    const opt = sel.options[sel.selectedIndex];
+    if (!sel.value) { badge.style.display = "none"; return; }
+    const cov = opt.getAttribute("data-cov");
+    badge.style.display = "";
+    badge.textContent = `✓ ${opt.text} — This plan is accepted. ${cov}% of the visit cost will be covered by insurance.`;
+}
+
+function renderOnboardStep() {
+    const labels = ["Step 1 of 3 — Insurance", "Step 2 of 3 — Patient Information", "Step 3 of 3 — First Appointment"];
+    document.getElementById("onboardStepLabel").textContent = labels[_onboardStep - 1];
+
+    // Show/hide steps
+    [1, 2, 3].forEach(i => {
+        const el = document.getElementById(`onboard-step-${i}`);
+        if (el) el.style.display = i === _onboardStep ? "flex" : "none";
+    });
+
+    // Step indicator pills
+    [1, 2, 3].forEach(i => {
+        const dot = document.getElementById(`onboard-dot-${i}`);
+        if (!dot) return;
+        dot.style.color = i === _onboardStep ? "#10b981" : (i < _onboardStep ? "#10b981" : "#aaa");
+        dot.style.borderBottomColor = i === _onboardStep ? "#10b981" : (i < _onboardStep ? "#10b981" : "transparent");
+        dot.style.fontWeight = i === _onboardStep ? "700" : "600";
+    });
+
+    // Prev/Next buttons
+    const prevBtn = document.getElementById("onboardPrevBtn");
+    const nextBtn = document.getElementById("onboardNextBtn");
+    prevBtn.style.display = _onboardStep > 1 ? "" : "none";
+    nextBtn.textContent = _onboardStep < 3 ? "Next →" : "Create Patient & Book Appointment";
+
+    // Populate physician dropdown on step 3
+    if (_onboardStep === 3) {
+        const phSelect = document.getElementById("ob_physician");
+        phSelect.innerHTML = '<option value="">Select physician…</option>' +
+            _acceptingPhysicians.map(p =>
+                `<option value="${p.physician_id}" data-city="${p.city}" data-days="${p.schedule.map(s=>s.day_of_week).join(', ')}">`
+                + `Dr. ${p.first_name} ${p.last_name} — ${p.specialty} (${p.city})</option>`
+            ).join("");
+    }
+}
+
+function onboardPrev() {
+    if (_onboardStep > 1) { _onboardStep--; renderOnboardStep(); }
+    document.getElementById("onboardError").style.display = "none";
+}
+
+function onboardNext() {
+    document.getElementById("onboardError").style.display = "none";
+
+    if (_onboardStep === 1) {
+        _onboardStep = 2;
+        renderOnboardStep();
+        return;
+    }
+
+    if (_onboardStep === 2) {
+        const first = document.getElementById("ob_first").value.trim();
+        const last  = document.getElementById("ob_last").value.trim();
+        const email = document.getElementById("ob_email").value.trim();
+        if (!first || !last) { showOnboardError("First name and last name are required."); return; }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showOnboardError("A valid email address is required (used as portal login)."); return; }
+        _onboardStep = 3;
+        renderOnboardStep();
+        return;
+    }
+
+    if (_onboardStep === 3) {
+        submitOnboarding();
+    }
+}
+
+function showOnboardError(msg) {
+    const el = document.getElementById("onboardError");
+    el.textContent = msg;
+    el.style.display = "";
+}
+
+async function loadOnboardSlots() {
+    const physician_id = document.getElementById("ob_physician").value;
+    const date = document.getElementById("ob_date").value;
+    const slotSelect = document.getElementById("ob_slot");
+    const schedEl = document.getElementById("ob_physician_schedule");
+
+    if (physician_id) {
+        const opt = document.getElementById("ob_physician").options[document.getElementById("ob_physician").selectedIndex];
+        const days = opt.getAttribute("data-days");
+        schedEl.textContent = days ? `Works: ${days}` : "";
+    }
+
+    if (!physician_id || !date) { slotSelect.innerHTML = '<option value="">Pick physician &amp; date first</option>'; return; }
+    slotSelect.innerHTML = '<option value="">Loading…</option>';
+    try {
+        const r = await fetch(`/api/patient/appointments/slots?physician_id=${physician_id}&date=${date}&user_id=${user.id}`);
+        const data = await r.json();
+        if (!data.slots || !data.slots.length) {
+            slotSelect.innerHTML = '<option value="">No slots available on this day</option>';
+        } else {
+            slotSelect.innerHTML = '<option value="">Choose a time…</option>' +
+                data.slots.map(s => {
+                    const [h, m] = s.split(":");
+                    const hn = parseInt(h);
+                    return `<option value="${s}">${hn % 12 || 12}:${m} ${hn >= 12 ? "PM" : "AM"}</option>`;
+                }).join("");
+        }
+    } catch(e) { slotSelect.innerHTML = '<option value="">Could not load slots</option>'; }
+}
+
+async function submitOnboarding() {
+    const physician_id = document.getElementById("ob_physician").value;
+    const date         = document.getElementById("ob_date").value;
+    const time         = document.getElementById("ob_slot").value;
+
+    if (!physician_id) { showOnboardError("Please select a physician."); return; }
+    if (!date)         { showOnboardError("Please select an appointment date."); return; }
+    if (!time)         { showOnboardError("Please select a time slot."); return; }
+
+    const nextBtn = document.getElementById("onboardNextBtn");
+    nextBtn.textContent = "Creating…";
+    nextBtn.disabled = true;
+
+    const payload = {
+        first_name:               document.getElementById("ob_first").value.trim(),
+        last_name:                document.getElementById("ob_last").value.trim(),
+        email:                    document.getElementById("ob_email").value.trim(),
+        phone_number:             document.getElementById("ob_phone").value.trim() || null,
+        date_of_birth:            document.getElementById("ob_dob").value || null,
+        gender:                   document.getElementById("ob_gender").value || null,
+        street_address:           document.getElementById("ob_street").value.trim() || null,
+        city:                     document.getElementById("ob_city").value.trim() || null,
+        state:                    document.getElementById("ob_state").value.trim().toUpperCase() || null,
+        zip_code:                 document.getElementById("ob_zip").value.trim() || null,
+        emergency_contact_name:   document.getElementById("ob_ec_name").value.trim() || null,
+        emergency_contact_phone:  document.getElementById("ob_ec_phone").value.trim() || null,
+        insurance_id:             document.getElementById("ob_insurance").value || null,
+        physician_id, date, time,
+        reason:                   document.getElementById("ob_reason").value.trim() || null,
+        user_id: user.id
+    };
+
+    try {
+        const r = await fetch("/api/staff/patients/onboard", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+
+        if (!r.ok && !data.temp_password) {
+            // Hard error — no patient created
+            showOnboardError(data.message || "Could not complete onboarding.");
+            nextBtn.textContent = "Create Patient & Book Appointment";
+            nextBtn.disabled = false;
+            return;
+        }
+
+        // Success (or partial success where patient created but appointment had an issue)
+        closeOnboardModal();
+        showOnboardSuccess(data);
+        loadDashboard();
+
+    } catch(err) {
+        showOnboardError(err.message || "Could not connect to server.");
+        nextBtn.textContent = "Create Patient & Book Appointment";
+        nextBtn.disabled = false;
+    }
+}
+
+function showOnboardSuccess(data) {
+    const fmt = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }) : "—";
+    const timeFmtLocal = t => { if(!t) return "—"; const [h,m]=t.split(":"); const hr=parseInt(h); return `${hr%12||12}:${m} ${hr<12?"AM":"PM"}`; };
+
+    const payload_date   = document.getElementById("ob_date").value;
+    const payload_time   = document.getElementById("ob_slot").value;
+    const payload_first  = document.getElementById("ob_first").value.trim();
+    const payload_last   = document.getElementById("ob_last").value.trim();
+
+    const body = document.getElementById("onboardSuccessBody");
+    body.innerHTML = `
+        <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:12px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Patient Created</div>
+            <div style="font-size:16px;font-weight:700;color:#065f46">${payload_first} ${payload_last}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+                <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Portal Login</div>
+                <div style="font-size:13px;color:#333">${data.username}</div>
+            </div>
+            <div>
+                <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Temp Password</div>
+                <div style="font-size:14px;font-weight:700;color:#7c3aed;font-family:monospace;background:#f5f3ff;padding:4px 8px;border-radius:5px;display:inline-block">${data.temp_password}</div>
+            </div>
+            <div style="grid-column:1/-1">
+                <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">First Appointment</div>
+                <div style="font-size:13px;color:#333">${data.appointmentError ? "⚠ Not booked — book manually" : fmt(payload_date) + " at " + timeFmtLocal(payload_time) + " (New Patient Visit, 60 min)"}</div>
+            </div>
+        </div>`;
+
+    document.getElementById("onboardSuccessModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+
+function closeOnboardSuccessModal() {
+    document.getElementById("onboardSuccessModal").classList.add("hidden");
+    document.body.style.overflow = "";
+}

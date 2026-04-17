@@ -3,6 +3,7 @@
 <head>
     <title>Staff Portal - Audit Trail Health</title>
     <link rel="stylesheet" href="/client/styles/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Staff purple accent overrides */
         .nav-item.active   { border-left-color: #9e6afe; color: #3a1a6d; }
@@ -58,11 +59,11 @@
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('overview')">Overview</button>
-            <button class="nav-item" onclick="showSection('appointments')">Appointments</button>
-            <button class="nav-item" onclick="showSection('billing')">Billing Queue</button>
-            <button class="nav-item" onclick="showSection('profile')">My Profile</button>
-            <button class="nav-item" onclick="showSection('settings')">Settings</button>
+            <button class="nav-item active" onclick="showSection('overview')"><i class="fa-solid fa-gauge-high"></i>Overview</button>
+            <button class="nav-item" onclick="showSection('appointments')"><i class="fa-solid fa-calendar-days"></i>Appointments</button>
+            <button class="nav-item" onclick="showSection('billing')"><i class="fa-solid fa-file-invoice-dollar"></i>Billing Queue</button>
+            <button class="nav-item" onclick="showSection('profile')"><i class="fa-solid fa-id-card"></i>My Profile</button>
+            <button class="nav-item" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i>Settings</button>
         </nav>
         <div class="sidebar-user">
             <div class="user-avatar" id="avatarInitials">ST</div>
@@ -102,6 +103,7 @@
                 <button class="quick-btn purple" onclick="showSection('appointments')">Appointments</button>
                 <button class="quick-btn violet" onclick="showSection('billing')">Billing Queue</button>
                 <button class="quick-btn navy"   onclick="showSection('profile')">My Profile</button>
+                <button class="quick-btn" style="background:#10b981" onclick="openOnboardModal()">+ Onboard Patient</button>
             </div>
 
             <div class="stats-row">
@@ -158,6 +160,7 @@
                     <div style="display:flex;gap:8px">
                         <button class="profile-edit-btn" onclick="loadDailySchedule()">Today's Schedule</button>
                         <button class="profile-edit-btn" onclick="openStaffBookingModal()">+ Book Appointment</button>
+                        <button class="profile-edit-btn" style="background:#10b981;color:white;border-color:#10b981" onclick="openOnboardModal()">+ Onboard New Patient</button>
                     </div>
                 </div>
                 <table class="data-table">
@@ -367,6 +370,165 @@
                 <thead><tr><th>Time</th><th>Patient</th><th>Physician</th><th>Type</th><th>Reason</th><th>Location</th><th>Status</th></tr></thead>
                 <tbody id="scheduleBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── Onboard New Patient Modal (3-step wizard) ── -->
+<div class="modal-overlay hidden" id="onboardModal">
+    <div class="modal-box" style="max-width:560px">
+        <div class="modal-header">
+            <div>
+                <h3>Onboard New Patient</h3>
+                <p id="onboardStepLabel" style="color:#888;font-size:13px;margin-top:2px">Step 1 of 3 — Insurance</p>
+            </div>
+            <button class="modal-close" onclick="closeOnboardModal()">&#10005;</button>
+        </div>
+
+        <!-- Step indicator -->
+        <div style="display:flex;gap:0;padding:0 24px;border-bottom:1px solid #f0f2f8;margin-bottom:4px">
+            <div class="onboard-step-pill active" id="onboard-dot-1" style="flex:1;text-align:center;padding:10px;font-size:12px;font-weight:700;color:#10b981;border-bottom:2px solid #10b981">1 Insurance</div>
+            <div class="onboard-step-pill" id="onboard-dot-2" style="flex:1;text-align:center;padding:10px;font-size:12px;font-weight:700;color:#aaa;border-bottom:2px solid transparent">2 Patient Info</div>
+            <div class="onboard-step-pill" id="onboard-dot-3" style="flex:1;text-align:center;padding:10px;font-size:12px;font-weight:700;color:#aaa;border-bottom:2px solid transparent">3 First Appointment</div>
+        </div>
+
+        <!-- Step 1: Insurance -->
+        <div id="onboard-step-1" style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+            <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;font-size:13px;color:#065f46;line-height:1.6">
+                <strong>Insurance is verified first.</strong> Confirm the patient's plan before collecting their information. If the plan isn't accepted, inform the patient upfront.
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Insurance Plan</label>
+                <select id="ob_insurance" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit" onchange="showInsuranceCoverage()">
+                    <option value="">None / Self-Pay</option>
+                </select>
+            </div>
+            <div id="ob_coverage_badge" style="display:none;background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;color:#065f46"></div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Member ID <span style="color:#aaa;font-weight:400;text-transform:none">(optional)</span></label>
+                <input type="text" id="ob_member_id" placeholder="e.g. BCB1234567" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+            </div>
+        </div>
+
+        <!-- Step 2: Patient Demographics -->
+        <div id="onboard-step-2" style="padding:20px 24px;display:none;flex-direction:column;gap:14px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">First Name <span style="color:#e05c5c">*</span></label>
+                    <input type="text" id="ob_first" placeholder="First name" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Last Name <span style="color:#e05c5c">*</span></label>
+                    <input type="text" id="ob_last" placeholder="Last name" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Date of Birth</label>
+                    <input type="date" id="ob_dob" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Gender</label>
+                    <select id="ob_gender" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit">
+                        <option value="">Select…</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Non-binary">Non-binary</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Phone</label>
+                    <input type="tel" id="ob_phone" placeholder="(555) 000-0000" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Email (becomes login) <span style="color:#e05c5c">*</span></label>
+                    <input type="email" id="ob_email" placeholder="patient@email.com" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div style="grid-column:1/-1">
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Street Address</label>
+                    <input type="text" id="ob_street" placeholder="123 Main St" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">City</label>
+                    <input type="text" id="ob_city" placeholder="City" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">State</label>
+                        <input type="text" id="ob_state" placeholder="TX" maxlength="2" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">ZIP</label>
+                        <input type="text" id="ob_zip" placeholder="00000" maxlength="5" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Emergency Contact</label>
+                    <input type="text" id="ob_ec_name" placeholder="Contact name" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Emergency Phone</label>
+                    <input type="tel" id="ob_ec_phone" placeholder="(555) 000-0000" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box">
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: First Appointment -->
+        <div id="onboard-step-3" style="padding:20px 24px;display:none;flex-direction:column;gap:14px">
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Primary Physician <span style="color:#e05c5c">*</span></label>
+                <select id="ob_physician" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit" onchange="loadOnboardSlots()">
+                    <option value="">Loading…</option>
+                </select>
+                <div id="ob_physician_schedule" style="font-size:11px;color:#888;margin-top:4px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Date <span style="color:#e05c5c">*</span></label>
+                    <input type="date" id="ob_date" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box" onchange="loadOnboardSlots()">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Time Slot <span style="color:#e05c5c">*</span></label>
+                    <select id="ob_slot" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit">
+                        <option value="">Pick physician &amp; date first</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Reason for Visit</label>
+                <textarea id="ob_reason" rows="2" placeholder="e.g. Establishing new primary care, chronic condition management…" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+            <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46">
+                This will book a <strong>60-minute New Patient Visit</strong>. The patient's intake forms will be created automatically.
+            </div>
+        </div>
+
+        <!-- Error message -->
+        <div id="onboardError" style="display:none;margin:0 24px 8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:12px;color:#c0392b"></div>
+
+        <!-- Footer buttons -->
+        <div style="padding:16px 24px;border-top:1px solid #f0f2f8;display:flex;justify-content:space-between;align-items:center">
+            <button id="onboardPrevBtn" onclick="onboardPrev()" style="padding:9px 18px;background:none;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;display:none">← Back</button>
+            <div style="flex:1"></div>
+            <button id="onboardNextBtn" onclick="onboardNext()" style="padding:9px 22px;background:#10b981;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Next →</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Onboard Success Modal ── -->
+<div class="modal-overlay hidden" id="onboardSuccessModal">
+    <div class="modal-box" style="max-width:460px">
+        <div class="modal-header">
+            <div><h3>Patient Onboarded ✓</h3><p style="color:#10b981;font-size:13px;margin-top:2px">Account created successfully</p></div>
+            <button class="modal-close" onclick="closeOnboardSuccessModal()">&#10005;</button>
+        </div>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+            <div id="onboardSuccessBody" style="display:flex;flex-direction:column;gap:10px"></div>
+            <div style="background:#fffbf0;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400e;line-height:1.6">
+                <strong>Share with the patient:</strong> their login is their email address and the temporary password below. They should log in and complete their intake forms before the appointment.
+            </div>
+            <div style="display:flex;justify-content:flex-end">
+                <button onclick="closeOnboardSuccessModal()" style="padding:9px 22px;background:#4a2c8a;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">Done</button>
+            </div>
         </div>
     </div>
 </div>

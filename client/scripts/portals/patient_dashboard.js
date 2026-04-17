@@ -183,7 +183,7 @@ async function loadDashboard() {
             return;
         }
 
-        const { patient, appointments, history, billing, referrals, referralEligible, treatments } = data;
+        const { patient, appointments, history, billing, referrals, referralEligible, treatments, pendingIntake } = data;
 
         // Store globally so filters can re-render without re-fetching
         _allAppointments = appointments || [];
@@ -255,6 +255,9 @@ async function loadDashboard() {
         /* ── Profile completeness banner ── */
         checkProfileCompleteness(patient);
         prefillModal(patient);
+
+        /* ── Intake form banner ── */
+        checkPendingIntake(pendingIntake);
 
         /* ── Profile info ── */
         document.getElementById("profileInfo").innerHTML = `
@@ -1635,4 +1638,169 @@ async function cancelAppointment(appointment_id) {
     } catch(err) {
         alert(err.message || "Could not cancel appointment.");
     }
+}
+
+/* ─────────────────────────────────────────────
+   PATIENT INTAKE WIZARD
+─────────────────────────────────────────────── */
+let _pendingIntake = null;
+let _intakeStep    = 1;
+
+function checkPendingIntake(intake) {
+    const banner = document.getElementById("intakeBanner");
+    if (!banner) return;
+    if (!intake) { banner.classList.add("hidden"); return; }
+
+    _pendingIntake = intake;
+
+    // Calculate days until appointment
+    const apptDate = new Date(intake.appointment_date + "T00:00:00");
+    const today    = new Date(); today.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil((apptDate - today) / (1000 * 60 * 60 * 24));
+
+    const subEl = document.getElementById("intakeBannerSub");
+    if (subEl) {
+        subEl.textContent = daysLeft > 0
+            ? `Due before your appointment on ${fmt(intake.appointment_date)} — ${daysLeft} day${daysLeft === 1 ? "" : "s"} remaining`
+            : "Your appointment is approaching — please complete your forms now";
+    }
+    banner.classList.remove("hidden");
+}
+
+function openIntakeModal() {
+    if (!_pendingIntake) return;
+    _intakeStep = 1;
+    renderIntakeStep();
+    // Clear all fields
+    ["intake_complaint","intake_diagnoses","intake_surgeries","intake_medications",
+     "intake_allergies","intake_family","intake_social"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+    const hipaaBox = document.getElementById("intake_hipaa");
+    const finBox   = document.getElementById("intake_financial");
+    if (hipaaBox) hipaaBox.checked = false;
+    if (finBox)   finBox.checked   = false;
+    document.getElementById("intakeError").style.display = "none";
+
+    document.getElementById("intakeModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+
+function closeIntakeModal() {
+    document.getElementById("intakeModal").classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
+function renderIntakeStep() {
+    const labels = [
+        "Step 1 of 4 — Medical History",
+        "Step 2 of 4 — Medications & Allergies",
+        "Step 3 of 4 — Family & Social History",
+        "Step 4 of 4 — Consent & HIPAA"
+    ];
+    document.getElementById("intakeStepLabel").textContent = labels[_intakeStep - 1];
+
+    // Show only the active step
+    [1, 2, 3, 4].forEach(i => {
+        const el = document.getElementById(`intake-step-${i}`);
+        if (el) el.style.display = i === _intakeStep ? "flex" : "none";
+    });
+
+    // Step indicator dots
+    [1, 2, 3, 4].forEach(i => {
+        const dot = document.getElementById(`intake-dot-${i}`);
+        if (!dot) return;
+        const isActive    = i === _intakeStep;
+        const isCompleted = i < _intakeStep;
+        dot.style.color             = (isActive || isCompleted) ? "#f59e0b" : "#aaa";
+        dot.style.borderBottomColor = (isActive || isCompleted) ? "#f59e0b" : "transparent";
+        dot.style.fontWeight        = isActive ? "700" : "600";
+    });
+
+    // Buttons
+    const prevBtn  = document.getElementById("intakePrevBtn");
+    const nextBtn  = document.getElementById("intakeNextBtn");
+    prevBtn.style.display = _intakeStep > 1 ? "" : "none";
+    nextBtn.textContent   = _intakeStep < 4 ? "Next →" : "Submit Intake Forms";
+    nextBtn.disabled      = false;
+}
+
+function intakePrev() {
+    if (_intakeStep > 1) { _intakeStep--; renderIntakeStep(); }
+    document.getElementById("intakeError").style.display = "none";
+}
+
+async function intakeNext() {
+    document.getElementById("intakeError").style.display = "none";
+
+    if (_intakeStep < 4) {
+        _intakeStep++;
+        renderIntakeStep();
+        return;
+    }
+
+    // Step 4 — validate and submit
+    const hipaa = document.getElementById("intake_hipaa").checked;
+    if (!hipaa) {
+        const errEl = document.getElementById("intakeError");
+        errEl.textContent = "You must acknowledge the HIPAA Privacy Notice to proceed.";
+        errEl.style.display = "";
+        return;
+    }
+
+    const nextBtn = document.getElementById("intakeNextBtn");
+    nextBtn.textContent = "Submitting…";
+    nextBtn.disabled    = true;
+
+    const payload = {
+        user_id:             user.id,
+        chief_complaint:     document.getElementById("intake_complaint").value.trim()   || null,
+        past_diagnoses:      document.getElementById("intake_diagnoses").value.trim()   || null,
+        past_surgeries:      document.getElementById("intake_surgeries").value.trim()   || null,
+        current_medications: document.getElementById("intake_medications").value.trim() || null,
+        known_allergies:     document.getElementById("intake_allergies").value.trim()   || null,
+        family_history:      document.getElementById("intake_family").value.trim()      || null,
+        social_history:      document.getElementById("intake_social").value.trim()      || null,
+        hipaa_signed:        true,
+        financial_consent:   document.getElementById("intake_financial").checked
+    };
+
+    try {
+        const r = await fetch(`/api/patient/intake/${_pendingIntake.appointment_id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+
+        // Success
+        closeIntakeModal();
+        document.getElementById("intakeBanner").classList.add("hidden");
+        _pendingIntake = null;
+
+        // Brief success toast
+        showIntakeSuccessToast();
+        loadDashboard();
+
+    } catch(err) {
+        const errEl = document.getElementById("intakeError");
+        errEl.textContent = err.message || "Could not submit intake form. Please try again.";
+        errEl.style.display = "";
+        nextBtn.textContent = "Submit Intake Forms";
+        nextBtn.disabled    = false;
+    }
+}
+
+function showIntakeSuccessToast() {
+    const toast = document.createElement("div");
+    toast.style.cssText = `
+        position:fixed;bottom:28px;right:28px;z-index:3000;
+        background:#10b981;color:white;padding:14px 20px;border-radius:10px;
+        font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.15);
+        display:flex;align-items:center;gap:8px;max-width:320px;`;
+    toast.innerHTML = `<span style="font-size:18px">✓</span> Intake forms submitted successfully!`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
 }
