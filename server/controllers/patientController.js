@@ -120,9 +120,18 @@ const getPatientDashboard = (req, res) => {
       SELECT COUNT(*) AS cnt FROM appointment
       WHERE patient_id = ? AND physician_id = ? AND status_id = 2`;
 
+    // Pending intake form — if patient_intake table doesn't exist yet query gracefully returns null
+    const intakeSql = `
+      SELECT pi.intake_id, pi.appointment_id, pi.status AS intake_status,
+             a.appointment_date
+      FROM patient_intake pi
+      JOIN appointment a ON pi.appointment_id = a.appointment_id
+      WHERE pi.patient_id = ? AND pi.status = 'Pending'
+      ORDER BY a.appointment_date ASC LIMIT 1`;
+
     let data = { patient };
     let completed = 0;
-    function finish() { completed++; if (completed === 6) res.json(data); }
+    function finish() { completed++; if (completed === 7) res.json(data); }
 
     db.query(appointmentsSql, [patient_id], (e, r) => { data.appointments = e ? [] : r; finish(); });
     db.query(historySQL,      [patient_id], (e, r) => { data.history      = e ? [] : r; finish(); });
@@ -131,6 +140,7 @@ const getPatientDashboard = (req, res) => {
     db.query(treatmentSql,    [patient_id], (e, r) => { data.treatments   = e ? [] : r; finish(); });
     db.query(eligibilitySql,  [patient_id, patient.primary_physician_id || 0],
         (e, r) => { data.referralEligible = !e && r[0].cnt > 0; finish(); });
+    db.query(intakeSql, [patient_id], (e, r) => { data.pendingIntake = e ? null : (r[0] || null); finish(); });
   });
 };
 
@@ -499,4 +509,78 @@ const cancelAppointment = (req, res) => {
     });
 };
 
-module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare, getSpecialistsByCity, requestReferral, getPhysicianSchedule, getAvailableSlots, bookAppointment, cancelAppointment };
+/* GET /api/patient/intake/:appointment_id — fetch pending intake form */
+const getIntakeForm = (req, res) => {
+    const { appointment_id } = req.params;
+    const { user_id } = req.query;
+    if (!user_id || !appointment_id) return res.status(400).json({ message: "user_id and appointment_id required" });
+
+    db.query(
+        `SELECT pi.*, a.appointment_date, a.appointment_time,
+                CONCAT(ph.first_name, ' ', ph.last_name) AS physician_name
+         FROM patient_intake pi
+         JOIN appointment a ON pi.appointment_id = a.appointment_id
+         JOIN physician ph ON a.physician_id = ph.physician_id
+         JOIN patient p ON pi.patient_id = p.patient_id
+         WHERE pi.appointment_id = ? AND p.user_id = ?`,
+        [appointment_id, user_id],
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            if (!rows.length) return res.status(404).json({ message: "Intake form not found" });
+            res.json(rows[0]);
+        }
+    );
+};
+
+/* POST /api/patient/intake/:appointment_id — submit completed intake form */
+const submitIntakeForm = (req, res) => {
+    const { appointment_id } = req.params;
+    const {
+        user_id, chief_complaint, past_diagnoses, past_surgeries,
+        current_medications, known_allergies, family_history, social_history,
+        hipaa_signed, financial_consent
+    } = req.body;
+
+    if (!user_id) return res.status(400).json({ message: "user_id required" });
+    if (!hipaa_signed) return res.status(400).json({ message: "HIPAA consent is required to proceed" });
+
+    db.query(
+        `SELECT pi.intake_id, pi.patient_id FROM patient_intake pi
+         JOIN patient p ON pi.patient_id = p.patient_id
+         WHERE pi.appointment_id = ? AND p.user_id = ? AND pi.status = 'Pending'`,
+        [appointment_id, user_id],
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            if (!rows.length) return res.status(404).json({ message: "Intake form not found or already submitted" });
+
+            const { intake_id, patient_id } = rows[0];
+
+            db.query(
+                `UPDATE patient_intake SET
+                    chief_complaint = ?, past_diagnoses = ?, past_surgeries = ?,
+                    current_medications = ?, known_allergies = ?,
+                    family_history = ?, social_history = ?,
+                    hipaa_signed = TRUE, hipaa_signed_at = NOW(),
+                    financial_consent = ?,
+                    status = 'Submitted', submitted_at = NOW()
+                 WHERE intake_id = ?`,
+                [chief_complaint || null, past_diagnoses || null, past_surgeries || null,
+                 current_medications || null, known_allergies || null,
+                 family_history || null, social_history || null,
+                 financial_consent ? 1 : 0,
+                 intake_id],
+                (err2) => {
+                    if (err2) return res.status(500).json({ message: "Could not submit intake form: " + err2.message });
+                    // Update patient onboarding_status (non-fatal if fails — trigger also handles this)
+                    db.query(
+                        "UPDATE patient SET onboarding_status = 'Intake Submitted' WHERE patient_id = ?",
+                        [patient_id], () => {}
+                    );
+                    res.json({ message: "Intake form submitted successfully" });
+                }
+            );
+        }
+    );
+};
+
+module.exports = { getPatientDashboard, updatePatientProfile, getCareCities, getPhysiciansByCity, getInsuranceOptions, assignCare, getSpecialistsByCity, requestReferral, getPhysicianSchedule, getAvailableSlots, bookAppointment, cancelAppointment, getIntakeForm, submitIntakeForm };

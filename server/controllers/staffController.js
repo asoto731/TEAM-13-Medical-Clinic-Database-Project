@@ -559,6 +559,146 @@ const getAllPatients = (req, res) => {
     );
 };
 
+/* POST /api/staff/patients/onboard — 3-step new patient onboarding
+   Creates: users row + patient row + first 'New Patient' appointment in one flow.
+   Trigger fires automatically to create patient_intake row.                        */
+const onboardPatient = (req, res) => {
+    const {
+        first_name, last_name, date_of_birth, gender,
+        phone_number, email,
+        street_address, city, state, zip_code,
+        emergency_contact_name, emergency_contact_phone,
+        insurance_id,
+        physician_id, appointment_date, appointment_time, reason
+    } = req.body;
+
+    if (!first_name || !last_name || !email || !physician_id || !appointment_date || !appointment_time) {
+        return res.status(400).json({ message: "First name, last name, email, physician, date, and time are required" });
+    }
+
+    const tempPassword = "Welcome@123";
+    const password_hash = bcrypt.hashSync(tempPassword, 10);
+    const username = email.toLowerCase().trim();
+
+    // Step 1: Create login account
+    db.query(
+        "INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'patient')",
+        [username, password_hash],
+        (err, userResult) => {
+            if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                    return res.status(409).json({ message: `A patient account with email "${email}" already exists.` });
+                }
+                return res.status(500).json({ message: "Could not create user account: " + err.message });
+            }
+            const user_id = userResult.insertId;
+
+            // Step 2: Create patient record (onboarding_status = 'Intake Pending' — trigger will also set this)
+            db.query(
+                `INSERT INTO patient (user_id, first_name, last_name, date_of_birth, gender,
+                    phone_number, email, street_address, city, state, zip_code,
+                    emergency_contact_name, emergency_contact_phone,
+                    primary_physician_id, insurance_id, onboarding_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Intake Pending')`,
+                [user_id, first_name, last_name, date_of_birth || null, gender || null,
+                 phone_number || null, email,
+                 street_address || null, city || null, state || null, zip_code || null,
+                 emergency_contact_name || null, emergency_contact_phone || null,
+                 physician_id, insurance_id || null],
+                (err2, patResult) => {
+                    if (err2) {
+                        db.query("DELETE FROM users WHERE user_id = ?", [user_id], () => {});
+                        return res.status(500).json({ message: "Could not create patient record: " + err2.message });
+                    }
+                    const patient_id = patResult.insertId;
+
+                    // Step 3: Look up office_id from physician's work schedule
+                    const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+                    const dayOfWeek = dayNames[new Date(appointment_date + "T12:00:00").getDay()];
+
+                    db.query(
+                        "SELECT office_id FROM work_schedule WHERE physician_id = ? AND day_of_week = ? LIMIT 1",
+                        [physician_id, dayOfWeek],
+                        (err3, sched) => {
+                            if (err3 || !sched.length) {
+                                return res.json({
+                                    message: "Patient created — physician not scheduled that day, book appointment manually.",
+                                    patient_id, user_id, username, temp_password: tempPassword,
+                                    appointmentError: true
+                                });
+                            }
+                            const office_id = sched[0].office_id;
+
+                            // Step 4: Book first appointment as 'New Patient' (60 min)
+                            // Trigger fires here → creates patient_intake row automatically
+                            db.query(
+                                `INSERT INTO appointment
+                                    (patient_id, physician_id, office_id, appointment_date, appointment_time,
+                                     status_id, booking_method, reason_for_visit, appointment_type, duration_minutes)
+                                 VALUES (?, ?, ?, ?, ?, 1, 'in-person', ?, 'New Patient', 60)`,
+                                [patient_id, physician_id, office_id, appointment_date, appointment_time,
+                                 reason || "New Patient Visit"],
+                                (err4, apptResult) => {
+                                    if (err4) {
+                                        const msg = err4.code === "ER_DUP_ENTRY"
+                                            ? "That time slot is already booked. Patient created — book appointment manually."
+                                            : "Could not book appointment. Patient created — book manually.";
+                                        return res.json({
+                                            message: msg,
+                                            patient_id, user_id, username, temp_password: tempPassword,
+                                            appointmentError: true
+                                        });
+                                    }
+                                    res.json({
+                                        message: "Patient onboarded successfully",
+                                        patient_id, user_id, username,
+                                        temp_password: tempPassword,
+                                        appointment_id: apptResult.insertId
+                                    });
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+};
+
+/* GET /api/staff/physicians/accepting — physicians accepting new patients */
+const getAcceptingPhysicians = (req, res) => {
+    db.query(
+        `SELECT ph.physician_id, ph.first_name, ph.last_name, ph.specialty, ph.physician_type,
+                o.city, ws.day_of_week, ws.start_time, ws.end_time
+         FROM physician ph
+         JOIN work_schedule ws ON ph.physician_id = ws.physician_id
+         JOIN office o ON ws.office_id = o.office_id
+         WHERE COALESCE(ph.accepting_new_patients, 1) = 1
+           AND ph.physician_type = 'primary'
+         ORDER BY o.city, ph.last_name`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            const map = {};
+            rows.forEach(r => {
+                if (!map[r.physician_id]) {
+                    map[r.physician_id] = {
+                        physician_id: r.physician_id,
+                        first_name: r.first_name, last_name: r.last_name,
+                        specialty: r.specialty, physician_type: r.physician_type,
+                        city: r.city, schedule: []
+                    };
+                }
+                map[r.physician_id].schedule.push({
+                    day_of_week: r.day_of_week,
+                    start_time:  r.start_time,
+                    end_time:    r.end_time
+                });
+            });
+            res.json(Object.values(map));
+        }
+    );
+};
+
 /* GET /api/staff/physicians — all physicians for staff booking */
 const getAllPhysicians = (req, res) => {
     db.query(
@@ -576,4 +716,4 @@ const getAllPhysicians = (req, res) => {
     );
 };
 
-module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians };
+module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians };
