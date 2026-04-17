@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin Portal - Audit Trail Health</title>
+    <link rel="stylesheet" href="/client/styles/auth/staff_login.css">
+    <style>
+        .staff-badge { background: #1a3a6d; color: #fff; }
+        button#btn   { background: #1a3a6d; }
+        button#btn:hover { background: #142e58; }
+    </style>
+</head>
+<body>
+
+<header>
+    <nav>
+        <h2 class="logo">Audit Trail Health</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/client/pages/about.html">About</a></li>
+            <li><a href="/client/pages/locations/locations.html">Locations</a></li>
+            <li><a href="/client/auth/patient_login.html">Patient Login</a></li>
+        </ul>
+    </nav>
+</header>
+
+<section class="hero">
+    <div class="form-card">
+        <div class="staff-badge">Admin Portal</div>
+        <h2>Administrator Login</h2>
+        <p class="subtitle">System administrator access only</p>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Enter admin username" required>
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+
+        <button type="button" id="btn">Sign In</button>
+        <p id="message"></p>
+
+        <p class="admin-note">This portal is restricted to system administrators only.</p>
+    </div>
+</section>
+
+<script>
+document.getElementById('btn').addEventListener('click', async () => {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const message  = document.getElementById('message');
+
+    if (!username || !password) {
+        message.textContent = 'Please enter your username and password.';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            message.style.color = '#1f6d45';
+            message.textContent = 'Login successful. Redirecting…';
+            localStorage.setItem('clinicUser', JSON.stringify(data.user));
+            setTimeout(() => { window.location.href = '/client/portals/admin_dashboard.html'; }, 1000);
+        } else {
+            message.style.color = '#c0392b';
+            message.textContent = data.message || 'Invalid username or password.';
+        }
+    } catch (err) {
+        message.style.color = '#c0392b';
+        message.textContent = 'Unable to connect to server. Please try again.';
+    }
+});
+
+// Allow Enter key to submit
+document.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn').click(); });
+</script>
+</body>
+</html>

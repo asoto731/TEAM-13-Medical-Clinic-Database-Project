@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin Portal - Audit Trail Health</title>
+    <link rel="stylesheet" href="/client/styles/dashboard.css">
+    <style>
+        /* Admin navy/blue accent */
+        .nav-item.active   { border-left-color: #4a90d9; color: #1a3a6d; }
+        .sidebar-logo .clinic-name { color: #1a3a6d; }
+        .user-avatar       { background: #1a3a6d; }
+        .stat-card         { border-left-color: #4a90d9; }
+        .greeting-card h2  { color: #1a3a6d; }
+        .greeting-badge    { background: #dbeafe; color: #1a3a6d; }
+        .section-block-header h3 { color: #1a3a6d; }
+        .quick-btn.blue    { background: #1a3a6d; }
+        .quick-btn.teal    { background: #0d7a60; }
+        .quick-btn.navy    { background: #1e3a5f; }
+        .stat-card .stat-value { color: #1a3a6d; }
+        .topbar-title span { color: #1a3a6d; }
+
+        /* Dark mode */
+        html[data-theme="dark"] .nav-item.active         { color: #7ab4f5; border-left-color: #4a90d9; background: #0d1a2e; }
+        html[data-theme="dark"] .greeting-card h2        { color: #7ab4f5; }
+        html[data-theme="dark"] .stat-card .stat-value   { color: #7ab4f5; }
+        html[data-theme="dark"] .section-block-header h3 { color: #7ab4f5; }
+        html[data-theme="dark"] .topbar-title span       { color: #7ab4f5; }
+        html[data-theme="dark"] .greeting-badge          { background: #0d1a2e; color: #7ab4f5; }
+        html[data-theme="dark"] .sidebar-logo .clinic-name { color: #7ab4f5; }
+
+        /* Settings */
+        .settings-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 20px; font-size:13px; color:#888; cursor:pointer; font-family:inherit; font-weight:600; transition:color 0.15s,border-color 0.15s; }
+        .settings-tab.active { color:#1a3a6d; border-bottom-color:#4a90d9; }
+        .settings-tab-content { padding:0 24px; }
+        .settings-tab-content.hidden { display:none; }
+        .settings-row { display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f0f2f8; }
+        .settings-row:last-child { border-bottom:none; }
+        .settings-row-label { font-size:14px; font-weight:600; color:#333; margin-bottom:3px; }
+        .settings-row-sub { font-size:12px; color:#aaa; }
+        .theme-btn { padding:8px 18px; border:1px solid #e0e4f0; border-radius:8px; background:white; font-size:13px; cursor:pointer; font-family:inherit; color:#555; transition:all 0.15s; }
+        .theme-btn.active { background:#1a3a6d; color:white; border-color:#1a3a6d; }
+
+        /* Admin form styles */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .form-field label { display:block; font-size:11px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; }
+        .form-field input, .form-field select { width:100%; padding:9px 12px; border:1px solid #e0e3ed; border-radius:7px; font-size:13px; font-family:inherit; box-sizing:border-box; }
+        .form-field.full { grid-column:1/-1; }
+        .add-btn { padding:10px 24px; background:#1a3a6d; color:white; border:none; border-radius:8px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; }
+        .add-btn:hover { background:#142e58; }
+
+        /* Clinic report cards */
+        .clinic-report-card { background:white; border:1px solid #e8ecf4; border-radius:12px; padding:20px 24px; margin-bottom:16px; }
+        html[data-theme="dark"] .clinic-report-card { background:#1e2535; border-color:#2a3348; }
+        .clinic-report-card h4 { margin:0 0 4px; font-size:16px; color:#1a3a6d; }
+        html[data-theme="dark"] .clinic-report-card h4 { color:#7ab4f5; }
+        .clinic-report-card .sub { font-size:12px; color:#aaa; margin:0 0 16px; }
+        .report-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+        .report-stat { text-align:center; background:#f8faff; border-radius:8px; padding:12px; }
+        html[data-theme="dark"] .report-stat { background:#141c2e; }
+        .report-stat .val { font-size:22px; font-weight:700; color:#1a3a6d; }
+        html[data-theme="dark"] .report-stat .val { color:#7ab4f5; }
+        .report-stat .lbl { font-size:11px; color:#aaa; margin-top:3px; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; }
+        .schedule-row { display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:10px; align-items:center; background:#f8faff; border-radius:8px; padding:10px 14px; margin-bottom:8px; }
+        html[data-theme="dark"] .schedule-row { background:#141c2e; }
+        .remove-sched-btn { background:none; border:none; color:#e05c5c; cursor:pointer; font-size:18px; font-weight:700; line-height:1; }
+    </style>
+    <script>if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark");</script>
+</head>
+<body>
+
+<div class="dashboard-wrap">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="clinic-name">Audit Trail Health</div>
+            <div class="portal-label">Admin Portal</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Menu</div>
+            <button class="nav-item active"  onclick="showSection('overview')">Overview</button>
+            <button class="nav-item"         onclick="showSection('physicians')">Physicians</button>
+            <button class="nav-item"         onclick="showSection('staff')">Staff Members</button>
+            <button class="nav-item"         onclick="showSection('reports')">Clinic Reports</button>
+            <button class="nav-item"         onclick="showSection('settings')">Settings</button>
+        </nav>
+        <div class="sidebar-user">
+            <div class="user-avatar" id="avatarInitials">AD</div>
+            <div class="user-info">
+                <div class="user-name" id="sidebarName">Administrator</div>
+                <div class="user-role">Admin</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <div class="main-content">
+
+        <div class="topbar">
+            <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Overview</span></div>
+            <div class="topbar-right">
+                <button class="logout-btn" id="logoutBtn">Sign Out</button>
+            </div>
+        </div>
+
+        <!-- ══════════════ OVERVIEW ══════════════ -->
+        <div class="page-section" id="sec-overview">
+
+            <div class="greeting-card">
+                <div>
+                    <h2>Welcome, Administrator.</h2>
+                    <p id="greetSub">Loading system overview…</p>
+                </div>
+                <div class="greeting-meta">
+                    <span class="greeting-badge">Admin</span>
+                    <span style="font-size:11px;color:#aaa;margin-top:4px" id="todayDate"></span>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button class="quick-btn blue"  onclick="showSection('physicians')">Manage Physicians</button>
+                <button class="quick-btn teal"  onclick="showSection('staff')">Manage Staff</button>
+                <button class="quick-btn navy"  onclick="showSection('reports')">Clinic Reports</button>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Total Physicians</div>
+                    <div class="stat-value" id="statPhysicians">—</div>
+                    <div class="stat-sub">Active in system</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Staff</div>
+                    <div class="stat-value" id="statStaff">—</div>
+                    <div class="stat-sub">Active in system</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Patients</div>
+                    <div class="stat-value" id="statPatients">—</div>
+                    <div class="stat-sub">Registered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Upcoming Appointments</div>
+                    <div class="stat-value" id="statAppts">—</div>
+                    <div class="stat-sub">From today</div>
+                </div>
+            </div>
+
+            <!-- Clinic Summary Table -->
+            <div class="section-block">
+                <div class="section-block-header"><h3>Clinic Summary</h3></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Clinic</th><th>Location</th><th>Departments</th><th>Physicians</th><th>Appts This Month</th></tr></thead>
+                        <tbody id="clinicSummaryBody"><tr><td colspan="5" class="table-empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Appointments -->
+            <div class="section-block">
+                <div class="section-block-header"><h3>Recent Appointments</h3></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Physician</th><th>Location</th><th>Status</th></tr></thead>
+                        <tbody id="recentApptBody"><tr><td colspan="6" class="table-empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /overview -->
+
+        <!-- ══════════════ PHYSICIANS ══════════════ -->
+        <div class="page-section hidden" id="sec-physicians">
+
+            <div class="section-block">
+                <div class="section-block-header">
+                    <h3>Add New Physician</h3>
+                </div>
+                <div style="padding:0 24px 24px">
+                    <div class="form-grid" id="addPhysicianForm">
+                        <div class="form-field"><label>First Name *</label><input type="text" id="ph_first" placeholder="First name"></div>
+                        <div class="form-field"><label>Last Name *</label><input type="text" id="ph_last" placeholder="Last name"></div>
+                        <div class="form-field"><label>Email</label><input type="email" id="ph_email" placeholder="physician@clinic.com"></div>
+                        <div class="form-field"><label>Phone</label><input type="tel" id="ph_phone" placeholder="(555) 000-0000"></div>
+                        <div class="form-field"><label>Specialty</label><input type="text" id="ph_specialty" placeholder="e.g. Cardiology"></div>
+                        <div class="form-field">
+                            <label>Physician Type</label>
+                            <select id="ph_type">
+                                <option value="primary">Primary</option>
+                                <option value="specialist">Specialist</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Department</label>
+                            <select id="ph_dept"><option value="">Loading…</option></select>
+                        </div>
+                        <div class="form-field"><label>Hire Date</label><input type="date" id="ph_hire"></div>
+                        <div class="form-field"><label>Login Username *</label><input type="text" id="ph_user" placeholder="Username for login"></div>
+                        <div class="form-field"><label>Login Password *</label><input type="password" id="ph_pass" placeholder="Temporary password"></div>
+
+                        <!-- Schedule builder -->
+                        <div class="form-field full">
+                            <label>Work Schedule (optional)</label>
+                            <div id="scheduleRows" style="margin-bottom:10px"></div>
+                            <button type="button" onclick="addScheduleRow()" style="padding:7px 16px;background:#f0f4ff;border:1px solid #c5d2f0;border-radius:7px;font-size:12px;font-weight:600;color:#1a3a6d;cursor:pointer;font-family:inherit">+ Add Schedule Day</button>
+                        </div>
+
+                        <div class="form-field full">
+                            <div id="phError" style="color:#e05c5c;font-size:13px;display:none;margin-bottom:8px"></div>
+                            <button class="add-btn" onclick="submitAddPhysician()">Add Physician</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-block">
+                <div class="section-block-header"><h3>All Physicians</h3></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Specialty</th><th>Type</th><th>Department</th><th>Clinic</th><th>Email</th><th>Hire Date</th></tr></thead>
+                        <tbody id="physicianListBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /physicians -->
+
+        <!-- ══════════════ STAFF MEMBERS ══════════════ -->
+        <div class="page-section hidden" id="sec-staff">
+
+            <div class="section-block">
+                <div class="section-block-header"><h3>Add New Staff Member</h3></div>
+                <div style="padding:0 24px 24px">
+                    <div class="form-grid">
+                        <div class="form-field"><label>First Name *</label><input type="text" id="st_first" placeholder="First name"></div>
+                        <div class="form-field"><label>Last Name *</label><input type="text" id="st_last" placeholder="Last name"></div>
+                        <div class="form-field"><label>Email</label><input type="email" id="st_email" placeholder="staff@clinic.com"></div>
+                        <div class="form-field"><label>Phone</label><input type="tel" id="st_phone" placeholder="(555) 000-0000"></div>
+                        <div class="form-field">
+                            <label>Role / Job Title</label>
+                            <select id="st_role">
+                                <option value="Receptionist">Receptionist</option>
+                                <option value="Nurse">Nurse</option>
+                                <option value="Medical Assistant">Medical Assistant</option>
+                                <option value="Billing Specialist">Billing Specialist</option>
+                                <option value="Lab Technician">Lab Technician</option>
+                                <option value="Office Manager">Office Manager</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Department</label>
+                            <select id="st_dept"><option value="">Loading…</option></select>
+                        </div>
+                        <div class="form-field"><label>Hire Date</label><input type="date" id="st_hire"></div>
+                        <div class="form-field"><label>Shift Start</label><input type="time" id="st_shift_start"></div>
+                        <div class="form-field"><label>Shift End</label><input type="time" id="st_shift_end"></div>
+                        <div class="form-field"><label>Login Username *</label><input type="text" id="st_user" placeholder="Username for login"></div>
+                        <div class="form-field"><label>Login Password *</label><input type="password" id="st_pass" placeholder="Temporary password"></div>
+                        <div class="form-field full">
+                            <div id="stError" style="color:#e05c5c;font-size:13px;display:none;margin-bottom:8px"></div>
+                            <button class="add-btn" onclick="submitAddStaff()">Add Staff Member</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-block">
+                <div class="section-block-header"><h3>All Staff Members</h3></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Clinic</th><th>Email</th><th>Shift</th><th>Hire Date</th></tr></thead>
+                        <tbody id="staffListBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /staff -->
+
+        <!-- ══════════════ CLINIC REPORTS ══════════════ -->
+        <div class="page-section hidden" id="sec-reports">
+
+            <div class="greeting-card" style="margin-bottom:20px">
+                <div>
+                    <h2 style="font-size:20px">Clinic Performance Reports</h2>
+                    <p style="color:#888;margin:0">System-wide data across all clinic locations</p>
+                </div>
+                <button class="quick-btn blue" onclick="loadClinicReport()" style="padding:10px 20px">Refresh</button>
+            </div>
+
+            <!-- Revenue summary stats -->
+            <div class="stats-row" style="margin-bottom:24px">
+                <div class="stat-card">
+                    <div class="stat-label">Total Billed (All Time)</div>
+                    <div class="stat-value" id="rptTotalBilled">—</div>
+                    <div class="stat-sub">Across all clinics</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Outstanding Balance</div>
+                    <div class="stat-value" id="rptOutstanding" style="color:#e74c3c">—</div>
+                    <div class="stat-sub">Unpaid patient balances</div>
+                </div>
+            </div>
+
+            <div id="clinicReportCards"><p style="color:#aaa;padding:20px">Loading clinic reports…</p></div>
+
+        </div><!-- /reports -->
+
+        <!-- ══════════════ SETTINGS ══════════════ -->
+        <div class="page-section hidden" id="sec-settings">
+            <div class="section-block">
+                <div class="section-block-header"><h3>Settings</h3></div>
+                <div style="border-bottom:1px solid #f0f2f8;display:flex;gap:0">
+                    <button class="settings-tab active" onclick="switchSettingsTab('appearance',this)">Appearance</button>
+                </div>
+                <div class="settings-tab-content" id="stab-appearance">
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-row-label">Theme</div>
+                            <div class="settings-row-sub">Choose light or dark mode</div>
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <button class="theme-btn" id="themeLight" onclick="setTheme('light')">Light</button>
+                            <button class="theme-btn" id="themeDark"  onclick="setTheme('dark')">Dark</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /settings -->
+
+    </div><!-- /main-content -->
+</div><!-- /dashboard-wrap -->
+
+<script src="/client/scripts/dark-mode.js"></script>
+<script src="/client/scripts/portals/admin_dashboard.js"></script>
+</body>
+</html>

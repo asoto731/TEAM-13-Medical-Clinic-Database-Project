@@ -7,6 +7,7 @@ const staffRoutes     = require("./server/routes/staffRoutes");
 const patientRoutes   = require("./server/routes/patientRoutes");
 const locationsRoutes = require("./server/routes/locationsRoutes");
 const reportRoutes    = require("./server/routes/reportRoutes");
+const adminRoutes     = require("./server/routes/adminRoutes");
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.use("/api/staff",     staffRoutes);
 app.use("/api/patient",   patientRoutes);
 app.use("/api/locations", locationsRoutes);
 app.use("/api/reports",   reportRoutes);
+app.use("/api/admin",     adminRoutes);
 
 // Default: home page
 app.get("/", (req, res) => {
