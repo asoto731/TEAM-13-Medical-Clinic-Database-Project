@@ -26,7 +26,7 @@ function requireRole(...allowedRoles) {
     }
 
     db.query(
-      "SELECT role FROM users WHERE user_id = ?",
+      "SELECT role, clinic_id FROM users WHERE user_id = ?",
       [userId],
       (err, rows) => {
         if (err) return res.status(500).json({ error: "Auth check failed" });
@@ -34,14 +34,14 @@ function requireRole(...allowedRoles) {
           return res.status(401).json({ error: "Unauthorized — user not found" });
         }
 
-        const role = rows[0].role;
+        const { role, clinic_id } = rows[0];
 
         if (!allowedRoles.includes(role)) {
           return res.status(403).json({ error: `Forbidden — ${role} cannot access this resource` });
         }
 
-        // Attach role to request so downstream handlers can use it
-        req.userRole = role;
+        req.userRole  = role;
+        req.clinicId  = clinic_id ?? null; // null = global admin (sees all)
         next();
       }
     );

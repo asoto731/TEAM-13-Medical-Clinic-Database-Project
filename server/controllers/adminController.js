@@ -31,37 +31,76 @@ const loginAdmin = (req, res) => {
   if (isRateLimited(ip, username))
     return res.status(429).json({ message: "Too many login attempts. Please wait 15 minutes." });
 
-  db.query("SELECT * FROM users WHERE username = ? AND role = 'admin'", [username], (err, rows) => {
-    if (err) return res.status(500).json({ message: "Login query failed" });
-    if (!rows.length) return res.status(401).json({ message: "Invalid username or password" });
+  db.query(
+    `SELECT u.*, a.first_name, a.last_name, a.admin_id
+     FROM users u
+     LEFT JOIN admin a ON u.admin_id = a.admin_id
+     WHERE u.username = ? AND u.role = 'admin'`,
+    [username],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: "Login query failed" });
+      if (!rows.length) return res.status(401).json({ message: "Invalid username or password" });
 
-    const user = rows[0];
-    if (!bcrypt.compareSync(password, user.password_hash))
-      return res.status(401).json({ message: "Invalid username or password" });
+      const user = rows[0];
+      if (!bcrypt.compareSync(password, user.password_hash))
+        return res.status(401).json({ message: "Invalid username or password" });
 
-    clearRateLimit(ip, username);
-    auditLog(user.user_id, "ADMIN_LOGIN", "user", user.user_id, ip);
+      clearRateLimit(ip, username);
+      auditLog(user.user_id, "ADMIN_LOGIN", "user", user.user_id, ip);
 
-    res.json({
-      message: "Login successful",
-      user: { id: user.user_id, username: user.username, role: user.role }
-    });
-  });
+      res.json({
+        message: "Login successful",
+        user: {
+          id:         user.user_id,
+          adminId:    user.admin_id,
+          username:   user.username,
+          firstName:  user.first_name,
+          lastName:   user.last_name,
+          role:       user.role,
+          clinicId:   user.clinic_id,           // null = global admin
+          isGlobal:   user.clinic_id === null
+        }
+      });
+    }
+  );
 };
 
 /* ─────────────────────────────────────────────
    GET /api/admin/dashboard
-   Returns clinic-wide stats for the overview
 ───────────────────────────────────────────── */
 const getAdminDashboard = (req, res) => {
+  const cid = req.clinicId; // null = global
+
+  const clinicFilter   = cid ? "WHERE c.clinic_id = ?"         : "";
+  const officeFilter   = cid ? "WHERE o.clinic_id = ?"         : "";
+  const deptFilter     = cid ? "WHERE d.clinic_id = ?"         : "";
+  const apptJoinFilter = cid ? "AND o2.clinic_id = ?"          : "";
+  const params         = cid ? [cid]                           : [];
+
   const statsSql = `
     SELECT
-      (SELECT COUNT(*) FROM physician)  AS total_physicians,
-      (SELECT COUNT(*) FROM staff)      AS total_staff,
-      (SELECT COUNT(*) FROM patient)    AS total_patients,
-      (SELECT COUNT(*) FROM appointment WHERE appointment_date >= CURDATE()) AS upcoming_appointments,
-      (SELECT IFNULL(SUM(patient_owed),0) FROM billing WHERE payment_status != 'Paid') AS outstanding_revenue,
-      (SELECT IFNULL(SUM(total_amount),0) FROM billing) AS total_billed`;
+      (SELECT COUNT(*) FROM physician ph
+         JOIN department d ON ph.department_id = d.department_id
+         ${cid ? "WHERE d.clinic_id = ?" : ""})        AS total_physicians,
+      (SELECT COUNT(*) FROM staff st
+         JOIN department d ON st.department_id = d.department_id
+         ${cid ? "WHERE d.clinic_id = ?" : ""})        AS total_staff,
+      (SELECT COUNT(*) FROM patient)                    AS total_patients,
+      (SELECT COUNT(*) FROM appointment a
+         JOIN office o2 ON a.office_id = o2.office_id
+         WHERE a.appointment_date >= CURDATE()
+         ${apptJoinFilter})                             AS upcoming_appointments,
+      (SELECT IFNULL(SUM(b.patient_owed),0) FROM billing b
+         JOIN appointment a ON b.appointment_id = a.appointment_id
+         JOIN office o2 ON a.office_id = o2.office_id
+         WHERE b.payment_status != 'Paid'
+         ${apptJoinFilter})                             AS outstanding_revenue,
+      (SELECT IFNULL(SUM(b.total_amount),0) FROM billing b
+         JOIN appointment a ON b.appointment_id = a.appointment_id
+         JOIN office o2 ON a.office_id = o2.office_id
+         ${apptJoinFilter})                             AS total_billed`;
+
+  const statsParams = cid ? [cid, cid, cid, cid, cid] : [];
 
   const clinicsSql = `
     SELECT c.clinic_id, c.clinic_name, c.city, c.state,
@@ -75,6 +114,7 @@ const getAdminDashboard = (req, res) => {
       AND MONTH(a.appointment_date) = MONTH(CURDATE())
       AND YEAR(a.appointment_date) = YEAR(CURDATE())
     LEFT JOIN physician ph ON ph.department_id = d.department_id
+    ${clinicFilter}
     GROUP BY c.clinic_id, c.clinic_name, c.city, c.state
     ORDER BY c.clinic_name`;
 
@@ -88,38 +128,38 @@ const getAdminDashboard = (req, res) => {
     JOIN physician ph ON a.physician_id = ph.physician_id
     JOIN appointment_status s ON a.status_id = s.status_id
     JOIN office o ON a.office_id = o.office_id
+    ${cid ? "WHERE o.clinic_id = ?" : ""}
     ORDER BY a.appointment_date DESC, a.appointment_time DESC
     LIMIT 10`;
 
-  let data = {};
-  let done = 0;
+  let data = {}, done = 0;
   const total = 3;
   function finish() { done++; if (done === total) res.json(data); }
 
-  db.query(statsSql,      (e, r) => { data.stats        = e ? null : r[0]; finish(); });
-  db.query(clinicsSql,    (e, r) => { data.clinics      = e ? []   : r;    finish(); });
-  db.query(recentApptSql, (e, r) => { data.recentAppts  = e ? []   : r;    finish(); });
+  db.query(statsSql,      statsParams,                  (e, r) => { data.stats       = e ? null : r[0]; finish(); });
+  db.query(clinicsSql,    params,                       (e, r) => { data.clinics     = e ? []   : r;    finish(); });
+  db.query(recentApptSql, cid ? [cid] : [],             (e, r) => { data.recentAppts = e ? []   : r;    finish(); });
 };
 
 /* ─────────────────────────────────────────────
    GET /api/admin/clinic-report
-   Full report per clinic: appointments, revenue, physicians, staff
 ───────────────────────────────────────────── */
 const getClinicReport = (req, res) => {
+  const cid = req.clinicId;
+  const filter = cid ? "WHERE c.clinic_id = ?" : "";
+  const params = cid ? [cid] : [];
+
   const sql = `
     SELECT
-      c.clinic_id,
-      c.clinic_name,
-      c.city,
-      c.state,
-      COUNT(DISTINCT ph.physician_id)   AS total_physicians,
-      COUNT(DISTINCT st.staff_id)       AS total_staff,
-      COUNT(DISTINCT a.appointment_id)  AS total_appointments,
-      SUM(CASE WHEN aps.status_name = 'Completed'  THEN 1 ELSE 0 END) AS completed,
-      SUM(CASE WHEN aps.status_name = 'No-Show'    THEN 1 ELSE 0 END) AS no_shows,
-      SUM(CASE WHEN aps.status_name = 'Cancelled'  THEN 1 ELSE 0 END) AS cancelled,
-      IFNULL(SUM(b.total_amount), 0)    AS total_billed,
-      IFNULL(SUM(b.patient_owed), 0)    AS outstanding_balance,
+      c.clinic_id, c.clinic_name, c.city, c.state,
+      COUNT(DISTINCT ph.physician_id)  AS total_physicians,
+      COUNT(DISTINCT st.staff_id)      AS total_staff,
+      COUNT(DISTINCT a.appointment_id) AS total_appointments,
+      SUM(CASE WHEN aps.status_name = 'Completed' THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN aps.status_name = 'No-Show'   THEN 1 ELSE 0 END) AS no_shows,
+      SUM(CASE WHEN aps.status_name = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled,
+      IFNULL(SUM(b.total_amount), 0)   AS total_billed,
+      IFNULL(SUM(b.patient_owed), 0)   AS outstanding_balance,
       IFNULL(SUM(CASE WHEN b.payment_status = 'Paid' THEN b.total_amount ELSE 0 END), 0) AS total_collected
     FROM clinic c
     LEFT JOIN office o          ON o.clinic_id      = c.clinic_id
@@ -129,19 +169,24 @@ const getClinicReport = (req, res) => {
     LEFT JOIN appointment a     ON a.office_id      = o.office_id
     LEFT JOIN appointment_status aps ON a.status_id = aps.status_id
     LEFT JOIN billing b         ON b.appointment_id = a.appointment_id
+    ${filter}
     GROUP BY c.clinic_id, c.clinic_name, c.city, c.state
     ORDER BY c.clinic_name`;
 
-  db.query(sql, (err, rows) => {
+  db.query(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ message: "Query failed: " + err.message });
     res.json({ clinics: rows });
   });
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/physicians  — list all
+   GET /api/admin/physicians
 ───────────────────────────────────────────── */
 const getAllPhysicians = (req, res) => {
+  const cid = req.clinicId;
+  const filter = cid ? "WHERE d.clinic_id = ?" : "";
+  const params = cid ? [cid] : [];
+
   db.query(
     `SELECT ph.physician_id, ph.first_name, ph.last_name, ph.email,
             ph.phone_number, ph.specialty, ph.physician_type, ph.hire_date,
@@ -149,7 +194,9 @@ const getAllPhysicians = (req, res) => {
      FROM physician ph
      LEFT JOIN department d ON ph.department_id = d.department_id
      LEFT JOIN clinic c ON d.clinic_id = c.clinic_id
+     ${filter}
      ORDER BY ph.last_name, ph.first_name`,
+    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -158,9 +205,13 @@ const getAllPhysicians = (req, res) => {
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/staff-members  — list all
+   GET /api/admin/staff-members
 ───────────────────────────────────────────── */
 const getAllStaff = (req, res) => {
+  const cid = req.clinicId;
+  const filter = cid ? "WHERE d.clinic_id = ?" : "";
+  const params = cid ? [cid] : [];
+
   db.query(
     `SELECT st.staff_id, st.first_name, st.last_name, st.email,
             st.phone_number, st.role, st.hire_date, st.shift_start, st.shift_end,
@@ -168,7 +219,9 @@ const getAllStaff = (req, res) => {
      FROM staff st
      LEFT JOIN department d ON st.department_id = d.department_id
      LEFT JOIN clinic c ON d.clinic_id = c.clinic_id
+     ${filter}
      ORDER BY st.last_name, st.first_name`,
+    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -177,13 +230,19 @@ const getAllStaff = (req, res) => {
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/departments  — for dropdowns
+   GET /api/admin/departments
 ───────────────────────────────────────────── */
 const getDepartments = (req, res) => {
+  const cid = req.clinicId;
+  const filter = cid ? "WHERE d.clinic_id = ?" : "";
+  const params = cid ? [cid] : [];
+
   db.query(
     `SELECT d.department_id, d.department_name, c.clinic_name
      FROM department d JOIN clinic c ON d.clinic_id = c.clinic_id
+     ${filter}
      ORDER BY c.clinic_name, d.department_name`,
+    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -192,13 +251,19 @@ const getDepartments = (req, res) => {
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/offices  — for dropdowns
+   GET /api/admin/offices
 ───────────────────────────────────────────── */
 const getOffices = (req, res) => {
+  const cid = req.clinicId;
+  const filter = cid ? "WHERE o.clinic_id = ?" : "";
+  const params = cid ? [cid] : [];
+
   db.query(
     `SELECT o.office_id, o.city, o.street_address, c.clinic_name
      FROM office o JOIN clinic c ON o.clinic_id = c.clinic_id
+     ${filter}
      ORDER BY c.clinic_name, o.city`,
+    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -208,10 +273,6 @@ const getOffices = (req, res) => {
 
 /* ─────────────────────────────────────────────
    POST /api/admin/add-physician
-   Body: { first_name, last_name, email, phone_number, specialty,
-           physician_type, department_id, hire_date,
-           username, password,
-           schedule: [{ office_id, day_of_week, start_time, end_time }] }
 ───────────────────────────────────────────── */
 const addPhysician = (req, res) => {
   const {
@@ -223,12 +284,10 @@ const addPhysician = (req, res) => {
   if (!first_name || !last_name || !username || !password)
     return res.status(400).json({ message: "first_name, last_name, username, and password are required" });
 
-  // Check username not taken
   db.query("SELECT user_id FROM users WHERE username = ?", [username], (err, existing) => {
     if (err) return res.status(500).json({ message: "DB error" });
     if (existing.length) return res.status(409).json({ message: "Username already taken" });
 
-    // Insert physician record
     const phSql = `INSERT INTO physician
       (first_name, last_name, email, phone_number, specialty, physician_type, department_id, hire_date)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -243,18 +302,16 @@ const addPhysician = (req, res) => {
       const physician_id = phResult.insertId;
       const hash = bcrypt.hashSync(password, 10);
 
-      // Create user account linked to physician
       db.query(
         "INSERT INTO users (username, password_hash, role, physician_id) VALUES (?, ?, 'physician', ?)",
         [username, hash, physician_id],
         (uErr) => {
           if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
 
-          // Insert schedule rows if provided
           if (schedule && schedule.length > 0) {
             const schSql = "INSERT IGNORE INTO work_schedule (physician_id, office_id, day_of_week, start_time, end_time) VALUES ?";
             const schVals = schedule.map(s => [physician_id, s.office_id, s.day_of_week, s.start_time, s.end_time]);
-            db.query(schSql, [schVals], () => {}); // non-fatal
+            db.query(schSql, [schVals], () => {});
           }
 
           res.status(201).json({ message: "Physician added successfully", physician_id });
@@ -266,9 +323,6 @@ const addPhysician = (req, res) => {
 
 /* ─────────────────────────────────────────────
    POST /api/admin/add-staff
-   Body: { first_name, last_name, email, phone_number, role,
-           department_id, hire_date, shift_start, shift_end,
-           username, password }
 ───────────────────────────────────────────── */
 const addStaff = (req, res) => {
   const {

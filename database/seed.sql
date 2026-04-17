@@ -251,6 +251,33 @@ INSERT IGNORE INTO staff (staff_id, first_name, last_name, date_of_birth, depart
   (7, 'Carlos',   'Mendez',  '1987-06-18', 25, 'Receptionist',       '2019-11-01', '(915) 555-0401', 'mendez@ath.staff.com',   '08:00:00', '16:00:00'),
   (8, 'Brittany', 'Ross',    '1995-01-09', 28, 'Medical Assistant',  '2023-03-01', '(361) 555-0401', 'ross@ath.staff.com',     '08:00:00', '16:00:00');
 
+-- ─── Admin table ────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS admin (
+  admin_id      INT AUTO_INCREMENT PRIMARY KEY,
+  first_name    VARCHAR(50)  NOT NULL,
+  last_name     VARCHAR(50)  NOT NULL,
+  date_of_birth DATE         NOT NULL,
+  phone_number  VARCHAR(20)  NOT NULL,
+  email         VARCHAR(100) NOT NULL UNIQUE,
+  city          VARCHAR(50)  NOT NULL,
+  state         CHAR(2)      NOT NULL,
+  start_date    DATE         NOT NULL,
+  clinic_id     INT          NULL,
+  CONSTRAINT fk_admin_clinic FOREIGN KEY (clinic_id) REFERENCES clinic(clinic_id)
+);
+
+INSERT IGNORE INTO admin (admin_id, first_name, last_name, date_of_birth, phone_number, email, city, state, start_date, clinic_id) VALUES
+  (1, 'System',  'Administrator', '1980-01-01', '(800) 555-0001', 'admin@ath.admin.com',       'Dallas',      'TX', '2018-01-01', NULL),
+  (2, 'James',   'Henderson',     '1979-03-15', '(214) 555-0901', 'henderson@ath.admin.com',   'Dallas',      'TX', '2019-02-01', 1),
+  (3, 'Priya',   'Patel',         '1983-07-22', '(713) 555-0902', 'patel@ath.admin.com',       'Houston',     'TX', '2019-04-15', 2),
+  (4, 'Claire',  'Morrison',      '1985-11-08', '(512) 555-0903', 'morrison@ath.admin.com',    'Austin',      'TX', '2020-01-10', 3),
+  (5, 'Sean',    'Fitzgerald',    '1977-05-30', '(212) 555-0904', 'fitzgerald@ath.admin.com',  'New York',    'NY', '2020-06-01', 4),
+  (6, 'Erin',    'OConnor',       '1982-09-14', '(312) 555-0905', 'oconnor@ath.admin.com',     'Chicago',     'IL', '2020-08-20', 5),
+  (7, 'Diego',   'Ramirez',       '1981-02-27', '(310) 555-0906', 'ramirez@ath.admin.com',     'Los Angeles', 'CA', '2021-03-01', 6),
+  (8, 'Sandra',  'Blackwood',     '1984-06-19', '(602) 555-0907', 'blackwood@ath.admin.com',   'Phoenix',     'AZ', '2021-05-15', 7),
+  (9, 'Michael', 'Chen',          '1980-12-03', '(206) 555-0908', 'chen@ath.admin.com',        'Seattle',     'WA', '2021-09-01', 8);
+
 -- ─── Users (login accounts) ─────────────────────────────────
 -- Passwords bcrypt-hashed (10 rounds)
 -- Patient@123  → $2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy
