@@ -21,9 +21,10 @@ document.getElementById('btn').addEventListener('click', async () => {
             message.style.color = '#1f6d45';
             message.textContent = 'Login successful. Redirecting...';
             localStorage.setItem('clinicUser', JSON.stringify(data.user));
-            const dest = data.user.role === 'physician'
-                ? '/client/portals/physician_dashboard.html'
-                : '/client/portals/staff_dashboard.html';
+            const role = data.user.role;
+            let dest = '/client/portals/staff_dashboard.html';
+            if (role === 'physician') dest = '/client/portals/physician_dashboard.html';
+            if (role === 'admin')     dest = '/client/portals/admin_dashboard.html';
             setTimeout(() => {
                 window.location.href = dest;
             }, 1000);
