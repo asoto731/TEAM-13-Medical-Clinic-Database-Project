@@ -636,7 +636,7 @@ function showOnboardSuccess(data) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div>
                 <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Portal Login</div>
-                <div style="font-size:13px;color:#333">${data.username}</div>
+                <div style="font-size:13px;color:#333">${data.email}</div>
             </div>
             <div>
                 <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Temp Password</div>

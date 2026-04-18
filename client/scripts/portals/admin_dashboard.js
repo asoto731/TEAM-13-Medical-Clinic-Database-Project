@@ -7,7 +7,7 @@ if (!user || user.role !== "admin") {
 /* ── Sidebar name + location ── */
 const displayName = (user?.firstName && user?.lastName)
     ? `${user.firstName} ${user.lastName}`
-    : user?.username || "Administrator";
+    : user?.email || "Administrator";
 document.getElementById("sidebarName").textContent = displayName;
 
 // Location badge in sidebar
@@ -254,16 +254,15 @@ async function submitAddPhysician() {
 
     const first_name    = document.getElementById("ph_first").value.trim();
     const last_name     = document.getElementById("ph_last").value.trim();
-    const email         = document.getElementById("ph_email").value.trim();
     const phone_number  = document.getElementById("ph_phone").value.trim();
     const specialty     = document.getElementById("ph_specialty").value.trim();
     const physician_type = document.getElementById("ph_type").value;
     const department_id = document.getElementById("ph_dept").value;
     const hire_date     = document.getElementById("ph_hire").value;
-    const password      = document.getElementById("ph_pass").value || "Doctor@123";
+    const password      = document.getElementById("ph_pass").value;
 
-    if (!first_name || !last_name) {
-        errEl.textContent = "First name and last name are required.";
+    if (!first_name || !last_name || !password) {
+        errEl.textContent = "First name, last name, and password are required.";
         errEl.style.display = "block";
         return;
     }
@@ -286,25 +285,27 @@ async function submitAddPhysician() {
         const r = await fetch("/api/admin/add-physician", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: user.id, first_name, last_name, email, phone_number,
+            body: JSON.stringify({ user_id: user.id, first_name, last_name, phone_number,
                 specialty, physician_type, department_id: department_id || null,
-                hire_date: hire_date || null, username, password, schedule })
+                hire_date: hire_date || null, password, schedule })
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.message);
 
-        // Reset form
-        ["ph_first","ph_last","ph_email","ph_phone","ph_specialty","ph_hire","ph_user","ph_pass"]
+        // Reset form — show the auto-generated email to the admin
+        if (data.email) {
+            errEl.style.color = "#0d7a60";
+            errEl.textContent = `✓ Dr. ${first_name} ${last_name} added. Login email: ${data.email}`;
+            errEl.style.display = "block";
+        }
+        ["ph_first","ph_last","ph_phone","ph_specialty","ph_hire","ph_pass"]
             .forEach(id => document.getElementById(id).value = "");
         document.getElementById("scheduleRows").innerHTML = "";
         document.getElementById("ph_type").value = "primary";
         document.getElementById("ph_dept").value = "";
 
-        // Show success and reload list
-        errEl.style.color = "#0d7a60";
-        errEl.textContent = `✓ Dr. ${first_name} ${last_name} added successfully!`;
-        errEl.style.display = "block";
-        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 4000);
+        // Show success with generated email and reload list
+        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 6000);
         loadPhysicians();
     } catch(err) {
         errEl.textContent = err.message || "Could not add physician.";
@@ -342,18 +343,16 @@ async function submitAddStaff() {
 
     const first_name   = document.getElementById("st_first").value.trim();
     const last_name    = document.getElementById("st_last").value.trim();
-    const email        = document.getElementById("st_email").value.trim();
     const phone_number = document.getElementById("st_phone").value.trim();
     const role         = document.getElementById("st_role").value;
     const department_id = document.getElementById("st_dept").value;
     const hire_date    = document.getElementById("st_hire").value;
     const shift_start  = document.getElementById("st_shift_start").value;
     const shift_end    = document.getElementById("st_shift_end").value;
-    const username     = document.getElementById("st_user").value.trim();
-    const password     = document.getElementById("st_pass").value || "Staff@123";
+    const password     = document.getElementById("st_pass").value;
 
-    if (!first_name || !last_name) {
-        errEl.textContent = "First name and last name are required.";
+    if (!first_name || !last_name || !password) {
+        errEl.textContent = "First name, last name, and password are required.";
         errEl.style.display = "block";
         return;
     }
@@ -362,24 +361,26 @@ async function submitAddStaff() {
         const r = await fetch("/api/admin/add-staff", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: user.id, first_name, last_name, email, phone_number,
+            body: JSON.stringify({ user_id: user.id, first_name, last_name, phone_number,
                 role, department_id: department_id || null,
                 hire_date: hire_date || null,
                 shift_start: shift_start || null, shift_end: shift_end || null,
-                username, password })
+                password })
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.message);
 
-        ["st_first","st_last","st_email","st_phone","st_hire","st_shift_start","st_shift_end","st_user","st_pass"]
+        ["st_first","st_last","st_phone","st_hire","st_shift_start","st_shift_end","st_pass"]
             .forEach(id => document.getElementById(id).value = "");
         document.getElementById("st_role").value = "Receptionist";
         document.getElementById("st_dept").value = "";
 
         errEl.style.color = "#0d7a60";
-        errEl.textContent = `✓ ${first_name} ${last_name} added successfully!`;
+        errEl.textContent = data.email
+            ? `✓ ${first_name} ${last_name} added. Login email: ${data.email}`
+            : `✓ ${first_name} ${last_name} added successfully!`;
         errEl.style.display = "block";
-        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 4000);
+        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 6000);
         loadStaff();
     } catch(err) {
         errEl.textContent = err.message || "Could not add staff member.";

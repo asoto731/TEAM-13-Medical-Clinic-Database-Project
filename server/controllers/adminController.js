@@ -22,29 +22,29 @@ function clearRateLimit(ip, username) { loginAttempts.delete(`${ip}:${(username 
    POST /api/admin/login
 ───────────────────────────────────────────── */
 const loginAdmin = (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
 
-  if (!username || !password)
-    return res.status(400).json({ message: "Username and password are required" });
+  if (!email || !password)
+    return res.status(400).json({ message: "Email and password are required" });
 
-  if (isRateLimited(ip, username))
+  if (isRateLimited(ip, email))
     return res.status(429).json({ message: "Too many login attempts. Please wait 15 minutes." });
 
-  db.query("SELECT * FROM users WHERE username = ? AND role = 'admin'", [username], (err, rows) => {
+  db.query("SELECT * FROM users WHERE email = ? AND role = 'admin'", [email], (err, rows) => {
     if (err) return res.status(500).json({ message: "Login query failed" });
-    if (!rows.length) return res.status(401).json({ message: "Invalid username or password" });
+    if (!rows.length) return res.status(401).json({ message: "Invalid email or password" });
 
     const user = rows[0];
     if (!bcrypt.compareSync(password, user.password_hash))
-      return res.status(401).json({ message: "Invalid username or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
 
-    clearRateLimit(ip, username);
+    clearRateLimit(ip, email);
     auditLog(user.user_id, "ADMIN_LOGIN", "user", user.user_id, ip);
 
     res.json({
       message: "Login successful",
-      user: { id: user.user_id, username: user.username, role: user.role }
+      user: { id: user.user_id, email: user.email, role: user.role }
     });
   });
 };
@@ -220,7 +220,7 @@ function generateStaffEmail(lastName, cb) {
   const tryEmail = () => {
     const num   = Math.floor(100 + Math.random() * 900); // 100–999
     const email = `${base}${num}@audittrailhealth.com`;
-    db.query("SELECT user_id FROM users WHERE username = ?", [email], (err, rows) => {
+    db.query("SELECT user_id FROM users WHERE email = ?", [email], (err, rows) => {
       if (err) return cb(err);
       if (rows.length) return tryEmail(); // collision — try again
       cb(null, email);
@@ -243,26 +243,35 @@ const addPhysician = (req, res) => {
   generateStaffEmail(last_name, (genErr, autoEmail) => {
     if (genErr) return res.status(500).json({ message: "Could not generate email" });
 
-    const phSql = `INSERT INTO physician
-      (first_name, last_name, email, phone_number, specialty, physician_type, department_id, hire_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const hash = bcrypt.hashSync(password, 10);
 
-    db.query(phSql, [
-      first_name, last_name, autoEmail, phone_number || null,
-      specialty || null, physician_type || "primary",
-      department_id || null, hire_date || null
-    ], (phErr, phResult) => {
-      if (phErr) return res.status(500).json({ message: "Could not insert physician: " + phErr.message });
+    // Insert user FIRST (physician.email FK references users.email)
+    db.query(
+      "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'physician')",
+      [autoEmail, hash],
+      (uErr, uResult) => {
+        if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
 
-      const physician_id = phResult.insertId;
-      const hash = bcrypt.hashSync(password, 10);
+        const user_id = uResult.insertId;
 
-      // username = the generated email
-      db.query(
-        "INSERT INTO users (username, password_hash, role, physician_id) VALUES (?, ?, 'physician', ?)",
-        [autoEmail, hash, physician_id],
-        (uErr) => {
-          if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
+        const phSql = `INSERT INTO physician
+          (first_name, last_name, email, phone_number, specialty, physician_type, department_id, hire_date)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        db.query(phSql, [
+          first_name, last_name, autoEmail, phone_number || null,
+          specialty || null, physician_type || "primary",
+          department_id || null, hire_date || null
+        ], (phErr, phResult) => {
+          if (phErr) {
+            db.query("DELETE FROM users WHERE user_id = ?", [user_id], () => {});
+            return res.status(500).json({ message: "Could not insert physician: " + phErr.message });
+          }
+
+          const physician_id = phResult.insertId;
+
+          // Link physician_id back to the user row
+          db.query("UPDATE users SET physician_id = ? WHERE user_id = ?", [physician_id, user_id], () => {});
 
           if (schedule && schedule.length > 0) {
             const schSql = "INSERT IGNORE INTO work_schedule (physician_id, office_id, day_of_week, start_time, end_time) VALUES ?";
@@ -271,9 +280,9 @@ const addPhysician = (req, res) => {
           }
 
           res.status(201).json({ message: "Physician added successfully", physician_id, email: autoEmail });
-        }
-      );
-    });
+        });
+      }
+    );
   });
 };
 
@@ -296,29 +305,40 @@ const addStaff = (req, res) => {
   generateStaffEmail(last_name, (genErr, autoEmail) => {
     if (genErr) return res.status(500).json({ message: "Could not generate email" });
 
-    const stSql = `INSERT INTO staff
-      (first_name, last_name, email, phone_number, role, department_id, hire_date, shift_start, shift_end)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const hash = bcrypt.hashSync(password, 10);
 
-    db.query(stSql, [
-      first_name, last_name, autoEmail, phone_number || null,
-      role || "Receptionist", department_id || null,
-      hire_date || null, shift_start || null, shift_end || null
-    ], (stErr, stResult) => {
-      if (stErr) return res.status(500).json({ message: "Could not insert staff: " + stErr.message });
+    // Insert user FIRST (staff.email FK references users.email)
+    db.query(
+      "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'staff')",
+      [autoEmail, hash],
+      (uErr, uResult) => {
+        if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
 
-      const staff_id = stResult.insertId;
-      const hash = bcrypt.hashSync(password, 10);
+        const user_id = uResult.insertId;
 
-      db.query(
-        "INSERT INTO users (username, password_hash, role, staff_id) VALUES (?, ?, 'staff', ?)",
-        [autoEmail, hash, staff_id],
-        (uErr) => {
-          if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
+        const stSql = `INSERT INTO staff
+          (first_name, last_name, email, phone_number, role, department_id, hire_date, shift_start, shift_end)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        db.query(stSql, [
+          first_name, last_name, autoEmail, phone_number || null,
+          role || "Receptionist", department_id || null,
+          hire_date || null, shift_start || null, shift_end || null
+        ], (stErr, stResult) => {
+          if (stErr) {
+            db.query("DELETE FROM users WHERE user_id = ?", [user_id], () => {});
+            return res.status(500).json({ message: "Could not insert staff: " + stErr.message });
+          }
+
+          const staff_id = stResult.insertId;
+
+          // Link staff_id back to the user row
+          db.query("UPDATE users SET staff_id = ? WHERE user_id = ?", [staff_id, user_id], () => {});
+
           res.status(201).json({ message: "Staff member added successfully", staff_id, email: autoEmail });
-        }
-      );
-    });
+        });
+      }
+    );
   });
 };
 

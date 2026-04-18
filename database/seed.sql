@@ -4,9 +4,9 @@
 --  number, special character — all pre-hashed with bcrypt.
 --
 --  Demo credentials:
---    Patients   → username: their email    | password: Patient@123
---    Physicians → username: dr.lastname    | password: Doctor@123
---    Staff      → username: staff.lastname | password: Staff@123
+--    Patients   → email: their signup email              | password: Patient@123
+--    Physicians → email: lastnameNNN@audittrailhealth.com | password: Doctor@123
+--    Staff      → email: lastnameNNN@audittrailhealth.com | password: Staff@123
 -- ============================================================
 
 -- ─── Reference Tables ───────────────────────────────────────
@@ -242,7 +242,7 @@ INSERT IGNORE INTO staff (staff_id, first_name, last_name, date_of_birth, depart
 -- Doctor@123   → $2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6
 -- Staff@123    → $2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6
 
-INSERT IGNORE INTO users (user_id, username, password_hash, role, physician_id, staff_id) VALUES
+INSERT IGNORE INTO users (user_id, email, password_hash, role, physician_id, staff_id) VALUES
   -- Patients (1–5)
   (1,  'alex.smith@email.com',    '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
   (2,  'taylor.jones@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
@@ -545,7 +545,7 @@ INSERT IGNORE INTO work_schedule (schedule_id, physician_id, office_id, day_of_w
 -- ─── New Users (IDs 44–77) ───────────────────────────────────
 -- Doctor@123 → $2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6
 
-INSERT IGNORE INTO users (user_id, username, password_hash, role, physician_id, staff_id) VALUES
+INSERT IGNORE INTO users (user_id, email, password_hash, role, physician_id, staff_id) VALUES
   (44, 'reed131@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 31, NULL),
   (45, 'price132@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 32, NULL),
   (46, 'allen133@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 33, NULL),

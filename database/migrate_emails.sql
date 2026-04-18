@@ -1,8 +1,12 @@
 -- ============================================================
 --  Email Migration — lastnameNNN@audittrailhealth.com
 --  Run ONCE in the Railway query console.
---  Updates users.username + physician.email + staff.email
---  for all existing physician and staff accounts.
+--  Steps:
+--    1. Update users.username values to email format
+--    2. Update physician.email + staff.email to match
+--    3. Rename users.username column to users.email
+--    4. Add FK: physician.email → users.email
+--    5. Add FK: staff.email    → users.email
 -- ============================================================
 
 -- ─── 1. Update users.username for all physicians ─────────────
@@ -91,3 +95,21 @@ SET ph.email = u.username;
 UPDATE staff s
 JOIN users u ON u.staff_id = s.staff_id
 SET s.email = u.username;
+
+-- ─── 5. Rename users.username → users.email ──────────────────
+ALTER TABLE users CHANGE COLUMN username email VARCHAR(150) NOT NULL;
+
+-- ─── 6. Add FK: physician.email → users.email (ON UPDATE CASCADE) ──
+--  Ensures physician.email always matches a valid users.email.
+--  ON UPDATE CASCADE: if the login email ever changes, the physician
+--  row updates automatically.
+ALTER TABLE physician
+  ADD CONSTRAINT fk_physician_user_email
+  FOREIGN KEY (email) REFERENCES users(email)
+  ON UPDATE CASCADE ON DELETE SET NULL;
+
+-- ─── 7. Add FK: staff.email → users.email ────────────────────
+ALTER TABLE staff
+  ADD CONSTRAINT fk_staff_user_email
+  FOREIGN KEY (email) REFERENCES users(email)
+  ON UPDATE CASCADE ON DELETE SET NULL;
