@@ -235,6 +235,16 @@ async function addScheduleRow() {
     document.getElementById("scheduleRows").appendChild(row);
 }
 
+// Auto-fill username previews when last name is typed
+document.getElementById("ph_last")?.addEventListener("input", e => {
+    const slug = e.target.value.trim().toLowerCase().replace(/\s+/g, "");
+    document.getElementById("ph_user").value = slug ? `${slug}@ath.doctor.com` : "";
+});
+document.getElementById("st_last")?.addEventListener("input", e => {
+    const slug = e.target.value.trim().toLowerCase().replace(/\s+/g, "");
+    document.getElementById("st_user").value = slug ? `${slug}@ath.staff.com` : "";
+});
+
 async function submitAddPhysician() {
     const errEl = document.getElementById("phError");
     errEl.style.display = "none";
@@ -247,14 +257,16 @@ async function submitAddPhysician() {
     const physician_type = document.getElementById("ph_type").value;
     const department_id = document.getElementById("ph_dept").value;
     const hire_date     = document.getElementById("ph_hire").value;
-    const username      = document.getElementById("ph_user").value.trim();
-    const password      = document.getElementById("ph_pass").value;
+    const password      = document.getElementById("ph_pass").value || "Doctor@123";
 
-    if (!first_name || !last_name || !username || !password) {
-        errEl.textContent = "First name, last name, username, and password are required.";
+    if (!first_name || !last_name) {
+        errEl.textContent = "First name and last name are required.";
         errEl.style.display = "block";
         return;
     }
+
+    // Username is auto-generated server-side from last name; pass it along for display
+    const username = document.getElementById("ph_user").value.trim();
 
     // Collect schedule rows
     const schedule = [];
@@ -335,10 +347,10 @@ async function submitAddStaff() {
     const shift_start  = document.getElementById("st_shift_start").value;
     const shift_end    = document.getElementById("st_shift_end").value;
     const username     = document.getElementById("st_user").value.trim();
-    const password     = document.getElementById("st_pass").value;
+    const password     = document.getElementById("st_pass").value || "Staff@123";
 
-    if (!first_name || !last_name || !username || !password) {
-        errEl.textContent = "First name, last name, username, and password are required.";
+    if (!first_name || !last_name) {
+        errEl.textContent = "First name and last name are required.";
         errEl.style.display = "block";
         return;
     }

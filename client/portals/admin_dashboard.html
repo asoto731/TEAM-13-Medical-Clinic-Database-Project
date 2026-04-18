@@ -201,8 +201,12 @@
                             <select id="ph_dept"><option value="">Loading…</option></select>
                         </div>
                         <div class="form-field"><label>Hire Date</label><input type="date" id="ph_hire"></div>
-                        <div class="form-field"><label>Login Username *</label><input type="text" id="ph_user" placeholder="Username for login"></div>
-                        <div class="form-field"><label>Login Password *</label><input type="password" id="ph_pass" placeholder="Temporary password"></div>
+                        <div class="form-field full">
+                            <label>Login Username (auto-generated)</label>
+                            <input type="text" id="ph_user" readonly style="background:#f5f7ff;color:#555;cursor:not-allowed" placeholder="Enter last name to generate…">
+                            <span style="font-size:11px;color:#888;margin-top:4px;display:block">Format: <strong>lastname@ath.doctor.com</strong> — auto-filled from Last Name</span>
+                        </div>
+                        <div class="form-field"><label>Login Password</label><input type="password" id="ph_pass" placeholder="Default: Doctor@123"></div>
 
                         <!-- Schedule builder -->
                         <div class="form-field full">
@@ -261,8 +265,12 @@
                         <div class="form-field"><label>Hire Date</label><input type="date" id="st_hire"></div>
                         <div class="form-field"><label>Shift Start</label><input type="time" id="st_shift_start"></div>
                         <div class="form-field"><label>Shift End</label><input type="time" id="st_shift_end"></div>
-                        <div class="form-field"><label>Login Username *</label><input type="text" id="st_user" placeholder="Username for login"></div>
-                        <div class="form-field"><label>Login Password *</label><input type="password" id="st_pass" placeholder="Temporary password"></div>
+                        <div class="form-field full">
+                            <label>Login Username (auto-generated)</label>
+                            <input type="text" id="st_user" readonly style="background:#f5f7ff;color:#555;cursor:not-allowed" placeholder="Enter last name to generate…">
+                            <span style="font-size:11px;color:#888;margin-top:4px;display:block">Format: <strong>lastname@ath.staff.com</strong> — auto-filled from Last Name</span>
+                        </div>
+                        <div class="form-field"><label>Login Password</label><input type="password" id="st_pass" placeholder="Default: Staff@123"></div>
                         <div class="form-field full">
                             <div id="stError" style="color:#e05c5c;font-size:13px;display:none;margin-bottom:8px"></div>
                             <button class="add-btn" onclick="submitAddStaff()">Add Staff Member</button>

@@ -286,12 +286,28 @@ const addPhysician = (req, res) => {
     username, password, schedule
   } = req.body;
 
-  if (!first_name || !last_name || !username || !password)
-    return res.status(400).json({ message: "first_name, last_name, username, and password are required" });
+  if (!first_name || !last_name)
+    return res.status(400).json({ message: "first_name and last_name are required" });
 
-  db.query("SELECT user_id FROM users WHERE username = ?", [username], (err, existing) => {
+  const defaultPassword = "Doctor@123";
+  const effectivePassword = password || defaultPassword;
+
+  // Auto-generate username: lastname@ath.doctor.com, with numeric suffix if taken
+  const baseSlug = last_name.toLowerCase().replace(/\s+/g, "");
+  const resolveUsername = (cb) => {
+    const trySlug = (n) => {
+      const candidate = n === 0 ? `${baseSlug}@ath.doctor.com` : `${baseSlug}${n}@ath.doctor.com`;
+      db.query("SELECT user_id FROM users WHERE username = ?", [candidate], (err, rows) => {
+        if (err) return cb(err);
+        if (!rows.length) return cb(null, candidate);
+        trySlug(n + 1);
+      });
+    };
+    trySlug(0);
+  };
+
+  resolveUsername((err, username) => {
     if (err) return res.status(500).json({ message: "DB error" });
-    if (existing.length) return res.status(409).json({ message: "Username already taken" });
 
     const phSql = `INSERT INTO physician
       (first_name, last_name, email, phone_number, specialty, physician_type, department_id, hire_date)
@@ -334,15 +350,29 @@ const addStaff = (req, res) => {
     first_name, last_name, email, phone_number,
     role, department_id, hire_date,
     shift_start, shift_end,
-    username, password
+    password
   } = req.body;
 
-  if (!first_name || !last_name || !username || !password)
-    return res.status(400).json({ message: "first_name, last_name, username, and password are required" });
+  if (!first_name || !last_name)
+    return res.status(400).json({ message: "first_name and last_name are required" });
 
-  db.query("SELECT user_id FROM users WHERE username = ?", [username], (err, existing) => {
-    if (err) return res.status(500).json({ message: "DB error" });
-    if (existing.length) return res.status(409).json({ message: "Username already taken" });
+  const finalPassword = password || "Staff@123";
+  const baseSlug = last_name.toLowerCase().replace(/\s+/g, "");
+
+  const resolveUsername = (cb) => {
+    const trySlug = (n) => {
+      const candidate = n === 0 ? `${baseSlug}@ath.staff.com` : `${baseSlug}${n}@ath.staff.com`;
+      db.query("SELECT user_id FROM users WHERE username = ?", [candidate], (err, rows) => {
+        if (err) return cb(err);
+        if (!rows.length) return cb(null, candidate);
+        trySlug(n + 1);
+      });
+    };
+    trySlug(0);
+  };
+
+  resolveUsername((err, username) => {
+    if (err) return res.status(500).json({ message: "DB error resolving username" });
 
     const stSql = `INSERT INTO staff
       (first_name, last_name, email, phone_number, role, department_id, hire_date, shift_start, shift_end)
@@ -356,14 +386,14 @@ const addStaff = (req, res) => {
       if (stErr) return res.status(500).json({ message: "Could not insert staff: " + stErr.message });
 
       const staff_id = stResult.insertId;
-      const hash = bcrypt.hashSync(password, 10);
+      const hash = bcrypt.hashSync(finalPassword, 10);
 
       db.query(
         "INSERT INTO users (username, password_hash, role, staff_id) VALUES (?, ?, 'staff', ?)",
         [username, hash, staff_id],
         (uErr) => {
           if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
-          res.status(201).json({ message: "Staff member added successfully", staff_id });
+          res.status(201).json({ message: "Staff member added successfully", staff_id, username });
         }
       );
     });
