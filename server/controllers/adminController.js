@@ -365,8 +365,278 @@ const addStaff = (req, res) => {
   });
 };
 
+/* ─────────────────────────────────────────────
+   GET /api/admin/reports/revenue
+   Monthly revenue: billed, collected, outstanding
+───────────────────────────────────────────── */
+const getRevenueReport = (req, res) => {
+  const cid  = req.clinicId;
+  const from = req.query.from || '2020-01-01';
+  const to   = req.query.to   || new Date().toISOString().slice(0,10);
+
+  const clinicJoin   = cid ? 'AND o.clinic_id = ?' : '';
+  const clinicParams = cid ? [cid] : [];
+
+  const chartSql = `
+    SELECT DATE_FORMAT(b.payment_date,'%Y-%m') AS month,
+      SUM(b.total_amount) AS billed,
+      SUM(CASE WHEN b.payment_status='Paid' THEN b.total_amount ELSE 0 END) AS collected,
+      SUM(b.patient_owed) AS outstanding
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    JOIN office o ON a.office_id = o.office_id
+    WHERE b.payment_date BETWEEN ? AND ? ${clinicJoin}
+    GROUP BY month ORDER BY month`;
+
+  const listSql = `
+    SELECT b.bill_id, CONCAT(pt.first_name,' ',pt.last_name) AS patient,
+      b.total_amount, b.insurance_paid_amount, b.patient_owed,
+      b.payment_status, b.payment_date, b.due_date, o.city AS clinic_city
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    JOIN office o ON a.office_id = o.office_id
+    JOIN patient pt ON b.patient_id = pt.patient_id
+    WHERE b.payment_date BETWEEN ? AND ? ${clinicJoin}
+    ORDER BY b.payment_date DESC LIMIT 200`;
+
+  const params = [from, to, ...clinicParams];
+  let data = {}, done = 0;
+  const finish = () => { if (++done === 2) res.json(data); };
+
+  db.query(chartSql, params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.chart = r; finish(); });
+  db.query(listSql,  params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list  = r; finish(); });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/reports/ar
+   Accounts receivable aging buckets + raw list
+───────────────────────────────────────────── */
+const getARReport = (req, res) => {
+  const cid  = req.clinicId;
+  const clinicJoin   = cid ? 'AND o.clinic_id = ?' : '';
+  const clinicParams = cid ? [cid] : [];
+
+  const agingSql = `
+    SELECT
+      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 0  AND 30 THEN b.patient_owed ELSE 0 END) AS \`0-30\`,
+      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 31 AND 60 THEN b.patient_owed ELSE 0 END) AS \`31-60\`,
+      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 61 AND 90 THEN b.patient_owed ELSE 0 END) AS \`61-90\`,
+      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) > 90             THEN b.patient_owed ELSE 0 END) AS \`90+\`
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    JOIN office o ON a.office_id = o.office_id
+    WHERE b.payment_status != 'Paid' ${clinicJoin}`;
+
+  const listSql = `
+    SELECT b.bill_id, CONCAT(pt.first_name,' ',pt.last_name) AS patient,
+      b.patient_owed, b.due_date,
+      DATEDIFF(CURDATE(), b.due_date) AS days_overdue,
+      o.city AS clinic_city
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    JOIN office o ON a.office_id = o.office_id
+    JOIN patient pt ON b.patient_id = pt.patient_id
+    WHERE b.payment_status != 'Paid' ${clinicJoin}
+    ORDER BY days_overdue DESC LIMIT 200`;
+
+  let data = {}, done = 0;
+  const finish = () => { if (++done === 2) res.json(data); };
+
+  db.query(agingSql, clinicParams, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.aging = r[0]; finish(); });
+  db.query(listSql,  clinicParams, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list  = r;    finish(); });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/reports/appointments
+   Monthly appointment counts by status + type breakdown
+───────────────────────────────────────────── */
+const getAppointmentReport = (req, res) => {
+  const cid    = req.clinicId;
+  const from   = req.query.from || '2020-01-01';
+  const to     = req.query.to   || new Date().toISOString().slice(0,10);
+  const type   = req.query.type   || null;
+  const phyId  = req.query.physician_id || null;
+
+  const clinicFilter = cid   ? 'AND o.clinic_id = ?'        : '';
+  const typeFilter   = type  ? 'AND a.appointment_type = ?'  : '';
+  const phyFilter    = phyId ? 'AND a.physician_id = ?'      : '';
+
+  const extras = [
+    ...(cid   ? [cid]   : []),
+    ...(type  ? [type]  : []),
+    ...(phyId ? [phyId] : [])
+  ];
+
+  const chartSql = `
+    SELECT DATE_FORMAT(a.appointment_date,'%Y-%m') AS month,
+      s.status_name, COUNT(*) AS count
+    FROM appointment a
+    JOIN appointment_status s ON a.status_id = s.status_id
+    JOIN office o ON a.office_id = o.office_id
+    WHERE a.appointment_date BETWEEN ? AND ?
+      ${clinicFilter} ${typeFilter} ${phyFilter}
+    GROUP BY month, s.status_name ORDER BY month`;
+
+  const typeSql = `
+    SELECT a.appointment_type, COUNT(*) AS count
+    FROM appointment a
+    JOIN office o ON a.office_id = o.office_id
+    WHERE a.appointment_date BETWEEN ? AND ?
+      ${clinicFilter}
+    GROUP BY a.appointment_type`;
+
+  const listSql = `
+    SELECT a.appointment_id, a.appointment_date, a.appointment_time,
+      a.appointment_type, s.status_name,
+      CONCAT(pt.first_name,' ',pt.last_name) AS patient,
+      CONCAT(ph.first_name,' ',ph.last_name) AS physician,
+      o.city
+    FROM appointment a
+    JOIN appointment_status s ON a.status_id = s.status_id
+    JOIN office o ON a.office_id = o.office_id
+    JOIN patient pt ON a.patient_id = pt.patient_id
+    JOIN physician ph ON a.physician_id = ph.physician_id
+    WHERE a.appointment_date BETWEEN ? AND ?
+      ${clinicFilter} ${typeFilter} ${phyFilter}
+    ORDER BY a.appointment_date DESC LIMIT 200`;
+
+  const params      = [from, to, ...extras];
+  const typeParams  = [from, to, ...(cid ? [cid] : [])];
+  let data = {}, done = 0;
+  const finish = () => { if (++done === 3) res.json(data); };
+
+  db.query(chartSql, params,     (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.chart     = r; finish(); });
+  db.query(typeSql,  typeParams, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.typeBreak = r; finish(); });
+  db.query(listSql,  params,     (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list      = r; finish(); });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/reports/physician-productivity
+   Appointment count + revenue per physician
+───────────────────────────────────────────── */
+const getPhysicianProductivity = (req, res) => {
+  const cid       = req.clinicId;
+  const from      = req.query.from      || '2020-01-01';
+  const to        = req.query.to        || new Date().toISOString().slice(0,10);
+  const specialty = req.query.specialty || null;
+  const phyType   = req.query.physician_type || null;
+
+  const clinicFilter    = cid       ? 'AND d.clinic_id = ?'        : '';
+  const specialtyFilter = specialty ? 'AND ph.specialty = ?'        : '';
+  const typeFilter      = phyType   ? 'AND ph.physician_type = ?'   : '';
+  const dateFilter      = 'AND a.appointment_date BETWEEN ? AND ?';
+
+  const extras = [
+    ...(cid       ? [cid]       : []),
+    ...(specialty ? [specialty] : []),
+    ...(phyType   ? [phyType]   : [])
+  ];
+
+  const sql = `
+    SELECT ph.physician_id,
+      CONCAT(ph.first_name,' ',ph.last_name) AS physician,
+      ph.specialty, ph.physician_type,
+      COUNT(a.appointment_id) AS total_appointments,
+      SUM(CASE WHEN s.status_name='Completed' THEN 1 ELSE 0 END) AS completed,
+      ROUND(SUM(CASE WHEN s.status_name='Completed' THEN 1 ELSE 0 END)*100.0/NULLIF(COUNT(a.appointment_id),0),1) AS completion_rate,
+      IFNULL(SUM(b.total_amount),0) AS total_revenue
+    FROM physician ph
+    LEFT JOIN department d ON ph.department_id = d.department_id
+    LEFT JOIN appointment a ON a.physician_id = ph.physician_id ${dateFilter}
+    LEFT JOIN appointment_status s ON a.status_id = s.status_id
+    LEFT JOIN billing b ON b.appointment_id = a.appointment_id
+    WHERE 1=1 ${clinicFilter} ${specialtyFilter} ${typeFilter}
+    GROUP BY ph.physician_id, physician, ph.specialty, ph.physician_type
+    ORDER BY total_appointments DESC`;
+
+  db.query(sql, [from, to, ...extras], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    res.json({ rows });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/reports/referrals
+   Referral counts by status + raw list
+───────────────────────────────────────────── */
+const getReferralReport = (req, res) => {
+  const cid  = req.clinicId;
+  const from = req.query.from || '2020-01-01';
+  const to   = req.query.to   || new Date().toISOString().slice(0,10);
+
+  // Referrals don't have office_id directly; filter via primary physician's department
+  const clinicJoin   = cid ? 'JOIN department d ON pph.department_id=d.department_id AND d.clinic_id=?' : '';
+  const clinicParams = cid ? [cid] : [];
+
+  const chartSql = `
+    SELECT rs.referral_status_name AS status, COUNT(*) AS count
+    FROM referral r
+    JOIN referral_status rs ON r.referral_status_id = rs.referral_status_id
+    JOIN physician pph ON r.primary_physician_id = pph.physician_id
+    ${clinicJoin}
+    WHERE r.date_issued BETWEEN ? AND ?
+    GROUP BY rs.referral_status_name ORDER BY count DESC`;
+
+  const listSql = `
+    SELECT r.referral_id,
+      CONCAT(pt.first_name,' ',pt.last_name) AS patient,
+      CONCAT(pph.first_name,' ',pph.last_name) AS referring_doctor,
+      CONCAT(sph.first_name,' ',sph.last_name) AS specialist,
+      rs.referral_status_name AS status,
+      r.date_issued, r.expiration_date, r.referral_reason
+    FROM referral r
+    JOIN referral_status rs ON r.referral_status_id = rs.referral_status_id
+    JOIN patient pt ON r.patient_id = pt.patient_id
+    JOIN physician pph ON r.primary_physician_id = pph.physician_id
+    JOIN physician sph ON r.specialist_id = sph.physician_id
+    ${clinicJoin}
+    WHERE r.date_issued BETWEEN ? AND ?
+    ORDER BY r.date_issued DESC LIMIT 200`;
+
+  const params = [...clinicParams, from, to];
+  let data = {}, done = 0;
+  const finish = () => { if (++done === 2) res.json(data); };
+
+  db.query(chartSql, params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.chart = r; finish(); });
+  db.query(listSql,  params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list  = r; finish(); });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/reports/insurance-breakdown
+   Insurance paid vs patient owed totals
+───────────────────────────────────────────── */
+const getInsuranceBreakdown = (req, res) => {
+  const cid  = req.clinicId;
+  const from = req.query.from || '2020-01-01';
+  const to   = req.query.to   || new Date().toISOString().slice(0,10);
+
+  const clinicJoin   = cid ? 'AND o.clinic_id = ?' : '';
+  const clinicParams = cid ? [cid] : [];
+
+  const sql = `
+    SELECT i.provider_name,
+      COUNT(b.bill_id) AS claims,
+      ROUND(AVG(i.coverage_percentage),1) AS avg_coverage_pct,
+      SUM(b.total_amount) AS total_billed,
+      SUM(b.insurance_paid_amount) AS insurance_paid,
+      SUM(b.patient_owed) AS patient_owed
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    JOIN office o ON a.office_id = o.office_id
+    JOIN insurance i ON b.insurance_id = i.insurance_id
+    WHERE b.payment_date BETWEEN ? AND ? ${clinicJoin}
+    GROUP BY i.provider_name ORDER BY total_billed DESC`;
+
+  db.query(sql, [from, to, ...clinicParams], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    res.json({ rows });
+  });
+};
+
 module.exports = {
   loginAdmin, getAdminDashboard, getClinicReport,
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
-  addPhysician, addStaff
+  addPhysician, addStaff,
+  getRevenueReport, getARReport, getAppointmentReport,
+  getPhysicianProductivity, getReferralReport, getInsuranceBreakdown
 };

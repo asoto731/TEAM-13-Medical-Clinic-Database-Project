@@ -27,7 +27,7 @@ document.getElementById("logoutBtn").addEventListener("click", logoutUser);
 /* ── Section nav ── */
 const sectionLabels = {
     overview:"Overview", physicians:"Physicians", staff:"Staff Members",
-    reports:"Clinic Reports", settings:"Settings"
+    reports:"Clinic Reports", analytics:"Analytics", settings:"Settings"
 };
 
 function showSection(name) {
@@ -43,6 +43,7 @@ function showSection(name) {
     if (name === "physicians") loadPhysicians();
     if (name === "staff")      loadStaff();
     if (name === "reports")    loadClinicReport();
+    if (name === "analytics")  initAnalytics();
 }
 
 /* ── Theme ── */
@@ -420,3 +421,295 @@ async function loadClinicReport() {
 
 /* ── Bootstrap ── */
 loadOverview();
+
+/* ══════════════════════════════════════════════════
+   ANALYTICS SECTION
+══════════════════════════════════════════════════ */
+
+const chartInstances = {};
+
+function renderChart(id, type, labels, datasets, options = {}) {
+    if (chartInstances[id]) chartInstances[id].destroy();
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    chartInstances[id] = new Chart(ctx, {
+        type,
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { position: "bottom" } },
+            ...options
+        }
+    });
+}
+
+function filterTable(tableId, query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+        tr.style.display = tr.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+}
+
+function toggleView(panel, mode, btn) {
+    const chartView = document.getElementById(`${panel}-chart-view`);
+    const listView  = document.getElementById(`${panel}-list-view`);
+    const arList    = document.getElementById("fin-ar-list");
+    btn.closest(".view-toggle").querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    if (mode === "chart") {
+        chartView?.classList.remove("hidden-view"); chartView?.classList.add("chart-view");
+        listView?.classList.remove("visible");
+        if (arList) { arList.classList.remove("hidden-view"); arList.classList.add("chart-view"); }
+    } else {
+        chartView?.classList.add("hidden-view"); chartView?.classList.remove("chart-view");
+        listView?.classList.add("visible");
+        if (arList) { arList.classList.add("hidden-view"); arList.classList.remove("chart-view"); }
+    }
+}
+
+function switchReportTab(tab, btn) {
+    document.querySelectorAll(".report-tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".report-panel").forEach(p => p.classList.remove("active"));
+    document.getElementById(`report-${tab}`)?.classList.add("active");
+
+    if (tab === "financial")    loadFinancialReports();
+    if (tab === "appointments") loadAppointmentReports();
+    if (tab === "physicians")   loadPhysicianReports();
+    if (tab === "referrals")    loadReferralReport();
+}
+
+function getDateRange(fromId, toId) {
+    const from = document.getElementById(fromId)?.value || "2020-01-01";
+    const to   = document.getElementById(toId)?.value   || new Date().toISOString().slice(0, 10);
+    return { from, to };
+}
+
+function money(v) { return "$" + parseFloat(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+function buildTableRows(tbodySelector, rows, cellFns) {
+    const tbody = document.querySelector(tbodySelector);
+    if (!tbody) return;
+    tbody.innerHTML = rows.length
+        ? rows.map(r => `<tr>${cellFns.map(fn => `<td>${fn(r) ?? "—"}</td>`).join("")}</tr>`).join("")
+        : `<tr><td colspan="${cellFns.length}" style="text-align:center;color:#aaa;padding:20px">No data found.</td></tr>`;
+}
+
+function initAnalytics() {
+    setDefaultDates();
+    populatePhysicianDropdown();
+    populateSpecialtyDropdown();
+    loadFinancialReports();
+}
+
+function setDefaultDates() {
+    const to   = new Date().toISOString().slice(0, 10);
+    const from = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().slice(0, 10);
+    ["fin-from","fin-to","appt-from","appt-to","phy-from","phy-to","ref-from","ref-to"].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.value = i % 2 === 0 ? from : to;
+    });
+}
+
+async function populatePhysicianDropdown() {
+    try {
+        const rows = await fetch(`/api/admin/physicians?user_id=${user.id}`).then(r => r.json());
+        const sel  = document.getElementById("appt-physician");
+        if (!sel) return;
+        rows.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.physician_id;
+            opt.textContent = `${p.first_name} ${p.last_name}`;
+            sel.appendChild(opt);
+        });
+    } catch {}
+}
+
+async function populateSpecialtyDropdown() {
+    try {
+        const rows = await fetch(`/api/admin/physicians?user_id=${user.id}`).then(r => r.json());
+        const sel  = document.getElementById("phy-specialty");
+        if (!sel) return;
+        const specialties = [...new Set(rows.map(p => p.specialty).filter(Boolean))].sort();
+        specialties.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s; opt.textContent = s;
+            sel.appendChild(opt);
+        });
+    } catch {}
+}
+
+/* ── Financial ── */
+async function loadFinancialReports() {
+    const { from, to } = getDateRange("fin-from", "fin-to");
+    const uid = user.id;
+
+    try {
+        const [revData, arData, insData] = await Promise.all([
+            fetch(`/api/admin/reports/revenue?user_id=${uid}&from=${from}&to=${to}`).then(r => r.json()),
+            fetch(`/api/admin/reports/ar?user_id=${uid}`).then(r => r.json()),
+            fetch(`/api/admin/reports/insurance-breakdown?user_id=${uid}&from=${from}&to=${to}`).then(r => r.json())
+        ]);
+
+        // Revenue line chart
+        renderChart("chart-revenue", "line",
+            revData.chart.map(r => r.month),
+            [
+                { label: "Total Billed",  data: revData.chart.map(r => +r.billed),      borderColor: "#1a3a6d", backgroundColor: "rgba(26,58,109,0.1)", fill: true, tension: 0.3 },
+                { label: "Collected",     data: revData.chart.map(r => +r.collected),    borderColor: "#0d7a60", backgroundColor: "rgba(13,122,96,0.1)",  fill: true, tension: 0.3 },
+                { label: "Outstanding",   data: revData.chart.map(r => +r.outstanding),  borderColor: "#e74c3c", backgroundColor: "rgba(231,76,60,0.1)",  fill: true, tension: 0.3 }
+            ],
+            { scales: { y: { ticks: { callback: v => "$" + v.toLocaleString() } } } }
+        );
+
+        // AR aging bar chart
+        const aging = arData.aging || {};
+        renderChart("chart-ar", "bar",
+            ["0–30 days", "31–60 days", "61–90 days", "90+ days"],
+            [{ label: "Amount Owed ($)", data: [+aging["0-30"]||0, +aging["31-60"]||0, +aging["61-90"]||0, +aging["90+"]||0], backgroundColor: ["#4a90d9","#f39c12","#e67e22","#e74c3c"] }],
+            { scales: { y: { ticks: { callback: v => "$" + v.toLocaleString() } } } }
+        );
+
+        // Insurance doughnut
+        const insRows = insData.rows || [];
+        renderChart("chart-insurance", "doughnut",
+            insRows.map(r => r.provider_name),
+            [{ data: insRows.map(r => +r.insurance_paid), backgroundColor: ["#1a3a6d","#0d7a60","#4a90d9","#f39c12","#9b59b6"] }]
+        );
+
+        // Financial list table
+        buildTableRows("#fin-table tbody", revData.list || [], [
+            r => r.patient, r => money(r.total_amount), r => money(r.insurance_paid_amount),
+            r => money(r.patient_owed),
+            r => `<span class="status-pill ${r.payment_status === 'Paid' ? 'pill-completed' : 'pill-cancelled'}">${r.payment_status}</span>`,
+            r => r.payment_date?.slice(0,10) || "—", r => r.due_date?.slice(0,10) || "—", r => r.clinic_city
+        ]);
+
+        // AR detail list
+        buildTableRows("#ar-table tbody", arData.list || [], [
+            r => r.patient, r => money(r.patient_owed),
+            r => r.due_date?.slice(0,10) || "—",
+            r => `<span style="color:${+r.days_overdue > 90 ? '#e74c3c' : +r.days_overdue > 60 ? '#e67e22' : '#f39c12'}">${r.days_overdue} days</span>`,
+            r => r.clinic_city
+        ]);
+
+    } catch(e) { console.error("Financial report error:", e); }
+}
+
+/* ── Appointments ── */
+async function loadAppointmentReports() {
+    const { from, to } = getDateRange("appt-from", "appt-to");
+    const type  = document.getElementById("appt-type")?.value || "";
+    const phyId = document.getElementById("appt-physician")?.value || "";
+    const uid   = user.id;
+
+    let url = `/api/admin/reports/appointments?user_id=${uid}&from=${from}&to=${to}`;
+    if (type)  url += `&type=${encodeURIComponent(type)}`;
+    if (phyId) url += `&physician_id=${phyId}`;
+
+    try {
+        const data = await fetch(url).then(r => r.json());
+
+        // Build stacked bar by month
+        const months   = [...new Set((data.chart || []).map(r => r.month))].sort();
+        const statuses = ["Scheduled", "Completed", "Cancelled", "No-Show"];
+        const colors   = { Scheduled: "#4a90d9", Completed: "#0d7a60", Cancelled: "#e74c3c", "No-Show": "#f39c12" };
+
+        const datasets = statuses.map(s => ({
+            label: s,
+            data: months.map(m => {
+                const row = data.chart.find(r => r.month === m && r.status_name === s);
+                return row ? +row.count : 0;
+            }),
+            backgroundColor: colors[s]
+        }));
+
+        renderChart("chart-appt-volume", "bar", months, datasets, { scales: { x: { stacked: true }, y: { stacked: true } } });
+
+        // Type pie
+        const typeRows = data.typeBreak || [];
+        renderChart("chart-appt-type", "pie",
+            typeRows.map(r => r.appointment_type || "Unknown"),
+            [{ data: typeRows.map(r => +r.count), backgroundColor: ["#1a3a6d","#0d7a60","#4a90d9","#f39c12","#9b59b6"] }]
+        );
+
+        // List table
+        buildTableRows("#appt-table tbody", data.list || [], [
+            r => r.appointment_date?.slice(0,10), r => r.appointment_time?.slice(0,5),
+            r => r.patient, r => r.physician, r => r.appointment_type || "—",
+            r => `<span class="status-pill pill-${(r.status_name||"").toLowerCase().replace("-","")}">${r.status_name}</span>`,
+            r => r.city
+        ]);
+
+    } catch(e) { console.error("Appointment report error:", e); }
+}
+
+/* ── Physician Productivity ── */
+async function loadPhysicianReports() {
+    const { from, to } = getDateRange("phy-from", "phy-to");
+    const specialty = document.getElementById("phy-specialty")?.value || "";
+    const phyType   = document.getElementById("phy-type")?.value || "";
+    const uid = user.id;
+
+    let url = `/api/admin/reports/physician-productivity?user_id=${uid}&from=${from}&to=${to}`;
+    if (specialty) url += `&specialty=${encodeURIComponent(specialty)}`;
+    if (phyType)   url += `&physician_type=${phyType}`;
+
+    try {
+        const data = await fetch(url).then(r => r.json());
+        const rows = data.rows || [];
+        const top20 = rows.slice(0, 20);
+
+        renderChart("chart-phy-productivity", "bar",
+            top20.map(r => r.physician),
+            [
+                { label: "Total Appointments", data: top20.map(r => r.total_appointments), backgroundColor: "#1a3a6d" },
+                { label: "Completed",          data: top20.map(r => r.completed),          backgroundColor: "#0d7a60" }
+            ],
+            { indexAxis: "y", scales: { x: { stacked: false } } }
+        );
+
+        renderChart("chart-phy-revenue", "bar",
+            top20.map(r => r.physician),
+            [{ label: "Revenue ($)", data: top20.map(r => +r.total_revenue), backgroundColor: "#4a90d9" }],
+            { indexAxis: "y", scales: { x: { ticks: { callback: v => "$" + v.toLocaleString() } } } }
+        );
+
+        buildTableRows("#phy-table tbody", rows, [
+            r => r.physician, r => r.specialty || "—", r => r.physician_type,
+            r => r.total_appointments, r => r.completed,
+            r => `${r.completion_rate ?? 0}%`,
+            r => money(r.total_revenue)
+        ]);
+
+    } catch(e) { console.error("Physician report error:", e); }
+}
+
+/* ── Referrals ── */
+async function loadReferralReport() {
+    const { from, to } = getDateRange("ref-from", "ref-to");
+    const uid = user.id;
+    const url = `/api/admin/reports/referrals?user_id=${uid}&from=${from}&to=${to}`;
+
+    try {
+        const data = await fetch(url).then(r => r.json());
+        const chart = data.chart || [];
+        const statusColors = { Requested:"#4a90d9", Issued:"#1a3a6d", Accepted:"#0d7a60", Rejected:"#e74c3c", Scheduled:"#f39c12", Completed:"#27ae60", Expired:"#aaa" };
+
+        renderChart("chart-referrals", "bar",
+            chart.map(r => r.status),
+            [{ label: "Referrals", data: chart.map(r => +r.count), backgroundColor: chart.map(r => statusColors[r.status] || "#999") }],
+            { indexAxis: "y" }
+        );
+
+        buildTableRows("#ref-table tbody", data.list || [], [
+            r => r.patient, r => r.referring_doctor, r => r.specialist,
+            r => `<span class="status-pill">${r.status}</span>`,
+            r => r.date_issued?.slice(0,10) || "—",
+            r => r.expiration_date?.slice(0,10) || "—",
+            r => r.referral_reason || "—"
+        ]);
+
+    } catch(e) { console.error("Referral report error:", e); }
+}
