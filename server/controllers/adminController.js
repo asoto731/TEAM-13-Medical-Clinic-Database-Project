@@ -37,7 +37,7 @@ const loginAdmin = (req, res) => {
      FROM users u
      LEFT JOIN admin a ON u.admin_id = a.admin_id
      LEFT JOIN clinic c ON u.clinic_id = c.clinic_id
-     WHERE u.username = ? AND u.role = 'admin'`,
+     WHERE u.email = ? AND u.role = 'admin'`,
     [username],
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Login query failed" });
@@ -55,7 +55,7 @@ const loginAdmin = (req, res) => {
         user: {
           id:          user.user_id,
           adminId:     user.admin_id,
-          username:    user.username,
+          username:    user.email,
           firstName:   user.first_name,
           lastName:    user.last_name,
           role:        user.role,
@@ -300,7 +300,7 @@ const addPhysician = (req, res) => {
   const resolveUsername = (cb) => {
     const trySlug = (n) => {
       const candidate = n === 0 ? `${baseSlug}@ath.doctor.com` : `${baseSlug}${n}@ath.doctor.com`;
-      db.query("SELECT user_id FROM users WHERE username = ?", [candidate], (err, rows) => {
+      db.query("SELECT user_id FROM users WHERE email = ?", [candidate], (err, rows) => {
         if (err) return cb(err);
         if (!rows.length) return cb(null, candidate);
         trySlug(n + 1);
@@ -327,7 +327,7 @@ const addPhysician = (req, res) => {
       const hash = bcrypt.hashSync(password, 10);
 
       db.query(
-        "INSERT INTO users (username, password_hash, role, physician_id) VALUES (?, ?, 'physician', ?)",
+        "INSERT INTO users (email, password_hash, role, physician_id) VALUES (?, ?, 'physician', ?)",
         [username, hash, physician_id],
         (uErr) => {
           if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
@@ -365,7 +365,7 @@ const addStaff = (req, res) => {
   const resolveUsername = (cb) => {
     const trySlug = (n) => {
       const candidate = n === 0 ? `${baseSlug}@ath.staff.com` : `${baseSlug}${n}@ath.staff.com`;
-      db.query("SELECT user_id FROM users WHERE username = ?", [candidate], (err, rows) => {
+      db.query("SELECT user_id FROM users WHERE email = ?", [candidate], (err, rows) => {
         if (err) return cb(err);
         if (!rows.length) return cb(null, candidate);
         trySlug(n + 1);
@@ -392,7 +392,7 @@ const addStaff = (req, res) => {
       const hash = bcrypt.hashSync(finalPassword, 10);
 
       db.query(
-        "INSERT INTO users (username, password_hash, role, staff_id) VALUES (?, ?, 'staff', ?)",
+        "INSERT INTO users (email, password_hash, role, staff_id) VALUES (?, ?, 'staff', ?)",
         [username, hash, staff_id],
         (uErr) => {
           if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });

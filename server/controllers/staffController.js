@@ -36,7 +36,7 @@ const loginStaff = (req, res) => {
     return res.status(429).json({ message: "Too many login attempts for this account. Please wait 15 minutes and try again." });
   }
 
-  const sql = "SELECT * FROM users WHERE username = ?";
+  const sql = "SELECT * FROM users WHERE email = ?";
 
   db.query(sql, [username], (err, results) => {
     if (err) return res.status(500).json({ message: "Login query failed" });
@@ -64,7 +64,7 @@ const loginStaff = (req, res) => {
       message: "Login successful",
       user: {
         id: user.user_id,
-        username: user.username,
+        username: user.email,
         role: user.role,
         physician_id: user.physician_id,
         staff_id: user.staff_id
@@ -582,7 +582,7 @@ const onboardPatient = (req, res) => {
 
     // Step 1: Create login account
     db.query(
-        "INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'patient')",
+        "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'patient')",
         [username, password_hash],
         (err, userResult) => {
             if (err) {
