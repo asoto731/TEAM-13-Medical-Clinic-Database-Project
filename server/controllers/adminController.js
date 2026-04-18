@@ -90,7 +90,10 @@ const getAdminDashboard = (req, res) => {
       (SELECT COUNT(*) FROM staff st
          JOIN department d ON st.department_id = d.department_id
          ${cid ? "WHERE d.clinic_id = ?" : ""})        AS total_staff,
-      (SELECT COUNT(*) FROM patient)                    AS total_patients,
+      (SELECT COUNT(*) FROM patient pt
+         JOIN physician ph ON pt.primary_physician_id = ph.physician_id
+         JOIN department d ON ph.department_id = d.department_id
+         ${cid ? "WHERE d.clinic_id = ?" : ""})         AS total_patients,
       (SELECT COUNT(*) FROM appointment a
          JOIN office o2 ON a.office_id = o2.office_id
          WHERE a.appointment_date >= CURDATE()
@@ -105,7 +108,7 @@ const getAdminDashboard = (req, res) => {
          JOIN office o2 ON a.office_id = o2.office_id
          ${apptJoinFilter})                             AS total_billed`;
 
-  const statsParams = cid ? [cid, cid, cid, cid, cid] : [];
+  const statsParams = cid ? [cid, cid, cid, cid, cid, cid] : [];
 
   const clinicsSql = `
     SELECT c.clinic_id, c.clinic_name, c.city, c.state,
