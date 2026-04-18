@@ -85,6 +85,7 @@
             <button class="nav-item"         onclick="showSection('appointments')">Appointments</button>
             <button class="nav-item"         onclick="showSection('reports')">Clinic Reports</button>
             <button class="nav-item"         onclick="showSection('analytics')">Analytics</button>
+            <button class="nav-item"         onclick="showSection('insurance')">Insurance</button>
             <button class="nav-item"         onclick="showSection('settings')">Settings</button>
         </nav>
         <div class="sidebar-user">
@@ -524,6 +525,97 @@
             </div>
 
         </div><!-- /analytics -->
+
+        <!-- ══════════════ INSURANCE ══════════════ -->
+        <div class="page-section hidden" id="sec-insurance">
+
+            <!-- Sub-tabs -->
+            <div class="report-tabs" style="margin-bottom:20px">
+                <button class="report-tab active" onclick="switchInsTab('scorecard',this)">Payer Scorecard</button>
+                <button class="report-tab"        onclick="switchInsTab('manage',this)">Insurance Plans</button>
+            </div>
+
+            <!-- ── Scorecard panel ── -->
+            <div id="ins-tab-scorecard" class="ins-panel">
+                <div class="section-label" style="margin-bottom:8px">Select payer</div>
+                <div id="ins-payer-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px"></div>
+
+                <!-- KPI row -->
+                <div id="ins-kpi-row" class="ins-kpi-row"></div>
+
+                <!-- Top 2 charts -->
+                <div class="ins-charts-2">
+                    <div class="chart-card">
+                        <h4 class="ins-card-title">Reimbursement vs Threshold</h4>
+                        <p class="ins-card-sub">Monthly avg paid % — dashed line = contracted rate</p>
+                        <div style="position:relative;height:190px"><canvas id="ins-reimb-chart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h4 class="ins-card-title">Claim Range</h4>
+                        <p class="ins-card-sub">Each dot = one claim · shaded band = acceptable window</p>
+                        <div style="position:relative;height:190px"><canvas id="ins-scatter-chart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Middle 3 charts -->
+                <div class="ins-charts-3">
+                    <div class="chart-card">
+                        <h4 class="ins-card-title">Network Participation</h4>
+                        <p class="ins-card-sub">Coverage rate — minimum 70%</p>
+                        <div style="display:flex;flex-direction:column;align-items:center;padding-top:4px">
+                            <canvas id="ins-gauge" width="200" height="110"></canvas>
+                            <div id="ins-gauge-label" style="font-size:26px;font-weight:700;margin-top:2px"></div>
+                            <div id="ins-gauge-status" style="font-size:12px;font-weight:600;margin-top:2px"></div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h4 class="ins-card-title">Claims Reliability</h4>
+                        <p class="ins-card-sub">Paid / Pending by month</p>
+                        <div style="position:relative;height:160px"><canvas id="ins-claims-chart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h4 class="ins-card-title">Payer Score</h4>
+                        <p class="ins-card-sub">Weighted composite</p>
+                        <div style="display:flex;flex-direction:column;align-items:center;margin-top:4px">
+                            <canvas id="ins-score-ring" width="130" height="130"></canvas>
+                            <div id="ins-score-label" style="font-size:30px;font-weight:700;margin-top:6px"></div>
+                            <div id="ins-score-status" style="font-size:12px;font-weight:600;margin-top:2px"></div>
+                        </div>
+                        <div id="ins-flags" style="margin-top:12px"></div>
+                    </div>
+                </div>
+
+                <!-- Score breakdown -->
+                <div class="chart-card" style="margin-bottom:12px">
+                    <h4 class="ins-card-title">Score Breakdown</h4>
+                    <p class="ins-card-sub">Each component is weighted and feeds the overall score ring above</p>
+                    <div id="ins-breakdown-grid" class="ins-breakdown-grid"></div>
+                </div>
+
+                <!-- Auto alerts -->
+                <div class="chart-card">
+                    <h4 class="ins-card-title">Auto-triggered Alerts</h4>
+                    <p class="ins-card-sub">System flags based on this payer's live data</p>
+                    <div id="ins-triggers" style="margin-top:12px"></div>
+                </div>
+            </div>
+
+            <!-- ── Insurance Plans panel ── -->
+            <div id="ins-tab-manage" class="ins-panel hidden">
+                <div class="section-block">
+                    <div class="section-block-header"><h3>Accepted Insurance Plans</h3></div>
+                    <div style="overflow-x:auto;margin-top:12px">
+                        <table class="data-table" id="ins-plans-table">
+                            <thead><tr>
+                                <th>Provider</th><th>Policy #</th><th>Coverage %</th><th>Group #</th><th>Phone</th>
+                            </tr></thead>
+                            <tbody><tr><td colspan="5" class="table-empty">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /insurance -->
 
         <!-- ══════════════ SETTINGS ══════════════ -->
         <div class="page-section hidden" id="sec-settings">

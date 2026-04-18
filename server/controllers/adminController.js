@@ -717,5 +717,81 @@ module.exports = {
   addPhysician, addStaff,
   getRevenueReport, getARReport, getAppointmentReport,
   getPhysicianProductivity, getReferralReport, getInsuranceBreakdown,
-  getClinicAppointments
+  getClinicAppointments,
+  getPayerScorecard, getPayerDetail
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/scorecard
+   Aggregate stats per payer, clinic-scoped.
+───────────────────────────────────────────── */
+const getPayerScorecard = (req, res) => {
+  const cid = req.clinicId;
+
+  const subquery = cid
+    ? `(SELECT b.*, o.clinic_id FROM billing b
+         JOIN appointment a ON b.appointment_id = a.appointment_id
+         JOIN office o ON a.office_id = o.office_id
+         WHERE o.clinic_id = ?) b`
+    : `billing b`;
+
+  const sql = `
+    SELECT i.insurance_id, i.provider_name, i.coverage_percentage,
+      COUNT(b.bill_id)                                                          AS total_claims,
+      SUM(CASE WHEN b.payment_status='Paid' THEN 1 ELSE 0 END)                 AS paid_claims,
+      ROUND(AVG(b.insurance_paid_amount), 2)                                    AS avg_paid,
+      ROUND(AVG(b.total_amount), 2)                                             AS avg_billed,
+      ROUND(AVG(CASE WHEN b.payment_status='Paid'
+                  AND b.payment_date IS NOT NULL AND b.due_date IS NOT NULL
+                  THEN DATEDIFF(b.payment_date, b.due_date) END), 1)            AS avg_ar_days,
+      COUNT(DISTINCT b.patient_id)                                              AS unique_patients
+    FROM insurance i
+    LEFT JOIN ${subquery} ON b.insurance_id = i.insurance_id
+    GROUP BY i.insurance_id, i.provider_name, i.coverage_percentage
+    ORDER BY i.insurance_id`;
+
+  db.query(sql, cid ? [cid] : [], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    res.json({ payers: rows });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/payer-detail
+   Monthly trend + individual claims for scatter.
+───────────────────────────────────────────── */
+const getPayerDetail = (req, res) => {
+  const cid = req.clinicId;
+  const iid = parseInt(req.query.insurance_id);
+  if (!iid) return res.status(400).json({ message: 'insurance_id required' });
+
+  const clinicJoin  = cid ? 'JOIN office o ON a.office_id = o.office_id' : '';
+  const clinicWhere = cid ? 'AND o.clinic_id = ?' : '';
+  const base = cid ? [iid, cid] : [iid];
+
+  const monthlySql = `
+    SELECT DATE_FORMAT(b.payment_date,'%Y-%m') AS month,
+      ROUND(AVG(b.insurance_paid_amount / NULLIF(b.total_amount,0) * 100), 1) AS reimb_rate,
+      ROUND(AVG(b.insurance_paid_amount), 2)                                   AS avg_paid,
+      SUM(CASE WHEN b.payment_status='Paid' THEN 1 ELSE 0 END)                AS paid,
+      COUNT(*)                                                                  AS total
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    ${clinicJoin}
+    WHERE b.insurance_id = ? AND b.payment_date IS NOT NULL ${clinicWhere}
+    GROUP BY month ORDER BY month ASC LIMIT 12`;
+
+  const claimsSql = `
+    SELECT b.insurance_paid_amount AS paid, b.total_amount AS billed,
+      b.payment_status
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    ${clinicJoin}
+    WHERE b.insurance_id = ? ${clinicWhere}
+    ORDER BY b.bill_id LIMIT 60`;
+
+  let done = 0, data = {};
+  const finish = () => { if (++done === 2) res.json(data); };
+  db.query(monthlySql, base, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.monthly = r; finish(); });
+  db.query(claimsSql,  base, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.claims  = r; finish(); });
 };

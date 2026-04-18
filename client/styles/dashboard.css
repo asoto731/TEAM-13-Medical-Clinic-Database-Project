@@ -1656,3 +1656,57 @@ body {
 [data-theme="dark"] .badge-completed  { background:#0d2e1a; color:#4caf80; }
 [data-theme="dark"] .badge-cancelled  { background:#3e0d0d; color:#f08080; }
 [data-theme="dark"] .badge-noshow     { background:#3e2a0d; color:#f0b05a; }
+
+/* ── Insurance Scorecard ── */
+.ins-panel { display:block; }
+.ins-panel.hidden { display:none; }
+
+.ins-kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+.ins-kpi {
+  background:var(--card-bg,#fff); border:1px solid var(--border-color,#e0e4f0);
+  border-radius:10px; padding:16px 18px;
+}
+.ins-kpi-label { font-size:11px; color:#888; font-weight:500; letter-spacing:.03em; margin-bottom:8px; text-transform:uppercase; }
+.ins-kpi-value { font-size:26px; font-weight:700; letter-spacing:-.02em; }
+.ins-kpi-sub   { font-size:11px; color:#aaa; margin-top:5px; }
+
+.ins-charts-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.ins-charts-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
+
+.ins-card-title { font-size:13px; font-weight:600; color:var(--text-color,#1a1a2e); margin-bottom:3px; }
+.ins-card-sub   { font-size:11px; color:#aaa; margin-bottom:14px; }
+
+.ins-breakdown-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:12px; }
+.ins-bd-item { text-align:center; }
+.ins-bd-bar-wrap { height:76px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:6px; }
+.ins-bd-bar { width:28px; border-radius:4px 4px 0 0; transition:height .4s; }
+.ins-bd-val   { font-size:14px; font-weight:700; }
+.ins-bd-label { font-size:10px; color:#aaa; margin-top:3px; text-transform:uppercase; letter-spacing:.02em; }
+.ins-bd-wt    { font-size:9px; color:#bbb; margin-top:1px; }
+
+.ins-flag { display:flex; align-items:flex-start; gap:7px; font-size:11px; color:#666; padding:5px 0; border-top:1px solid rgba(0,0,0,.06); line-height:1.4; }
+.ins-dot  { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.ins-dot-r { background:#E24B4A; } .ins-dot-y { background:#EF9F27; } .ins-dot-g { background:#5CAD2A; }
+
+.ins-trigger { display:flex; align-items:center; gap:10px; font-size:12px; padding:8px 12px; border-radius:8px; margin-bottom:4px; }
+.ins-trigger.tr  { background:#FEF2F2; border:1px solid #F7C1C1; }
+.ins-trigger.ty  { background:#FFFBEB; border:1px solid #FAC775; }
+.ins-trigger.tg  { background:#F0FDF4; border:1px solid #C0DD97; }
+.ins-tbadge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; flex-shrink:0; }
+.ins-tbadge.br { background:#F7C1C1; color:#791F1F; }
+.ins-tbadge.by { background:#FAC775; color:#633806; }
+.ins-tbadge.bg { background:#C0DD97; color:#27500A; }
+.ins-ttext  { flex:1; color:inherit; }
+.ins-taction{ font-size:11px; color:#999; font-style:italic; }
+
+[data-theme="dark"] .ins-kpi { background:#1a1f3a; border-color:#2a3050; }
+[data-theme="dark"] .ins-card-title { color:#e0e6ff; }
+[data-theme="dark"] .ins-flag { color:#aaa; border-color:rgba(255,255,255,.08); }
+[data-theme="dark"] .ins-trigger.tr { background:#2a1010; border-color:#5a2020; }
+[data-theme="dark"] .ins-trigger.ty { background:#2a2010; border-color:#5a4010; }
+[data-theme="dark"] .ins-trigger.tg { background:#102a10; border-color:#205a20; }
+@media(max-width:900px){
+  .ins-kpi-row{grid-template-columns:repeat(2,1fr);}
+  .ins-charts-2,.ins-charts-3{grid-template-columns:1fr;}
+  .ins-breakdown-grid{grid-template-columns:repeat(3,1fr);}
+}

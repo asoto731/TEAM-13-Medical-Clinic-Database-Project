@@ -6,7 +6,8 @@ const {
   addPhysician, addStaff,
   getRevenueReport, getARReport, getAppointmentReport,
   getPhysicianProductivity, getReferralReport, getInsuranceBreakdown,
-  getClinicAppointments
+  getClinicAppointments,
+  getPayerScorecard, getPayerDetail
 } = require("../controllers/adminController");
 const { requireRole } = require("../middleware/auth");
 
@@ -20,7 +21,9 @@ router.get("/offices",           requireRole("admin"), getOffices);
 router.post("/add-physician",    requireRole("admin"), addPhysician);
 router.post("/add-staff",        requireRole("admin"), addStaff);
 
-router.get("/clinic-appointments",   requireRole("admin"), getClinicAppointments);
+router.get("/clinic-appointments",        requireRole("admin"), getClinicAppointments);
+router.get("/insurance/scorecard",        requireRole("admin"), getPayerScorecard);
+router.get("/insurance/payer-detail",     requireRole("admin"), getPayerDetail);
 
 // Report endpoints
 router.get("/reports/revenue",               requireRole("admin"), getRevenueReport);

@@ -57,7 +57,8 @@ document.getElementById("logoutBtn").addEventListener("click", logoutUser);
 /* ── Section nav ── */
 const sectionLabels = {
     overview:"Overview", physicians:"Physicians", staff:"Staff Members",
-    appointments:"Appointments", reports:"Clinic Reports", analytics:"Analytics", settings:"Settings"
+    appointments:"Appointments", reports:"Clinic Reports",
+    analytics:"Analytics", insurance:"Insurance", settings:"Settings"
 };
 
 function showSection(name) {
@@ -75,6 +76,7 @@ function showSection(name) {
     if (name === "reports")      loadClinicReport();
     if (name === "analytics")    initAnalytics();
     if (name === "appointments") initAppointments();
+    if (name === "insurance")    initInsurance();
 }
 
 /* ── Theme ── */
@@ -594,6 +596,251 @@ function renderApptTables(upcoming, past) {
     // Wire search input for live filtering
     document.getElementById("appt-search").oninput = applyApptFilters;
     document.getElementById("appt-status-filter").onchange = applyApptFilters;
+}
+
+/* ══════════════════════════════════════════════
+   INSURANCE SCORECARD
+══════════════════════════════════════════════ */
+const _insCharts = {};
+let _insPayers = [];
+
+function switchInsTab(tab, btn) {
+    document.querySelectorAll('.report-tabs .report-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('ins-tab-scorecard').classList.toggle('hidden', tab !== 'scorecard');
+    document.getElementById('ins-tab-manage').classList.toggle('hidden', tab !== 'manage');
+    if (tab === 'manage') loadInsPlans();
+}
+
+function initInsurance() {
+    const user = JSON.parse(localStorage.getItem('clinicUser') || '{}');
+    fetch(`/api/admin/insurance/scorecard?user_id=${user.id}`)
+        .then(r => r.json())
+        .then(d => {
+            _insPayers = d.payers || [];
+            const tabs = document.getElementById('ins-payer-tabs');
+            tabs.innerHTML = _insPayers.map((p, i) =>
+                `<button class="report-tab${i===0?' active':''}" onclick="selectInsPayer(${i},this)">${p.provider_name}</button>`
+            ).join('');
+            if (_insPayers.length) selectInsPayer(0, tabs.querySelector('.report-tab'));
+        })
+        .catch(() => console.error('Insurance scorecard load failed'));
+}
+
+function selectInsPayer(idx, btn) {
+    document.querySelectorAll('#ins-payer-tabs .report-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const p = _insPayers[idx];
+    if (!p) return;
+    const user = JSON.parse(localStorage.getItem('clinicUser') || '{}');
+    fetch(`/api/admin/insurance/payer-detail?user_id=${user.id}&insurance_id=${p.insurance_id}`)
+        .then(r => r.json())
+        .then(detail => renderInsScorecard(p, detail))
+        .catch(() => console.error('Payer detail load failed'));
+}
+
+function _insScoreColor(v, good, warn) {
+    return v >= good ? '#5CAD2A' : v >= warn ? '#EF9F27' : '#E24B4A';
+}
+
+function _insComputeScores(p) {
+    const reimb  = p.avg_billed > 0 ? (p.avg_paid / p.avg_billed * 100) : 0;
+    const thresh = parseFloat(p.coverage_percentage);
+    const financial    = Math.min(100, Math.round(reimb / thresh * 100));
+    const reliability  = p.total_claims > 0 ? Math.round(p.paid_claims / p.total_claims * 100) : 0;
+    const network      = Math.min(100, Math.round(thresh));
+    const access       = Math.min(100, Math.round(thresh * 1.05));
+    const arDays       = parseFloat(p.avg_ar_days) || 12;
+    const admin        = Math.min(100, Math.max(0, Math.round(100 - arDays * 2)));
+    const composite    = Math.round(0.35*financial + 0.25*reliability + 0.15*network + 0.15*access + 0.10*admin);
+    return { financial, reliability, network, access, admin, composite, reimb, thresh, arDays };
+}
+
+function renderInsScorecard(p, detail) {
+    const sc = _insComputeScores(p);
+    const paidRate    = p.total_claims > 0 ? Math.round(p.paid_claims / p.total_claims * 100) : 0;
+    const pendingRate = 100 - paidRate;
+    const threshDollar = p.avg_billed > 0 ? Math.round(p.avg_billed * parseFloat(p.coverage_percentage) / 100) : 0;
+
+    // KPIs
+    const rc = _insScoreColor(sc.reimb, parseFloat(p.coverage_percentage), parseFloat(p.coverage_percentage)*0.9);
+    const nc = _insScoreColor(sc.network, 75, 70);
+    const pc = paidRate >= 70 ? '#5CAD2A' : paidRate >= 55 ? '#EF9F27' : '#E24B4A';
+    const ac = sc.arDays <= 20 ? '#5CAD2A' : sc.arDays <= 30 ? '#EF9F27' : '#E24B4A';
+    document.getElementById('ins-kpi-row').innerHTML = `
+        <div class="ins-kpi"><div class="ins-kpi-label">Avg Reimbursement</div>
+            <div class="ins-kpi-value" style="color:${rc}">$${Math.round(p.avg_paid||0)}</div>
+            <div class="ins-kpi-sub">Threshold: $${threshDollar}</div></div>
+        <div class="ins-kpi"><div class="ins-kpi-label">Network Participation</div>
+            <div class="ins-kpi-value" style="color:${nc}">${sc.network}%</div>
+            <div class="ins-kpi-sub">Minimum required: 70%</div></div>
+        <div class="ins-kpi"><div class="ins-kpi-label">Paid Rate</div>
+            <div class="ins-kpi-value" style="color:${pc}">${paidRate}%</div>
+            <div class="ins-kpi-sub">Target: &gt;70%</div></div>
+        <div class="ins-kpi"><div class="ins-kpi-label">Avg A/R Days</div>
+            <div class="ins-kpi-value" style="color:${ac}">${Math.abs(sc.arDays)} days</div>
+            <div class="ins-kpi-sub">Target: &lt;20 days</div></div>`;
+
+    // Build monthly labels/data (fill missing months with 0)
+    const monthly = detail.monthly || [];
+    const labels  = monthly.map(m => { const [y,mo]=m.month.split('-'); return new Date(y,mo-1).toLocaleString('en-US',{month:'short'}); });
+    const reimbData = monthly.map(m => parseFloat(m.reimb_rate)||0);
+    const threshLine = Array(monthly.length).fill(parseFloat(p.coverage_percentage));
+    const paidData    = monthly.map(m => parseInt(m.paid)||0);
+    const pendingData = monthly.map(m => (parseInt(m.total)||0) - (parseInt(m.paid)||0));
+
+    // Reimb line chart
+    _insChart('ins-reimb-chart', 'line', {
+        labels,
+        datasets: [
+            { label:'Avg Reimb %', data:reimbData, borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,.08)', tension:.38, pointRadius:3, fill:true, borderWidth:2 },
+            { label:'Threshold',   data:threshLine, borderColor:'#E24B4A', borderDash:[7,4], pointRadius:0, borderWidth:1.5, fill:false }
+        ]
+    }, { plugins:{legend:{display:false}}, scales:{ y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(128,128,128,.08)'}}, x:{grid:{display:false},ticks:{font:{size:10}}} } });
+
+    // Scatter chart — individual claims
+    const claims = detail.claims || [];
+    const inBand=[], outBand=[];
+    const bandMin = threshDollar * 0.7, bandMax = p.avg_billed * 1.1;
+    claims.forEach((c,i) => {
+        const pt = {x:i+1, y:parseFloat(c.paid)||0};
+        (pt.y >= bandMin && pt.y <= bandMax ? inBand : outBand).push(pt);
+    });
+    _insChart('ins-scatter-chart', 'scatter', {
+        datasets: [
+            { label:'In range',    data:inBand,  backgroundColor:'rgba(55,138,221,.65)', pointRadius:5 },
+            { label:'Out of range',data:outBand, backgroundColor:'rgba(226,75,74,.85)',  pointRadius:6, pointStyle:'rectRot' }
+        ]
+    }, { plugins:{legend:{display:false}},
+         scales:{ y:{ticks:{callback:v=>'$'+v,font:{size:9}},grid:{color:'rgba(128,128,128,.07)'}}, x:{display:false} } });
+
+    // Gauge
+    drawInsGauge(document.getElementById('ins-gauge'), sc.network);
+    document.getElementById('ins-gauge-label').textContent = sc.network + '%';
+    document.getElementById('ins-gauge-label').style.color = nc;
+    const gs = document.getElementById('ins-gauge-status');
+    if (sc.network >= 75) { gs.textContent='Compliant'; gs.style.color='#5CAD2A'; }
+    else if (sc.network >= 70) { gs.textContent='Borderline'; gs.style.color='#EF9F27'; }
+    else { gs.textContent='Non-compliant'; gs.style.color='#E24B4A'; }
+
+    // Claims stacked bar
+    _insChart('ins-claims-chart', 'bar', {
+        labels,
+        datasets: [
+            { label:'Paid',    data:paidData,    backgroundColor:'#5CAD2A', stack:'s' },
+            { label:'Pending', data:pendingData, backgroundColor:'#EF9F27', stack:'s' }
+        ]
+    }, { plugins:{legend:{display:false}}, scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}, y:{stacked:true,ticks:{font:{size:10}},grid:{color:'rgba(128,128,128,.08)'}} } });
+
+    // Score ring
+    drawInsScoreRing(document.getElementById('ins-score-ring'), sc.composite);
+    const sl = document.getElementById('ins-score-label');
+    const ss = document.getElementById('ins-score-status');
+    const scCol = sc.composite>=80?'#5CAD2A': sc.composite>=60?'#EF9F27':'#E24B4A';
+    sl.textContent = sc.composite; sl.style.color = scCol;
+    if (sc.composite>=80) { ss.textContent='Strong payer'; ss.style.color='#5CAD2A'; }
+    else if (sc.composite>=60) { ss.textContent='Acceptable — monitor'; ss.style.color='#EF9F27'; }
+    else { ss.textContent='Problematic — review'; ss.style.color='#E24B4A'; }
+
+    // Flags
+    const flags = [
+        sc.network>=75 ? {c:'g',t:'Network above 70% threshold'} : sc.network>=70 ? {c:'y',t:'Network borderline — approaching minimum'} : {c:'r',t:'Network below 70% minimum'},
+        paidRate>=70 ? {c:'g',t:`Paid rate healthy (${paidRate}%)`} : {c:'r',t:`Low paid rate (${paidRate}%) — investigate denials`},
+        sc.arDays<=20 ? {c:'g',t:'A/R days within target'} : {c:'y',t:`A/R days elevated (${Math.abs(sc.arDays)} days)`}
+    ];
+    document.getElementById('ins-flags').innerHTML = flags.map(f=>
+        `<div class="ins-flag"><span class="ins-dot ins-dot-${f.c}"></span>${f.t}</div>`).join('');
+
+    // Breakdown grid
+    const comps = [
+        {label:'Financial', val:sc.financial, wt:'35%'},
+        {label:'Reliability', val:sc.reliability, wt:'25%'},
+        {label:'Network', val:sc.network, wt:'15%'},
+        {label:'Access', val:sc.access, wt:'15%'},
+        {label:'Admin', val:sc.admin, wt:'10%'},
+    ];
+    document.getElementById('ins-breakdown-grid').innerHTML = comps.map(c => {
+        const col = c.val>=80?'#5CAD2A': c.val>=60?'#EF9F27':'#E24B4A';
+        const h = Math.round((c.val/100)*72);
+        return `<div class="ins-bd-item">
+            <div class="ins-bd-bar-wrap"><div class="ins-bd-bar" style="height:${h}px;background:${col}"></div></div>
+            <div class="ins-bd-val" style="color:${col}">${c.val}</div>
+            <div class="ins-bd-label">${c.label}</div>
+            <div class="ins-bd-wt">×${c.wt}</div>
+        </div>`;
+    }).join('');
+
+    // Triggers
+    const triggers = [
+        { cond: sc.reimb < parseFloat(p.coverage_percentage), sev:'r', text:`Reimbursement (${Math.round(sc.reimb)}%) below contracted threshold (${p.coverage_percentage}%)`, action:'Review CPT rates with billing manager' },
+        { cond: sc.network < 70, sev:'r', text:`Network participation (${sc.network}%) below 70% minimum`, action:'Escalate to contracting team' },
+        { cond: paidRate < 55, sev:'r', text:`Paid rate critically low (${paidRate}%)`, action:'Open renegotiation workflow' },
+        { cond: sc.arDays > 30, sev:'r', text:`A/R days excessive (${Math.abs(sc.arDays)} days)`, action:'Trigger collections follow-up queue' },
+        { cond: sc.network>=70 && sc.network<75, sev:'y', text:`Network borderline (${sc.network}%) — approaching minimum`, action:'Schedule quarterly review' },
+        { cond: paidRate>=55 && paidRate<70, sev:'y', text:`Paid rate below target (${paidRate}%)`, action:'Monitor monthly' },
+        { cond: sc.arDays>20 && sc.arDays<=30, sev:'y', text:`A/R days approaching limit (${Math.abs(sc.arDays)} days)`, action:'Flag for next collections cycle' },
+        { cond: sc.network>=75 && paidRate>=70 && sc.reimb>=parseFloat(p.coverage_percentage), sev:'g', text:'All primary metrics within acceptable range', action:'No action required — continue monitoring' },
+    ];
+    const active = triggers.filter(t=>t.cond);
+    document.getElementById('ins-triggers').innerHTML = active.length
+        ? active.map(t=>`<div class="ins-trigger t${t.sev}">
+            <span class="ins-tbadge b${t.sev}">${t.sev==='r'?'ALERT':t.sev==='y'?'WATCH':'OK'}</span>
+            <span class="ins-ttext">${t.text}</span>
+            <span class="ins-taction">${t.action}</span>
+          </div>`).join('')
+        : '<div style="font-size:12px;color:#aaa;padding:8px 0">No active alerts for this payer.</div>';
+}
+
+function _insChart(id, type, data, options) {
+    if (_insCharts[id]) _insCharts[id].destroy();
+    _insCharts[id] = new Chart(document.getElementById(id), {
+        type, data,
+        options: { responsive:true, maintainAspectRatio:false, ...options }
+    });
+}
+
+function drawInsGauge(canvas, pct) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H-14, r=Math.min(W,H*2)*0.42;
+    const zones=[{end:.70,color:'#F09595'},{end:.75,color:'#FAC775'},{end:1,color:'#A8D86E'}];
+    let prev=Math.PI;
+    zones.forEach(z=>{ const ea=Math.PI+z.end*Math.PI; ctx.beginPath(); ctx.arc(cx,cy,r,prev,ea); ctx.arc(cx,cy,r*.62,ea,prev,true); ctx.closePath(); ctx.fillStyle=z.color; ctx.fill(); prev=ea; });
+    const na=Math.PI+(pct/100)*Math.PI;
+    const nx=cx+Math.cos(na)*r*.76, ny=cy+Math.sin(na)*r*.76;
+    ctx.beginPath(); ctx.moveTo(nx,ny); ctx.lineTo(cx+Math.cos(na+.1)*r*.12,cy+Math.sin(na+.1)*r*.12); ctx.lineTo(cx+Math.cos(na-.1)*r*.12,cy+Math.sin(na-.1)*r*.12); ctx.closePath(); ctx.fillStyle='#333'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,9,0,2*Math.PI); ctx.fillStyle='#666'; ctx.fill();
+    ctx.font='500 9px monospace'; ctx.fillStyle='#999'; ctx.textAlign='center';
+    ctx.fillText('0%',cx-r+6,cy+13); ctx.fillText('50%',cx,cy-r+12); ctx.fillText('100%',cx+r-6,cy+13);
+}
+
+function drawInsScoreRing(canvas, score) {
+    const ctx=canvas.getContext('2d'), s=canvas.width;
+    ctx.clearRect(0,0,s,s);
+    const cx=s/2,cy=s/2,r=s*.38,lw=s*.11;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI); ctx.strokeStyle='#E8E6E0'; ctx.lineWidth=lw; ctx.stroke();
+    const col=score>=80?'#5CAD2A': score>=60?'#EF9F27':'#E24B4A';
+    const ea=-0.5*Math.PI+(score/100)*2*Math.PI;
+    ctx.beginPath(); ctx.arc(cx,cy,r,-0.5*Math.PI,ea); ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
+}
+
+function loadInsPlans() {
+    const user = JSON.parse(localStorage.getItem('clinicUser')||'{}');
+    fetch(`/api/admin/insurance/scorecard?user_id=${user.id}`)
+        .then(r=>r.json())
+        .then(d=>{
+            const rows = d.payers||[];
+            document.querySelector('#ins-plans-table tbody').innerHTML = rows.length
+                ? rows.map(p=>`<tr>
+                    <td><strong>${p.provider_name}</strong></td>
+                    <td>${p.policy_number||'—'}</td>
+                    <td>${p.coverage_percentage}%</td>
+                    <td>${p.group_number||'—'}</td>
+                    <td>${p.phone_number||'—'}</td>
+                  </tr>`).join('')
+                : `<tr><td colspan="5" class="table-empty">No plans found</td></tr>`;
+        });
 }
 
 function filterTable(tableId, query) {
