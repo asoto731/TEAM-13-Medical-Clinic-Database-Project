@@ -57,7 +57,7 @@ document.getElementById("logoutBtn").addEventListener("click", logoutUser);
 /* ── Section nav ── */
 const sectionLabels = {
     overview:"Overview", physicians:"Physicians", staff:"Staff Members",
-    reports:"Clinic Reports", analytics:"Analytics", settings:"Settings"
+    appointments:"Appointments", reports:"Clinic Reports", analytics:"Analytics", settings:"Settings"
 };
 
 function showSection(name) {
@@ -70,10 +70,11 @@ function showSection(name) {
     document.getElementById("currentSection").textContent = sectionLabels[name] || name;
 
     // Lazy-load section data
-    if (name === "physicians") loadPhysicians();
-    if (name === "staff")      loadStaff();
-    if (name === "reports")    loadClinicReport();
-    if (name === "analytics")  initAnalytics();
+    if (name === "physicians")   loadPhysicians();
+    if (name === "staff")        loadStaff();
+    if (name === "reports")      loadClinicReport();
+    if (name === "analytics")    initAnalytics();
+    if (name === "appointments") initAppointments();
 }
 
 /* ── Theme ── */
@@ -484,6 +485,115 @@ function renderChart(id, type, labels, datasets, options = {}) {
             ...options
         }
     });
+}
+
+/* ══════════════════════════════════════════════
+   APPOINTMENTS SECTION
+══════════════════════════════════════════════ */
+let _apptAllUpcoming = [];
+let _apptAllPast     = [];
+let _apptClinicId    = null; // null = all (global), number = specific
+
+function initAppointments() {
+    const user = JSON.parse(localStorage.getItem("clinicUser") || "{}");
+    const isGlobal = !user.clinicId;
+
+    if (isGlobal) {
+        // Show clinic picker, load clinic list
+        document.getElementById("appt-clinic-picker").classList.remove("hidden");
+        loadApptClinicPicker(user);
+    } else {
+        document.getElementById("appt-clinic-picker").classList.add("hidden");
+        fetchAppointments(null);
+    }
+}
+
+function loadApptClinicPicker(user) {
+    fetch(`/api/admin/dashboard?user_id=${user.id}`)
+        .then(r => r.json())
+        .then(data => {
+            const clinics = data.clinics || [];
+            const pills = document.getElementById("appt-clinic-pills");
+            pills.innerHTML = clinics.map(c =>
+                `<button class="report-tab" onclick="fetchAppointments(${c.clinic_id}, this)">
+                    ${c.clinic_name} <span style="opacity:.6;font-size:11px">${c.city}, ${c.state}</span>
+                </button>`
+            ).join("");
+            // Auto-select first clinic
+            const first = pills.querySelector(".report-tab");
+            if (first) { first.classList.add("active"); fetchAppointments(clinics[0].clinic_id, first); }
+        });
+}
+
+function fetchAppointments(clinicId, btn) {
+    _apptClinicId = clinicId;
+
+    // Update active pill
+    if (btn) {
+        document.querySelectorAll("#appt-clinic-pills .report-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+    }
+
+    const user = JSON.parse(localStorage.getItem("clinicUser") || "{}");
+    const qs = clinicId ? `?user_id=${user.id}&clinic_id=${clinicId}` : `?user_id=${user.id}`;
+
+    fetch(`/api/admin/clinic-appointments${qs}`)
+        .then(r => r.json())
+        .then(data => {
+            _apptAllUpcoming = data.upcoming || [];
+            _apptAllPast     = data.past     || [];
+            renderApptTables(_apptAllUpcoming, _apptAllPast);
+        })
+        .catch(() => {
+            document.querySelector("#appt-upcoming-table tbody").innerHTML = `<tr><td colspan="7" class="table-empty">Failed to load</td></tr>`;
+            document.querySelector("#appt-past-table tbody").innerHTML     = `<tr><td colspan="7" class="table-empty">Failed to load</td></tr>`;
+        });
+}
+
+function applyApptFilters() {
+    const search = document.getElementById("appt-search").value.toLowerCase();
+    const status = document.getElementById("appt-status-filter").value;
+
+    const filter = rows => rows.filter(r => {
+        const matchStatus = !status || r.status_name === status;
+        const matchSearch = !search ||
+            r.patient_name.toLowerCase().includes(search) ||
+            r.physician_name.toLowerCase().includes(search) ||
+            (r.appointment_type || "").toLowerCase().includes(search);
+        return matchStatus && matchSearch;
+    });
+
+    renderApptTables(filter(_apptAllUpcoming), filter(_apptAllPast));
+}
+
+function renderApptTables(upcoming, past) {
+    const fmt = d => new Date(d).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
+    const fmtTime = t => { const [h,m] = t.split(":"); const hr = +h; return `${hr%12||12}:${m} ${hr<12?"AM":"PM"}`; };
+    const statusBadge = s => {
+        const cls = {Scheduled:"badge-scheduled",Completed:"badge-completed",Cancelled:"badge-cancelled","No-Show":"badge-noshow"}[s] || "";
+        return `<span class="status-badge ${cls}">${s}</span>`;
+    };
+    const row = r => `<tr>
+        <td>${fmt(r.appointment_date)}</td>
+        <td>${fmtTime(r.appointment_time)}</td>
+        <td>${r.patient_name}</td>
+        <td>${r.physician_name}</td>
+        <td>${r.appointment_type || "—"}</td>
+        <td>${statusBadge(r.status_name)}</td>
+        <td>${r.city}</td>
+    </tr>`;
+
+    document.querySelector("#appt-upcoming-table tbody").innerHTML =
+        upcoming.length ? upcoming.map(row).join("") : `<tr><td colspan="7" class="table-empty">No upcoming appointments</td></tr>`;
+    document.querySelector("#appt-past-table tbody").innerHTML =
+        past.length ? past.map(row).join("") : `<tr><td colspan="7" class="table-empty">No past appointments</td></tr>`;
+
+    document.getElementById("appt-upcoming-count").textContent = `(${upcoming.length})`;
+    document.getElementById("appt-past-count").textContent     = `(${past.length})`;
+
+    // Wire search input for live filtering
+    document.getElementById("appt-search").oninput = applyApptFilters;
+    document.getElementById("appt-status-filter").onchange = applyApptFilters;
 }
 
 function filterTable(tableId, query) {

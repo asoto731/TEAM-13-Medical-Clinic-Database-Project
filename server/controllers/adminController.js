@@ -671,10 +671,51 @@ const getInsuranceBreakdown = (req, res) => {
   });
 };
 
+/* ─────────────────────────────────────────────
+   GET /api/admin/clinic-appointments
+   Past + upcoming appointments, clinic-scoped.
+   Global admin can pass ?clinic_id= to filter.
+───────────────────────────────────────────── */
+const getClinicAppointments = (req, res) => {
+  const cid = req.clinicId ?? (req.query.clinic_id ? parseInt(req.query.clinic_id) : null);
+  const clinicFilter = cid ? "AND o.clinic_id = ?" : "";
+  const params = cid ? [cid] : [];
+
+  const sql = `
+    SELECT
+      a.appointment_id,
+      a.appointment_date,
+      a.appointment_time,
+      a.appointment_type,
+      CONCAT(pt.first_name,' ',pt.last_name) AS patient_name,
+      CONCAT(ph.first_name,' ',ph.last_name) AS physician_name,
+      s.status_name,
+      o.city,
+      c.clinic_name
+    FROM appointment a
+    JOIN patient pt        ON a.patient_id   = pt.patient_id
+    JOIN physician ph      ON a.physician_id  = ph.physician_id
+    JOIN appointment_status s ON a.status_id = s.status_id
+    JOIN office o          ON a.office_id     = o.office_id
+    JOIN clinic c          ON o.clinic_id     = c.clinic_id
+    WHERE 1=1 ${clinicFilter}
+    ORDER BY a.appointment_date DESC, a.appointment_time DESC
+    LIMIT 500`;
+
+  db.query(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    const today = new Date().toISOString().slice(0, 10);
+    const past     = rows.filter(r => r.appointment_date.toISOString().slice(0,10) <  today);
+    const upcoming = rows.filter(r => r.appointment_date.toISOString().slice(0,10) >= today);
+    res.json({ past, upcoming });
+  });
+};
+
 module.exports = {
   loginAdmin, getAdminDashboard, getClinicReport,
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
   addPhysician, addStaff,
   getRevenueReport, getARReport, getAppointmentReport,
-  getPhysicianProductivity, getReferralReport, getInsuranceBreakdown
+  getPhysicianProductivity, getReferralReport, getInsuranceBreakdown,
+  getClinicAppointments
 };

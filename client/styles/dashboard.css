@@ -1645,3 +1645,14 @@ body {
 [data-theme="dark"] .view-toggle { border-color: #4a90d9; }
 [data-theme="dark"] .view-toggle button { color: #8ba4ff; }
 [data-theme="dark"] .view-toggle button.active { background: #1a3a6d; color: #fff; }
+
+/* Appointment status badges */
+.status-badge { font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; }
+.badge-scheduled { background:#e8f4fd; color:#1a6b9a; }
+.badge-completed  { background:#e8f8ee; color:#1a6b3a; }
+.badge-cancelled  { background:#fdecea; color:#c0392b; }
+.badge-noshow     { background:#fff3e0; color:#e67e22; }
+[data-theme="dark"] .badge-scheduled { background:#0d2a3e; color:#7ab4f5; }
+[data-theme="dark"] .badge-completed  { background:#0d2e1a; color:#4caf80; }
+[data-theme="dark"] .badge-cancelled  { background:#3e0d0d; color:#f08080; }
+[data-theme="dark"] .badge-noshow     { background:#3e2a0d; color:#f0b05a; }

@@ -82,6 +82,7 @@
             <button class="nav-item active"  onclick="showSection('overview')">Overview</button>
             <button class="nav-item"         onclick="showSection('physicians')">Physicians</button>
             <button class="nav-item"         onclick="showSection('staff')">Staff Members</button>
+            <button class="nav-item"         onclick="showSection('appointments')">Appointments</button>
             <button class="nav-item"         onclick="showSection('reports')">Clinic Reports</button>
             <button class="nav-item"         onclick="showSection('analytics')">Analytics</button>
             <button class="nav-item"         onclick="showSection('settings')">Settings</button>
@@ -290,6 +291,58 @@
             </div>
 
         </div><!-- /staff -->
+
+        <!-- ══════════════ APPOINTMENTS ══════════════ -->
+        <div class="page-section hidden" id="sec-appointments">
+
+            <!-- Global admin: clinic picker (hidden for clinic admins) -->
+            <div id="appt-clinic-picker" class="hidden" style="margin-bottom:20px">
+                <div class="section-block-header"><h3>Select a Clinic</h3></div>
+                <div id="appt-clinic-pills" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px"></div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="filter-bar" style="margin-bottom:16px">
+                <input type="text" id="appt-search" placeholder="Search patient, physician…" class="search-input" style="width:260px;margin:0">
+                <select id="appt-status-filter" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc">
+                    <option value="">All Statuses</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="No-Show">No-Show</option>
+                </select>
+                <button class="btn-apply" onclick="applyApptFilters()">Apply</button>
+            </div>
+
+            <!-- Upcoming -->
+            <div class="section-block" style="margin-bottom:24px">
+                <div class="section-block-header"><h3>Upcoming Appointments</h3><span id="appt-upcoming-count" style="font-size:13px;color:#888"></span></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table" id="appt-upcoming-table">
+                        <thead><tr>
+                            <th>Date</th><th>Time</th><th>Patient</th>
+                            <th>Physician</th><th>Type</th><th>Status</th><th>Location</th>
+                        </tr></thead>
+                        <tbody><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Past -->
+            <div class="section-block">
+                <div class="section-block-header"><h3>Past Appointments</h3><span id="appt-past-count" style="font-size:13px;color:#888"></span></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table" id="appt-past-table">
+                        <thead><tr>
+                            <th>Date</th><th>Time</th><th>Patient</th>
+                            <th>Physician</th><th>Type</th><th>Status</th><th>Location</th>
+                        </tr></thead>
+                        <tbody><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /appointments -->
 
         <!-- ══════════════ CLINIC REPORTS ══════════════ -->
         <div class="page-section hidden" id="sec-reports">
