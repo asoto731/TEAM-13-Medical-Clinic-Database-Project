@@ -520,12 +520,15 @@
                         <h3 style="font-size:15px;font-weight:700;color:#1f2a6d;margin-bottom:2px">Billing &amp; Payments</h3>
                         <p style="font-size:12px;color:#aaa">Your payment summary and billing history</p>
                     </div>
-                    <select class="filter-select" id="billTimeRange" onchange="applyBillingFilters()" style="font-size:11px;padding:5px 22px 5px 8px">
-                        <option value="all">All Time</option>
-                        <option value="month">This Month</option>
-                        <option value="3months">Last 3 Months</option>
-                        <option value="year">This Year</option>
-                    </select>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <select class="filter-select" id="billTimeRange" onchange="applyBillingFilters()" style="font-size:11px;padding:5px 22px 5px 8px">
+                            <option value="all">All Time</option>
+                            <option value="month">This Month</option>
+                            <option value="3months">Last 3 Months</option>
+                            <option value="year">This Year</option>
+                        </select>
+                        <button class="action-btn" onclick="openBillingStatement()" style="font-size:11px;padding:5px 12px;display:flex;align-items:center;gap:5px"><i class="fa-solid fa-file-invoice"></i> View Full Statement</button>
+                    </div>
                 </div>
 
                 <!-- Summary stat cards -->
@@ -546,6 +549,49 @@
                     </thead>
                     <tbody id="billingBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- ── Billing Statement Modal ── -->
+        <div id="billingStatementModal" class="modal-overlay hidden" onclick="closeBillingStatementOutside(event)">
+            <div class="modal-box" style="max-width:820px;width:95%">
+                <div class="modal-header">
+                    <div>
+                        <h3><i class="fa-solid fa-file-invoice" style="margin-right:8px;color:#1f2a6d"></i>Full Billing Statement</h3>
+                        <p id="bsPatientName" style="font-size:12px;color:#888;margin-top:2px"></p>
+                    </div>
+                    <button class="modal-close" onclick="closeBillingStatement()">&times;</button>
+                </div>
+                <div style="padding:20px 24px">
+                    <!-- Summary cards -->
+                    <div id="bsSummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+                    <!-- Table -->
+                    <div style="overflow-x:auto">
+                        <table class="data-table" style="min-width:680px">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Physician</th>
+                                    <th>Type</th>
+                                    <th>Charged</th>
+                                    <th>Insurance Paid</th>
+                                    <th>You Owe</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bsBody">
+                                <tr><td colspan="8" class="table-empty">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Footer note -->
+                    <p style="font-size:11px;color:#aaa;margin-top:14px">Questions about your bill? Contact our billing department at <strong>billing@athhospital.com</strong> or call <strong>(800) 555-0192</strong>.</p>
+                </div>
+                <div class="modal-footer" style="justify-content:space-between">
+                    <button type="button" class="modal-cancel-btn" onclick="window.print()"><i class="fa-solid fa-print" style="margin-right:6px"></i>Print</button>
+                    <button type="button" class="modal-save-btn" onclick="closeBillingStatement()">Close</button>
+                </div>
             </div>
         </div>
 
