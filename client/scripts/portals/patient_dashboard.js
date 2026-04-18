@@ -1351,6 +1351,9 @@ function applyBillingFilters() {
                 (_billPills.has("Paid")    && isPaid);
             if (!match) return false;
         }
+        
+        filtered.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date)); // newest first
+        
         return true;
     });
 
