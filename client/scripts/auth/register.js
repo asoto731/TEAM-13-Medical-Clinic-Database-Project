@@ -65,6 +65,9 @@ function goStep(n) {
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// Insurance step (3) is hidden — visually remap: step 4 displays as "3"
+const _visibleStepNum = { 1: 1, 2: 2, 3: 3, 4: 3 };
+
 function updateLeftPanel(current) {
     for (let i = 1; i <= 4; i++) {
         const bubble = document.getElementById("lbubble-" + i);
@@ -82,13 +85,13 @@ function updateLeftPanel(current) {
             if (line)  { line.className  = "reg-step-line done"; }
         } else if (i === current) {
             bubble.className = "reg-step-bubble active";
-            bubble.textContent = i;
+            bubble.textContent = _visibleStepNum[i] || i;
             if (title) { title.className = "reg-step-title active"; }
             if (desc)  { desc.className  = "reg-step-desc active"; }
             if (line)  { line.className  = "reg-step-line"; }
         } else {
             bubble.className = "reg-step-bubble";
-            bubble.textContent = i;
+            bubble.textContent = _visibleStepNum[i] || i;
             if (title) { title.className = "reg-step-title"; }
             if (desc)  { desc.className  = "reg-step-desc"; }
             if (line)  { line.className  = "reg-step-line"; }
@@ -153,9 +156,9 @@ function step2Next() {
 
     if (password !== confirm) { showError(2, "Passwords do not match. Please re-enter them."); return; }
 
-    // Step 3: load insurance plans if not loaded yet
-    if (_insurancePlans.length === 0) loadInsurancePlans();
-    goStep(3);
+    // Insurance step removed from registration — patients set it via profile after sign-up
+    buildReview();
+    goStep(4);
 }
 
 /* ── Insurance plans ── */

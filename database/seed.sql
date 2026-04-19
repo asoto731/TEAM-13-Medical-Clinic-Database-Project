@@ -29,11 +29,18 @@ INSERT IGNORE INTO referral_status (referral_status_id, referral_status_name) VA
 -- ─── Insurance (5 providers) ────────────────────────────────
 
 INSERT IGNORE INTO insurance (insurance_id, provider_name, policy_number, coverage_percentage, group_number, phone_number) VALUES
-  (1, 'BlueCross BlueShield', 'BCB-100001', 80.00, 'GRP-001', '(800) 555-2583'),
-  (2, 'Aetna',                'AET-200002', 75.00, 'GRP-002', '(800) 555-2386'),
-  (3, 'UnitedHealth',         'UHC-300003', 85.00, 'GRP-003', '(800) 555-4822'),
-  (4, 'Cigna',                'CIG-400004', 78.00, 'GRP-004', '(800) 555-2446'),
-  (5, 'Humana',               'HUM-500005', 82.00, 'GRP-005', '(800) 555-4862');
+  (1,  'BlueCross BlueShield', 'BCB-100001', 80.00, 'GRP-001', '(800) 555-2583'),
+  (2,  'Aetna',                'AET-200002', 75.00, 'GRP-002', '(800) 555-2386'),
+  (3,  'UnitedHealth',         'UHC-300003', 85.00, 'GRP-003', '(800) 555-4822'),
+  (4,  'Cigna',                'CIG-400004', 78.00, 'GRP-004', '(800) 555-2446'),
+  (5,  'Humana',               'HUM-500005', 82.00, 'GRP-005', '(800) 555-4862'),
+  (6,  'Kaiser Permanente',    'KAI-600006', 88.00, 'GRP-006', '(800) 555-5774'),
+  (7,  'Anthem Blue Cross',    'ANT-700007', 79.00, 'GRP-007', '(800) 555-8742'),
+  (8,  'Molina Healthcare',    'MOL-800008', 72.00, 'GRP-008', '(800) 555-6654'),
+  (9,  'WellCare',             'WLC-900009', 70.00, 'GRP-009', '(800) 555-9355'),
+  (10, 'Medicare',             'MED-100010', 80.00, 'GRP-010', '(800) 555-1800'),
+  (11, 'Medicaid',             'MCD-110011', 90.00, 'GRP-011', '(800) 555-7200'),
+  (12, 'Oscar Health',         'OSC-120012', 77.00, 'GRP-012', '(855) 555-6727');
 
 -- ─── Clinics (8 locations across the US) ────────────────────
 
@@ -304,14 +311,19 @@ INSERT IGNORE INTO patient (patient_id, user_id, first_name, last_name, date_of_
 -- ─── Appointments ────────────────────────────────────────────
 
 INSERT IGNORE INTO appointment (appointment_id, patient_id, physician_id, office_id, appointment_date, appointment_time, status_id, booking_method, reason_for_visit, appointment_type, duration_minutes) VALUES
-  (1, 1, 1, 1, '2026-04-28', '09:00:00', 1, 'online',    'Annual physical exam',        'Physical',   60),
-  (2, 1, 1, 1, '2025-12-05', '10:30:00', 2, 'phone',     'Follow-up on blood pressure', 'Follow-Up',  30),
-  (3, 2, 3, 2, '2026-05-06', '11:00:00', 1, 'online',    'Routine checkup',             'General',    30),
-  (4, 2, 3, 2, '2025-11-20', '14:00:00', 2, 'in-person', 'Hypertension management',     'Follow-Up',  30),
-  (5, 2, 4, 2, '2026-05-13', '10:00:00', 1, 'online',    'Cardiology consultation',     'Specialist', 45),
-  (6, 3, 5, 3, '2025-10-15', '09:00:00', 4, 'phone',     'Headache evaluation',         'General',    30),
-  (7, 4, 1, 1, '2026-04-30', '14:00:00', 1, 'online',    'Diabetes management check',   'Follow-Up',  30),
-  (8, 5, 3, 2, '2026-05-08', '13:00:00', 1, 'online',    'New patient visit',           'Physical',   60);
+  (1,  1, 1, 1, '2026-04-28', '09:00:00', 1, 'online',    'Annual physical exam',        'Physical',   60),
+  (2,  1, 1, 1, '2025-12-05', '10:30:00', 2, 'phone',     'Follow-up on blood pressure', 'Follow-Up',  30),
+  (3,  2, 3, 2, '2026-05-06', '11:00:00', 1, 'online',    'Routine checkup',             'General',    30),
+  (4,  2, 3, 2, '2025-11-20', '14:00:00', 2, 'in-person', 'Hypertension management',     'Follow-Up',  30),
+  (5,  2, 4, 2, '2026-05-13', '10:00:00', 1, 'online',    'Cardiology consultation',     'Specialist', 45),
+  (6,  3, 5, 3, '2025-10-15', '09:00:00', 4, 'phone',     'Headache evaluation',         'General',    30),
+  (7,  4, 1, 1, '2026-04-30', '14:00:00', 1, 'online',    'Diabetes management check',   'Follow-Up',  30),
+  (8,  5, 3, 2, '2026-05-08', '13:00:00', 1, 'online',    'New patient visit',           'Physical',   60),
+  -- Today's appointments (2026-04-18) — for demo / daily schedule
+  (9,  1, 1, 1, '2026-04-18', '10:00:00', 1, 'online',    'Blood pressure recheck',      'Follow-Up',  30),
+  (10, 4, 1, 1, '2026-04-18', '11:30:00', 1, 'phone',     'Diabetes management review',  'Follow-Up',  30),
+  (11, 5, 3, 2, '2026-04-18', '09:30:00', 1, 'online',    'Routine wellness checkup',    'General',    30),
+  (12, 3, 5, 3, '2026-04-18', '14:00:00', 1, 'in-person', 'Migraine consultation',       'Specialist', 45);
 
 -- ─── Medical History ─────────────────────────────────────────
 
@@ -581,3 +593,25 @@ INSERT IGNORE INTO users (user_id, email, password_hash, role, physician_id, sta
   (76, 'holt163@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 63, NULL),
   (77, 'stanton164@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 64, NULL),
   (78, 'egan165@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 65, NULL);
+
+-- ─── Accepted Insurance per Clinic ───────────────────────────
+-- added_by = NULL because admin user is created separately (not seeded)
+-- reimbursement_threshold_pct = the contracted minimum we negotiated
+-- min_participation_rate = network adequacy floor (75% standard)
+
+INSERT IGNORE INTO clinic_accepted_insurance
+  (clinic_id, insurance_id, is_active, reimbursement_threshold_pct, min_participation_rate, effective_date, added_by)
+VALUES
+  -- Dallas (clinic 1) accepts BlueCross, Aetna, UnitedHealth, Cigna
+  (1, 1, TRUE, 78.00, 75.00, '2024-01-01', NULL),
+  (1, 2, TRUE, 72.00, 75.00, '2024-01-01', NULL),
+  (1, 3, TRUE, 82.00, 75.00, '2024-01-01', NULL),
+  (1, 4, TRUE, 75.00, 75.00, '2024-06-01', NULL),
+  -- Houston (clinic 2) accepts BlueCross, Aetna, UnitedHealth
+  (2, 1, TRUE, 78.00, 75.00, '2024-03-01', NULL),
+  (2, 2, TRUE, 72.00, 75.00, '2024-03-01', NULL),
+  (2, 3, TRUE, 82.00, 75.00, '2024-03-01', NULL),
+  -- Austin (clinic 3) accepts BlueCross, UnitedHealth, Humana
+  (3, 1, TRUE, 78.00, 75.00, '2024-06-01', NULL),
+  (3, 3, TRUE, 82.00, 75.00, '2024-06-01', NULL),
+  (3, 5, TRUE, 79.00, 75.00, '2024-06-01', NULL);

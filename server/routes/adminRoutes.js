@@ -3,11 +3,9 @@ const router  = express.Router();
 const {
   loginAdmin, getAdminDashboard, getClinicReport,
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
-  addPhysician, addStaff,
-  getRevenueReport, getARReport, getAppointmentReport,
-  getPhysicianProductivity, getReferralReport, getInsuranceBreakdown,
-  getClinicAppointments,
-  getPayerScorecard, getPayerDetail
+  addPhysician, addStaff, editPhysician, deletePhysician, editStaff, deleteStaff,
+  getPayerScorecard, getPayerDetail, getAcceptedInsurance, addAcceptedInsurance,
+  deactivateInsurance, getPayerAlerts, markAlertRead
 } = require("../controllers/adminController");
 const { requireRole } = require("../middleware/auth");
 
@@ -20,17 +18,18 @@ router.get("/departments",       requireRole("admin"), getDepartments);
 router.get("/offices",           requireRole("admin"), getOffices);
 router.post("/add-physician",    requireRole("admin"), addPhysician);
 router.post("/add-staff",        requireRole("admin"), addStaff);
+router.put("/physician/:id",     requireRole("admin"), editPhysician);
+router.delete("/physician/:id",  requireRole("admin"), deletePhysician);
+router.put("/staff/:id",         requireRole("admin"), editStaff);
+router.delete("/staff/:id",      requireRole("admin"), deleteStaff);
 
-router.get("/clinic-appointments",        requireRole("admin"), getClinicAppointments);
-router.get("/insurance/scorecard",        requireRole("admin"), getPayerScorecard);
-router.get("/insurance/payer-detail",     requireRole("admin"), getPayerDetail);
-
-// Report endpoints
-router.get("/reports/revenue",               requireRole("admin"), getRevenueReport);
-router.get("/reports/ar",                    requireRole("admin"), getARReport);
-router.get("/reports/appointments",          requireRole("admin"), getAppointmentReport);
-router.get("/reports/physician-productivity",requireRole("admin"), getPhysicianProductivity);
-router.get("/reports/referrals",             requireRole("admin"), getReferralReport);
-router.get("/reports/insurance-breakdown",   requireRole("admin"), getInsuranceBreakdown);
+// ── Insurance Analytics ──────────────────────────────────────
+router.get("/insurance/scorecard",           requireRole("admin"), getPayerScorecard);
+router.get("/insurance/payer-detail",        requireRole("admin"), getPayerDetail);
+router.get("/insurance/accepted",            requireRole("admin"), getAcceptedInsurance);
+router.post("/insurance/accept",             requireRole("admin"), addAcceptedInsurance);
+router.put("/insurance/:id/deactivate",      requireRole("admin"), deactivateInsurance);
+router.get("/insurance/alerts",              requireRole("admin"), getPayerAlerts);
+router.put("/insurance/alerts/:id/read",     requireRole("admin"), markAlertRead);
 
 module.exports = router;

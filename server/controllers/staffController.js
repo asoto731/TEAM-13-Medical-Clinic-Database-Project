@@ -39,7 +39,7 @@ const loginStaff = (req, res) => {
   const sql = "SELECT * FROM users WHERE email = ?";
 
   db.query(sql, [email], (err, results) => {
-    if (err) return res.status(500).json({ message: "Login query failed" });
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
 
     if (results.length === 0) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -716,4 +716,63 @@ const getAllPhysicians = (req, res) => {
     );
 };
 
-module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians };
+/* ─────────────────────────────────────────────
+   GET /api/staff/specialists — all specialist physicians
+   Used by physician dashboard Create Referral modal
+───────────────────────────────────────────── */
+const getAllSpecialists = (req, res) => {
+    db.query(
+        `SELECT DISTINCT ph.physician_id, ph.first_name, ph.last_name, ph.specialty, o.city
+         FROM physician ph
+         JOIN work_schedule ws ON ph.physician_id = ws.physician_id
+         JOIN office o ON ws.office_id = o.office_id
+         WHERE ph.physician_type = 'specialist'
+         ORDER BY ph.specialty, ph.last_name`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            res.json(rows);
+        }
+    );
+};
+
+/* ─────────────────────────────────────────────
+   POST /api/staff/referral/create
+   Body: { physician_id, patient_id, specialist_id, referral_reason, user_id }
+   PCP directly issues a referral (status = "Issued", bypassing patient request step)
+───────────────────────────────────────────── */
+const createReferral = (req, res) => {
+    const { physician_id, patient_id, specialist_id, referral_reason } = req.body;
+    if (!physician_id || !patient_id || !specialist_id) {
+        return res.status(400).json({ message: "physician_id, patient_id, and specialist_id are required." });
+    }
+
+    // Get "Issued" status id
+    db.query(
+        "SELECT referral_status_id FROM referral_status WHERE referral_status_name = 'Issued' LIMIT 1",
+        [],
+        (e, statusRows) => {
+            if (e || !statusRows.length) {
+                return res.status(500).json({ message: "Could not resolve referral status." });
+            }
+            const statusId = statusRows[0].referral_status_id;
+            const expDate  = new Date();
+            expDate.setDate(expDate.getDate() + 90);
+            const expStr   = expDate.toISOString().split("T")[0];
+
+            db.query(
+                `INSERT INTO referral
+                   (patient_id, primary_physician_id, specialist_id, referral_status_id,
+                    referral_reason, date_issued, expiration_date)
+                 VALUES (?, ?, ?, ?, ?, CURDATE(), ?)`,
+                [patient_id, physician_id, specialist_id, statusId,
+                 referral_reason || null, expStr],
+                (err2, result) => {
+                    if (err2) return res.status(500).json({ message: "Could not create referral: " + err2.message });
+                    res.status(201).json({ message: "Referral issued successfully.", referral_id: result.insertId });
+                }
+            );
+        }
+    );
+};
+
+module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians, getAllSpecialists, createReferral };

@@ -57,8 +57,14 @@ const getBillingStatement = (req, res) => {
    GET /api/reports/daily-schedule?date=YYYY-MM-DD&user_id=Y
 ───────────────────────────────────────────── */
 const getDailySchedule = (req, res) => {
-    const { date } = req.query;
-    const targetDate = date || new Date().toISOString().split("T")[0];
+    const { date, clinic_id } = req.query;
+    const now = new Date();
+    const localToday = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+    const targetDate = date || localToday;
+
+    // Optional clinic filter — admin can scope to one location
+    const clinicFilter = clinic_id ? "AND o.clinic_id = ?" : "";
+    const params = clinic_id ? [targetDate, clinic_id] : [targetDate];
 
     const sql = `
         SELECT
@@ -73,16 +79,18 @@ const getDailySchedule = (req, res) => {
           a.reason_for_visit,
           s.status_name,
           o.city,
-          o.street_address
+          o.street_address,
+          c.clinic_name
         FROM appointment a
         JOIN patient pt              ON a.patient_id  = pt.patient_id
         JOIN physician ph             ON a.physician_id = ph.physician_id
         JOIN appointment_status s     ON a.status_id    = s.status_id
         JOIN office o                 ON a.office_id    = o.office_id
-        WHERE a.appointment_date = ?
+        JOIN clinic c                 ON o.clinic_id    = c.clinic_id
+        WHERE a.appointment_date = ? ${clinicFilter}
         ORDER BY o.city, a.appointment_time`;
 
-    db.query(sql, [targetDate], (err, rows) => {
+    db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ message: "Query failed" });
 
         const scheduled  = rows.filter(r => r.status_name === "Scheduled").length;

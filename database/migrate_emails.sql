@@ -1,6 +1,6 @@
 -- ============================================================
 --  Email Migration — lastnameNNN@audittrailhealth.com
---  Run ONCE in the Railway query console.
+--  Run ONCE in the Railway query console or MySQL Workbench.
 --  Steps:
 --    1. Update users.username values to email format
 --    2. Update physician.email + staff.email to match
@@ -8,6 +8,9 @@
 --    4. Add FK: physician.email → users.email
 --    5. Add FK: staff.email    → users.email
 -- ============================================================
+
+-- Disable safe update mode (required for WHERE on non-PK columns in Workbench)
+SET SQL_SAFE_UPDATES = 0;
 
 -- ─── 1. Update users.username for all physicians ─────────────
 UPDATE users SET username = 'johnson101@audittrailhealth.com'  WHERE physician_id = 1;
@@ -113,3 +116,6 @@ ALTER TABLE staff
   ADD CONSTRAINT fk_staff_user_email
   FOREIGN KEY (email) REFERENCES users(email)
   ON UPDATE CASCADE ON DELETE SET NULL;
+
+-- Re-enable safe update mode
+SET SQL_SAFE_UPDATES = 1;

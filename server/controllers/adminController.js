@@ -32,7 +32,7 @@ const loginAdmin = (req, res) => {
     return res.status(429).json({ message: "Too many login attempts. Please wait 15 minutes." });
 
   db.query("SELECT * FROM users WHERE email = ? AND role = 'admin'", [email], (err, rows) => {
-    if (err) return res.status(500).json({ message: "Login query failed" });
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
     if (!rows.length) return res.status(401).json({ message: "Invalid email or password" });
 
     const user = rows[0];
@@ -342,8 +342,361 @@ const addStaff = (req, res) => {
   });
 };
 
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/scorecard
+   Returns Query A (financial) + Query B (outcomes) merged per payer.
+   The frontend computes the composite score from this data.
+───────────────────────────────────────────── */
+const getPayerScorecard = (req, res) => {
+  const financialSql = `
+    SELECT
+      ins.insurance_id,
+      ins.provider_name,
+      ins.coverage_percentage                                                  AS contracted_rate,
+      ROUND(SUM(b.insurance_paid_amount) / NULLIF(SUM(b.total_amount),0) * 100, 1) AS actual_rate,
+      COUNT(b.bill_id)                                                         AS total_claims,
+      IFNULL(SUM(b.total_amount), 0)                                           AS total_billed,
+      IFNULL(SUM(b.insurance_paid_amount), 0)                                  AS total_paid,
+      IFNULL(SUM(b.patient_owed), 0)                                           AS total_outstanding,
+      SUM(CASE WHEN b.payment_status = 'Paid'  THEN 1 ELSE 0 END)             AS paid_claims,
+      SUM(CASE WHEN b.payment_status != 'Paid' THEN 1 ELSE 0 END)             AS unpaid_claims
+    FROM insurance ins
+    LEFT JOIN billing b ON ins.insurance_id = b.insurance_id
+    GROUP BY ins.insurance_id, ins.provider_name, ins.coverage_percentage
+    ORDER BY ins.provider_name`;
+
+  const outcomesSql = `
+    SELECT
+      ins.insurance_id,
+      COUNT(DISTINCT p.patient_id)                                              AS total_patients,
+      COUNT(a.appointment_id)                                                   AS total_appointments,
+      SUM(CASE WHEN s.status_name = 'Completed'  THEN 1 ELSE 0 END)            AS completed,
+      SUM(CASE WHEN s.status_name = 'No-Show'    THEN 1 ELSE 0 END)            AS no_shows,
+      SUM(CASE WHEN s.status_name = 'Cancelled'  THEN 1 ELSE 0 END)            AS cancelled,
+      ROUND(
+        SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END)
+        / NULLIF(COUNT(a.appointment_id), 0) * 100, 1
+      )                                                                         AS completion_rate_pct
+    FROM insurance ins
+    LEFT JOIN patient p ON p.insurance_id = ins.insurance_id
+    LEFT JOIN appointment a ON a.patient_id = p.patient_id
+    LEFT JOIN appointment_status s ON a.status_id = s.status_id
+    GROUP BY ins.insurance_id
+    ORDER BY ins.insurance_id`;
+
+  let financial = null, outcomes = null;
+
+  db.query(financialSql, (e1, r1) => {
+    if (e1) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    financial = r1;
+    if (outcomes !== null) mergeAndRespond();
+  });
+
+  db.query(outcomesSql, (e2, r2) => {
+    if (e2) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    outcomes = r2;
+    if (financial !== null) mergeAndRespond();
+  });
+
+  function mergeAndRespond() {
+    const outcomesMap = {};
+    outcomes.forEach(o => { outcomesMap[o.insurance_id] = o; });
+    const merged = financial.map(f => ({
+      ...f,
+      ...(outcomesMap[f.insurance_id] || {
+        total_patients: 0, total_appointments: 0,
+        completed: 0, no_shows: 0, cancelled: 0, completion_rate_pct: 0
+      })
+    }));
+    res.json(merged);
+  }
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/accepted
+   Returns all clinic_accepted_insurance rows with clinic + insurance names.
+───────────────────────────────────────────── */
+const getAcceptedInsurance = (req, res) => {
+  const sql = `
+    SELECT cai.id, cai.clinic_id, c.clinic_name,
+           ins.insurance_id, ins.provider_name, ins.coverage_percentage,
+           cai.reimbursement_threshold_pct, cai.min_participation_rate,
+           cai.is_active, cai.effective_date, cai.removal_reason
+    FROM clinic_accepted_insurance cai
+    JOIN clinic c      ON cai.clinic_id    = c.clinic_id
+    JOIN insurance ins ON cai.insurance_id = ins.insurance_id
+    ORDER BY c.clinic_name, ins.provider_name`;
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    res.json(rows);
+  });
+};
+
+/* ─────────────────────────────────────────────
+   POST /api/admin/insurance/accept
+   Body: { clinic_id, insurance_id, reimbursement_threshold_pct,
+           min_participation_rate, effective_date, notes, user_id }
+───────────────────────────────────────────── */
+const addAcceptedInsurance = (req, res) => {
+  const {
+    clinic_id, insurance_id,
+    reimbursement_threshold_pct, min_participation_rate,
+    effective_date, user_id
+  } = req.body;
+
+  if (!clinic_id || !insurance_id || !reimbursement_threshold_pct)
+    return res.status(400).json({ message: "clinic_id, insurance_id, and reimbursement_threshold_pct are required" });
+
+  const sql = `
+    INSERT INTO clinic_accepted_insurance
+      (clinic_id, insurance_id, is_active, reimbursement_threshold_pct,
+       min_participation_rate, effective_date, added_by)
+    VALUES (?, ?, TRUE, ?, ?, ?, ?)`;
+
+  db.query(sql, [
+    clinic_id, insurance_id,
+    reimbursement_threshold_pct,
+    min_participation_rate || 75.00,
+    effective_date || null,
+    user_id || null
+  ], (err, result) => {
+    if (err) {
+      if (err.code === "ER_DUP_ENTRY")
+        return res.status(409).json({ message: "This insurance plan is already accepted at that clinic." });
+      return res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
+    res.status(201).json({ message: "Insurance plan added successfully", id: result.insertId });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/insurance/:id/deactivate
+   Body: { removal_reason, user_id }
+───────────────────────────────────────────── */
+const deactivateInsurance = (req, res) => {
+  const { id } = req.params;
+  const { removal_reason, user_id } = req.body;
+
+  if (!removal_reason || !removal_reason.trim())
+    return res.status(400).json({ message: "A removal reason is required." });
+
+  db.query(
+    `UPDATE clinic_accepted_insurance
+     SET is_active = FALSE, removed_date = CURDATE(),
+         removal_reason = ?, removed_by = ?
+     WHERE id = ?`,
+    [removal_reason.trim(), user_id || null, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Record not found." });
+      res.json({ message: "Insurance plan deactivated." });
+    }
+  );
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/alerts
+   Returns unread payer_alert rows with insurance name.
+───────────────────────────────────────────── */
+const getPayerAlerts = (req, res) => {
+  const sql = `
+    SELECT pa.alert_id, pa.alert_type, pa.alert_message,
+           pa.triggered_at, pa.is_read, pa.clinic_id,
+           ins.provider_name, c.clinic_name
+    FROM payer_alert pa
+    JOIN insurance ins ON pa.insurance_id = ins.insurance_id
+    LEFT JOIN clinic c ON pa.clinic_id = c.clinic_id
+    WHERE pa.is_read = FALSE
+    ORDER BY pa.triggered_at DESC
+    LIMIT 20`;
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    res.json(rows);
+  });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/payer-detail?insurance_id=X
+   Per-payer detail for the analytics charts:
+     stats    – aggregate KPIs
+     trend    – monthly avg reimbursement (last 8 months)
+     scatter  – individual billing rows
+     bar      – monthly paid/unpaid counts
+───────────────────────────────────────────── */
+const getPayerDetail = (req, res) => {
+  const insId = parseInt(req.query.insurance_id);
+  if (!insId) return res.status(400).json({ message: "insurance_id is required" });
+
+  const statsSql = `
+    SELECT
+      ins.insurance_id,
+      ins.provider_name,
+      ins.coverage_percentage                                                     AS contracted_rate,
+      COUNT(b.bill_id)                                                            AS total_claims,
+      COUNT(DISTINCT b.patient_id)                                                AS total_patients,
+      ROUND(AVG(CASE WHEN b.total_amount > 0
+                     THEN b.insurance_paid_amount / b.total_amount * 100 END), 1) AS avg_reimb_pct,
+      IFNULL(SUM(b.total_amount), 0)                                              AS total_billed,
+      IFNULL(SUM(b.insurance_paid_amount), 0)                                     AS total_paid,
+      SUM(CASE WHEN b.payment_status = 'Paid'  THEN 1 ELSE 0 END)                AS paid_claims,
+      SUM(CASE WHEN b.payment_status != 'Paid' THEN 1 ELSE 0 END)                AS unpaid_claims,
+      SUM(CASE WHEN b.due_date < CURDATE()
+               AND b.payment_status != 'Paid'  THEN 1 ELSE 0 END)                AS overdue_claims
+    FROM insurance ins
+    LEFT JOIN billing b ON ins.insurance_id = b.insurance_id
+    WHERE ins.insurance_id = ?
+    GROUP BY ins.insurance_id, ins.provider_name, ins.coverage_percentage`;
+
+  const trendSql = `
+    SELECT
+      DATE_FORMAT(a.appointment_date, '%Y-%m')   AS month,
+      DATE_FORMAT(a.appointment_date, '%b %Y')   AS month_label,
+      ROUND(AVG(CASE WHEN b.total_amount > 0
+                     THEN b.insurance_paid_amount / b.total_amount * 100 END), 1) AS avg_reimb_pct,
+      COUNT(b.bill_id)                                                             AS claim_count
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    WHERE b.insurance_id = ?
+    GROUP BY DATE_FORMAT(a.appointment_date, '%Y-%m'),
+             DATE_FORMAT(a.appointment_date, '%b %Y')
+    ORDER BY month`;
+
+  const scatterSql = `
+    SELECT
+      DATE_FORMAT(a.appointment_date, '%Y-%m-%d') AS date_str,
+      ROUND(CASE WHEN b.total_amount > 0
+                 THEN b.insurance_paid_amount / b.total_amount * 100 ELSE 0 END, 1) AS reimb_pct,
+      b.total_amount,
+      b.payment_status,
+      IFNULL(a.appointment_type, 'General') AS appointment_type
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    WHERE b.insurance_id = ?
+    ORDER BY a.appointment_date`;
+
+  const barSql = `
+    SELECT
+      DATE_FORMAT(a.appointment_date, '%Y-%m')   AS month,
+      DATE_FORMAT(a.appointment_date, '%b %Y')   AS month_label,
+      b.payment_status,
+      COUNT(*)                                    AS cnt
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    WHERE b.insurance_id = ?
+    GROUP BY DATE_FORMAT(a.appointment_date, '%Y-%m'),
+             DATE_FORMAT(a.appointment_date, '%b %Y'),
+             b.payment_status
+    ORDER BY month`;
+
+  let out = {}, left = 4;
+  const done = () => { if (--left === 0) res.json(out); };
+  const bail = () => res.status(500).json({ message: "Something went wrong. Please try again." });
+
+  db.query(statsSql,   [insId], (e, r) => { if (e) return bail(); out.stats   = r[0] || {}; done(); });
+  db.query(trendSql,   [insId], (e, r) => { if (e) return bail(); out.trend   = r;           done(); });
+  db.query(scatterSql, [insId], (e, r) => { if (e) return bail(); out.scatter = r;           done(); });
+  db.query(barSql,     [insId], (e, r) => { if (e) return bail(); out.bar     = r;           done(); });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/physician/:id  — edit
+───────────────────────────────────────────── */
+const editPhysician = (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, phone_number, specialty, physician_type, department_id, hire_date } = req.body;
+  if (!first_name || !last_name)
+    return res.status(400).json({ message: "First name and last name are required." });
+
+  db.query(
+    `UPDATE physician SET first_name=?, last_name=?, phone_number=?, specialty=?,
+            physician_type=?, department_id=?, hire_date=? WHERE physician_id=?`,
+    [first_name, last_name, phone_number || null, specialty || null,
+     physician_type || "primary", department_id || null, hire_date || null, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Could not update physician: " + err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Physician not found." });
+      res.json({ message: "Physician updated successfully." });
+    }
+  );
+};
+
+/* ─────────────────────────────────────────────
+   DELETE /api/admin/physician/:id
+───────────────────────────────────────────── */
+const deletePhysician = (req, res) => {
+  const { id } = req.params;
+  // Get email to also delete from users
+  db.query("SELECT email FROM physician WHERE physician_id = ?", [id], (e, rows) => {
+    if (e || !rows.length) return res.status(404).json({ message: "Physician not found." });
+    const email = rows[0].email;
+    db.query("DELETE FROM physician WHERE physician_id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ message: "Could not delete physician: " + err.message });
+      if (email) db.query("DELETE FROM users WHERE email = ?", [email], () => {});
+      res.json({ message: "Physician deleted." });
+    });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/staff/:id  — edit
+───────────────────────────────────────────── */
+const editStaff = (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, phone_number, role, department_id, hire_date, shift_start, shift_end } = req.body;
+  if (!first_name || !last_name)
+    return res.status(400).json({ message: "First name and last name are required." });
+
+  db.query(
+    `UPDATE staff SET first_name=?, last_name=?, phone_number=?, role=?,
+            department_id=?, hire_date=?, shift_start=?, shift_end=? WHERE staff_id=?`,
+    [first_name, last_name, phone_number || null, role || "Receptionist",
+     department_id || null, hire_date || null, shift_start || null, shift_end || null, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Could not update staff: " + err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Staff not found." });
+      res.json({ message: "Staff updated successfully." });
+    }
+  );
+};
+
+/* ─────────────────────────────────────────────
+   DELETE /api/admin/staff/:id
+───────────────────────────────────────────── */
+const deleteStaff = (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT email FROM staff WHERE staff_id = ?", [id], (e, rows) => {
+    if (e || !rows.length) return res.status(404).json({ message: "Staff not found." });
+    const email = rows[0].email;
+    db.query("DELETE FROM staff WHERE staff_id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ message: "Could not delete staff: " + err.message });
+      if (email) db.query("DELETE FROM users WHERE email = ?", [email], () => {});
+      res.json({ message: "Staff member deleted." });
+    });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/insurance/alerts/:id/read
+───────────────────────────────────────────── */
+const markAlertRead = (req, res) => {
+  const { id } = req.params;
+  db.query(
+    "UPDATE payer_alert SET is_read = TRUE WHERE alert_id = ?",
+    [id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Alert not found." });
+      res.json({ message: "Alert dismissed." });
+    }
+  );
+};
+
 module.exports = {
   loginAdmin, getAdminDashboard, getClinicReport,
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
-  addPhysician, addStaff
+  addPhysician, addStaff, editPhysician, deletePhysician, editStaff, deleteStaff,
+  getPayerScorecard, getPayerDetail, getAcceptedInsurance, addAcceptedInsurance,
+  deactivateInsurance, getPayerAlerts, markAlertRead
 };

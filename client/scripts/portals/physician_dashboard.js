@@ -1,6 +1,10 @@
 /* ── Auth check ── */
 const user = JSON.parse(localStorage.getItem("clinicUser") || "null");
 
+/* ── Module-level caches ── */
+let _dashPatients   = [];   // patients belonging to this physician (populated in loadDashboard)
+let _allSpecialists = [];   // lazy-loaded for Create Referral modal
+
 if (!user || user.role !== "physician") {
     window.location.href = "/client/auth/staff_login.html";
 }
@@ -469,6 +473,79 @@ async function loadIncomingReferrals(physician_id) {
     }
 }
 
+/* ── Create Referral Modal ── */
+async function openCreateReferralModal() {
+    const modal = document.getElementById("createReferralModal");
+    if (!modal) return;
+
+    // Populate patient dropdown from cached list
+    const patSel = document.getElementById("cr_patient");
+    patSel.innerHTML = _dashPatients.length
+        ? '<option value="">— Select patient —</option>' +
+          _dashPatients.map(p => `<option value="${p.patient_id}">${p.first_name} ${p.last_name}</option>`).join("")
+        : '<option value="">No patients on file</option>';
+
+    // Lazy-load specialists
+    const specSel = document.getElementById("cr_specialist");
+    if (_allSpecialists.length === 0) {
+        specSel.innerHTML = '<option value="">Loading…</option>';
+        try {
+            const r = await fetch(`/api/staff/specialists?user_id=${user.id}`);
+            _allSpecialists = await r.json();
+        } catch(e) { _allSpecialists = []; }
+    }
+    specSel.innerHTML = _allSpecialists.length
+        ? '<option value="">— Select specialist —</option>' +
+          _allSpecialists.map(s => `<option value="${s.physician_id}">Dr. ${s.first_name} ${s.last_name} — ${s.specialty} (${s.city})</option>`).join("")
+        : '<option value="">No specialists found</option>';
+
+    document.getElementById("cr_reason").value = "";
+    document.getElementById("crError").style.display = "none";
+    modal.classList.remove("hidden");
+}
+
+function closeCreateReferralModal() {
+    document.getElementById("createReferralModal").classList.add("hidden");
+}
+
+async function submitCreateReferral() {
+    const errEl   = document.getElementById("crError");
+    const btn     = document.getElementById("crSubmitBtn");
+    errEl.style.display = "none";
+
+    const patient_id    = document.getElementById("cr_patient").value;
+    const specialist_id = document.getElementById("cr_specialist").value;
+    const referral_reason = document.getElementById("cr_reason").value.trim();
+
+    if (!patient_id)    { errEl.textContent = "Please select a patient.";          errEl.style.display = "block"; return; }
+    if (!specialist_id) { errEl.textContent = "Please select a specialist.";       errEl.style.display = "block"; return; }
+    if (!referral_reason) { errEl.textContent = "Please enter a reason for the referral."; errEl.style.display = "block"; return; }
+
+    btn.disabled = true;
+    btn.textContent = "Issuing…";
+
+    try {
+        // Get physician_id from dashboard data (window._currentPhysicianId is set in loadDashboard)
+        const physician_id = window._currentPhysicianId;
+        const r = await fetch("/api/staff/referral/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ physician_id, patient_id, specialist_id, referral_reason, user_id: user.id })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+
+        closeCreateReferralModal();
+        loadDashboard();   // refresh referrals table
+    } catch(err) {
+        errEl.textContent = err.message || "Could not issue referral.";
+        errEl.style.display = "block";
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Issue Referral";
+    }
+}
+
 /* ── Load data ── */
 async function loadDashboard() {
     try {
@@ -481,6 +558,7 @@ async function loadDashboard() {
         }
 
         const { physician, appointments, patients, schedule, referrals } = data;
+        _dashPatients = patients || [];   // cache for Create Referral modal
 
         /* Greeting */
         const docName = physician ? `Dr. ${physician.last_name}` : "Doctor";

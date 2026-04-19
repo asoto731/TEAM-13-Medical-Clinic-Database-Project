@@ -47,8 +47,8 @@
             <div class="sidebar-divider"></div>
 
             <div class="sidebar-form-group">
-                <label for="s-username">Username</label>
-                <input type="text" id="s-username" placeholder="Enter your username" autocomplete="username">
+                <label for="s-email">Email</label>
+                <input type="email" id="s-email" placeholder="lastname###@audittrailhealth.com" autocomplete="email">
             </div>
             <div class="sidebar-form-group">
                 <label for="s-password">Password</label>
@@ -163,11 +163,11 @@
 
         /* ── Staff login submit ── */
         document.getElementById('staff-login-btn').addEventListener('click', async () => {
-            const username = document.getElementById('s-username').value.trim();
+            const email    = document.getElementById('s-email').value.trim();
             const password = document.getElementById('s-password').value.trim();
             const msgEl    = document.getElementById('staff-msg');
 
-            if (!username || !password) {
+            if (!email || !password) {
                 msgEl.className = 'sidebar-message error';
                 msgEl.textContent = 'Please fill in all fields.';
                 return;
@@ -180,7 +180,7 @@
                 const res  = await fetch('/api/staff/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ email, password })
                 });
                 const data = await res.json();
 
@@ -194,7 +194,7 @@
                     setTimeout(() => { window.location.href = dest; }, 1000);
                 } else {
                     msgEl.className = 'sidebar-message error';
-                    msgEl.textContent = data.message || 'Invalid username or password.';
+                    msgEl.textContent = data.message || 'Invalid email or password.';
                 }
             } catch {
                 msgEl.className = 'sidebar-message error';
@@ -205,6 +205,9 @@
         /* allow Enter key to submit */
         document.getElementById('p-password').addEventListener('keydown', e => {
             if (e.key === 'Enter') document.getElementById('patient-login-btn').click();
+        });
+        document.getElementById('s-email').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('s-password').focus();
         });
         document.getElementById('s-password').addEventListener('keydown', e => {
             if (e.key === 'Enter') document.getElementById('staff-login-btn').click();

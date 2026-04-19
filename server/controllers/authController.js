@@ -155,7 +155,7 @@ const loginUser = (req, res) => {
 
   db.query(sql, [email], (err, results) => {
     if (err) {
-      return res.status(500).json({ error: "Login query failed" });
+      return res.status(500).json({ error: "Something went wrong. Please try again." });
     }
 
     if (results.length === 0) {
