@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Patient accent overrides */
-        .nav-item.active   { border-left-color: #6ea8fe; color: #1f2a6d; }
+        .nav-item.active   { border-left-color: #6ea8fe; color: #fff; }
         .user-avatar       { background: #1f2a6d; }
         .stat-card         { border-left-color: #6ea8fe; }
         .greeting-badge    { background: #dbeafe; color: #1e40af; }
@@ -27,6 +27,8 @@
         /* Settings panel */
         .settings-tab { background:none; border:none; outline:none; border-bottom:2px solid transparent; padding:10px 20px; font-size:13px; color:#888; cursor:pointer; font-family:inherit; font-weight:600; transition:color 0.15s,border-color 0.15s; }
         .settings-tab.active { color:#1f2a6d; border-bottom-color:#6ea8fe; }
+        html[data-theme="dark"] .settings-tab { color:#b3bddf; }
+        html[data-theme="dark"] .settings-tab.active { color:#cfe0ff; border-bottom-color:#6ea8fe; }
         .settings-tab-content.hidden { display:none; }
         .settings-tab-content { padding:0 24px; }
         .settings-row { display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f0f2f8; }
