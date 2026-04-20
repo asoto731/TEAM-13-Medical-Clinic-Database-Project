@@ -1137,3 +1137,20 @@ async function deactivateInsuranceRow(id) {
 
 /* ── Bootstrap ── */
 loadOverview();
+
+/* ── Staff termination trigger ── */
+async function terminateStaffMember(staffId, btn) {
+    const chk = await fetch(`/api/admin/staff/${staffId}/termination-check?user_id=${user.id}`);
+    const eligibility = await chk.json();
+    if (!eligibility.can_fire) {
+        alert(`Cannot terminate:\n${eligibility.reason}\n\nCurrent staff: ${eligibility.current_staff} | Min required: ${eligibility.min_staff}`);
+        return;
+    }
+    if (!confirm(`Terminate this staff member?\n\nAfter: ${eligibility.current_staff - 1} staff | Min required: ${eligibility.min_staff} | Patients: ${eligibility.clinic_patients}`)) return;
+    btn.disabled = true; btn.textContent = 'Processing…';
+    const r = await fetch(`/api/admin/staff/${staffId}/terminate?user_id=${user.id}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.message || 'Termination failed.'); btn.disabled = false; btn.textContent = 'Terminate'; return; }
+    alert(d.message);
+    loadStaff();
+}

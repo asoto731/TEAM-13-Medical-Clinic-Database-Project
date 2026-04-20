@@ -203,19 +203,20 @@ async function loadDashboard() {
 
         /* ── Stats ── */
         const today = new Date(); today.setHours(0,0,0,0);
-        const upcoming   = appointments.filter(a => a.status_name === "Scheduled" && new Date(a.appointment_date) >= today).length;
+        const upcoming    = appointments.filter(a => a.status_name === "Scheduled" && new Date(a.appointment_date) >= today).length;
         const unpaidBills = billing.filter(b => !b.payment_status || b.payment_status.toLowerCase() !== "paid").length;
-        document.getElementById("statAppts").textContent      = appointments.length;
-        document.getElementById("statUpcoming").textContent   = upcoming;
-        document.getElementById("statConditions").textContent = history.length;
-        document.getElementById("statBills").textContent      = unpaidBills;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set("statAppts",      appointments.length);
+        set("statUpcoming",   upcoming);
+        set("statConditions", history.length);
+        set("statBills",      unpaidBills);
 
         /* ── Overview: upcoming appointments (Scheduled only, future dates) ── */
         const overviewAppts = appointments
             .filter(a => a.status_name === "Scheduled" && new Date(a.appointment_date) >= today)
             .slice(0, 5);
         const oBody = document.getElementById("overviewApptBody");
-        oBody.innerHTML = overviewAppts.length
+        if (oBody) oBody.innerHTML = overviewAppts.length
             ? overviewAppts.map(a => `<tr>
                 <td class="primary">${fmt(a.appointment_date)}</td>
                 <td>Dr. ${a.doc_last}</td>
@@ -223,27 +224,30 @@ async function loadDashboard() {
             </tr>`).join("")
             : `<tr><td colspan="3" class="table-empty">No upcoming appointments</td></tr>`;
 
-        /* ── Overview: care card ── */
-        if (!patient.primary_physician_id) {
-            document.getElementById("careCard").innerHTML = `
-                <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px 0;text-align:center">
-                    <div style="font-size:32px;color:#1f2a6d">&#10010;</div>
-                    <div>
-                        <div style="font-size:14px;font-weight:700;color:#1f2a6d;margin-bottom:4px">No physician assigned yet</div>
-                        <div style="font-size:12px;color:#aaa;font-weight:300;line-height:1.6">Choose a clinic location and primary<br>physician to complete your setup.</div>
-                    </div>
-                    <button class="profile-edit-btn" onclick="openCareModal()" style="width:100%">Choose My Care Team →</button>
-                </div>`;
-        } else {
-            document.getElementById("careCard").innerHTML = `
-                ${infoRow("Primary Physician", `Dr. ${patient.doc_first} ${patient.doc_last}`)}
-                ${infoRow("Specialty", patient.specialty)}
-                ${infoRow("Physician Phone", patient.doc_phone)}
-                <hr style="border:none;border-top:1px solid #f0f2f8;margin:4px 0">
-                ${infoRow("Insurance Provider", patient.provider_name || "None / Self-Pay")}
-                ${sensitiveRow("Policy Number", patient.policy_number || "—")}
-                ${infoRow("Coverage", patient.coverage_percentage ? patient.coverage_percentage + "%" : "—")}
-                <button class="profile-edit-btn" onclick="openCareModal()" style="margin-top:8px">Change Care Team</button>`;
+        /* ── Overview: care card (optional element) ── */
+        const careCard = document.getElementById("careCard");
+        if (careCard) {
+            if (!patient.primary_physician_id) {
+                careCard.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px 0;text-align:center">
+                        <div style="font-size:32px;color:#1f2a6d">&#10010;</div>
+                        <div>
+                            <div style="font-size:14px;font-weight:700;color:#1f2a6d;margin-bottom:4px">No physician assigned yet</div>
+                            <div style="font-size:12px;color:#aaa;font-weight:300;line-height:1.6">Choose a clinic location and primary<br>physician to complete your setup.</div>
+                        </div>
+                        <button class="profile-edit-btn" onclick="openCareModal()" style="width:100%">Choose My Care Team →</button>
+                    </div>`;
+            } else {
+                careCard.innerHTML = `
+                    ${infoRow("Primary Physician", `Dr. ${patient.doc_first} ${patient.doc_last}`)}
+                    ${infoRow("Specialty", patient.specialty)}
+                    ${infoRow("Physician Phone", patient.doc_phone)}
+                    <hr style="border:none;border-top:1px solid #f0f2f8;margin:4px 0">
+                    ${infoRow("Insurance Provider", patient.provider_name || "None / Self-Pay")}
+                    ${sensitiveRow("Policy Number", patient.policy_number || "—")}
+                    ${infoRow("Coverage", patient.coverage_percentage ? patient.coverage_percentage + "%" : "—")}
+                    <button class="profile-edit-btn" onclick="openCareModal()" style="margin-top:8px">Change Care Team</button>`;
+            }
         }
 
         /* ── Appointments, Health Records, Billing — rendered by filter functions ── */
@@ -636,7 +640,7 @@ async function openReferralModal() {
     spSelect.innerHTML = '<option value="">Loading…</option>';
     try {
         // Get patient's primary physician city from the care card data already on screen
-        const cityEl = document.querySelector("#careCard [data-city]");
+        const cityEl = document.querySelector("#careCard [data-city]") || document.querySelector("[data-city]");
         // Fall back: fetch from the user's office city via specialists endpoint
         // We store the city on the dashboard load; use a module-level variable
         const city = _patientCity || "";

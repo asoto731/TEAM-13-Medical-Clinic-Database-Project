@@ -693,10 +693,85 @@ const markAlertRead = (req, res) => {
   );
 };
 
+/* ─────────────────────────────────────────────
+   GET /api/admin/staff/:id/termination-check
+   Formula: min_staff = MAX(2, CEIL(patients / 10))
+            can_fire  = (current_staff - 1) >= min_staff
+───────────────────────────────────────────── */
+const checkTerminationEligibility = (req, res) => {
+  const staffId = parseInt(req.params.id);
+  if (!staffId) return res.status(400).json({ message: 'staff_id required' });
+
+  const clinicSql = `SELECT d.clinic_id FROM staff s
+    JOIN department d ON s.department_id = d.department_id WHERE s.staff_id = ?`;
+
+  db.query(clinicSql, [staffId], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows.length) return res.status(404).json({ message: 'Staff not found' });
+    const clinicId = rows[0].clinic_id;
+
+    const statsSql = `SELECT
+      (SELECT COUNT(*) FROM staff s2 JOIN department d2 ON s2.department_id=d2.department_id WHERE d2.clinic_id=?) AS current_staff,
+      (SELECT COUNT(*) FROM patient pt JOIN physician ph ON pt.primary_physician_id=ph.physician_id
+        JOIN department dp ON ph.department_id=dp.department_id WHERE dp.clinic_id=?) AS clinic_patients`;
+
+    db.query(statsSql, [clinicId, clinicId], (err2, stats) => {
+      if (err2) return res.status(500).json({ message: err2.message });
+      const { current_staff, clinic_patients } = stats[0];
+      const min_staff = Math.max(2, Math.ceil(clinic_patients / 10));
+      const can_fire  = (current_staff - 1) >= min_staff;
+      res.json({ can_fire, current_staff, clinic_patients, min_staff,
+        reason: can_fire ? null :
+          `Cannot terminate: clinic would drop to ${current_staff - 1} staff (minimum is ${min_staff} for ${clinic_patients} patients).`
+      });
+    });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   DELETE /api/admin/staff/:id/terminate
+───────────────────────────────────────────── */
+const terminateStaff = (req, res) => {
+  const staffId = parseInt(req.params.id);
+  if (!staffId) return res.status(400).json({ message: 'staff_id required' });
+
+  const lookupSql = `SELECT s.staff_id, u.user_id, d.clinic_id
+    FROM staff s JOIN department d ON s.department_id=d.department_id
+    LEFT JOIN users u ON u.staff_id=s.staff_id WHERE s.staff_id=?`;
+
+  db.query(lookupSql, [staffId], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows.length) return res.status(404).json({ message: 'Staff not found' });
+    const { user_id, clinic_id } = rows[0];
+
+    const statsSql = `SELECT
+      (SELECT COUNT(*) FROM staff s2 JOIN department d2 ON s2.department_id=d2.department_id WHERE d2.clinic_id=?) AS current_staff,
+      (SELECT COUNT(*) FROM patient pt JOIN physician ph ON pt.primary_physician_id=ph.physician_id
+        JOIN department dp ON ph.department_id=dp.department_id WHERE dp.clinic_id=?) AS clinic_patients`;
+
+    db.query(statsSql, [clinic_id, clinic_id], (err2, stats) => {
+      if (err2) return res.status(500).json({ message: err2.message });
+      const { current_staff, clinic_patients } = stats[0];
+      const min_staff = Math.max(2, Math.ceil(clinic_patients / 10));
+      if ((current_staff - 1) < min_staff)
+        return res.status(403).json({ message: `Cannot terminate: would drop to ${current_staff - 1} staff (min ${min_staff}).` });
+
+      db.query('DELETE FROM users WHERE staff_id=?', [staffId], (err3) => {
+        if (err3) return res.status(500).json({ message: err3.message });
+        db.query('DELETE FROM staff WHERE staff_id=?', [staffId], (err4) => {
+          if (err4) return res.status(500).json({ message: err4.message });
+          res.json({ message: 'Staff member terminated successfully.' });
+        });
+      });
+    });
+  });
+};
+
 module.exports = {
   loginAdmin, getAdminDashboard, getClinicReport,
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
   addPhysician, addStaff, editPhysician, deletePhysician, editStaff, deleteStaff,
   getPayerScorecard, getPayerDetail, getAcceptedInsurance, addAcceptedInsurance,
-  deactivateInsurance, getPayerAlerts, markAlertRead
+  deactivateInsurance, getPayerAlerts, markAlertRead,
+  checkTerminationEligibility, terminateStaff
 };

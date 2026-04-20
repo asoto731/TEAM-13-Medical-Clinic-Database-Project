@@ -5,7 +5,8 @@ const {
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
   addPhysician, addStaff, editPhysician, deletePhysician, editStaff, deleteStaff,
   getPayerScorecard, getPayerDetail, getAcceptedInsurance, addAcceptedInsurance,
-  deactivateInsurance, getPayerAlerts, markAlertRead
+  deactivateInsurance, getPayerAlerts, markAlertRead,
+  checkTerminationEligibility, terminateStaff
 } = require("../controllers/adminController");
 const { requireRole } = require("../middleware/auth");
 
@@ -31,5 +32,9 @@ router.post("/insurance/accept",             requireRole("admin"), addAcceptedIn
 router.put("/insurance/:id/deactivate",      requireRole("admin"), deactivateInsurance);
 router.get("/insurance/alerts",              requireRole("admin"), getPayerAlerts);
 router.put("/insurance/alerts/:id/read",     requireRole("admin"), markAlertRead);
+
+// ── Staff termination trigger ────────────────────────────────
+router.get("/staff/:id/termination-check",   requireRole("admin"), checkTerminationEligibility);
+router.delete("/staff/:id/terminate",        requireRole("admin"), terminateStaff);
 
 module.exports = router;
