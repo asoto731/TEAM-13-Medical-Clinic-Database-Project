@@ -243,6 +243,7 @@ async function loadStaffSlots() {
     try {
         const r = await fetch(`/api/patient/appointments/slots?physician_id=${physician_id}&date=${date}&user_id=${user.id}`);
         const data = await r.json();
+        if (!r.ok) throw new Error(data.message || data.error || "Could not load slots");
         if (!data.slots || !data.slots.length) {
             slotSelect.innerHTML = '<option value="">No slots available</option>';
         } else {
@@ -549,6 +550,7 @@ async function loadOnboardSlots() {
     try {
         const r = await fetch(`/api/patient/appointments/slots?physician_id=${physician_id}&date=${date}&user_id=${user.id}`);
         const data = await r.json();
+        if (!r.ok) throw new Error(data.message || data.error || "Could not load slots");
         if (!data.slots || !data.slots.length) {
             slotSelect.innerHTML = '<option value="">No slots available on this day</option>';
         } else {
