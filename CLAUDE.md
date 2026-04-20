@@ -181,7 +181,8 @@ project root
 ## Auth & Session Flow
 
 1. User registers → `users` row created (bcrypt hashed) + blank `patient` row auto-created
-2. User logs in → server returns `{ role, userId, patientId / physicianId / staffId }`
+2. User logs in → server returns `{ role, userId, email, patientId / physicianId / staffId }`
+   - Note: login response field is `email` (not `username`) — `users` table column was renamed
 3. Frontend stores in `localStorage` as `clinicUser`, appends `user_id` to every API call
 4. Role determines portal:
    - `patient` → `/client/portals/patient_dashboard.html`
@@ -241,7 +242,7 @@ Run from: `database/triggers.sql` — use MySQL Workbench (not Railway query edi
 
 ---
 
-## Known Bugs Fixed This Session
+## Known Bugs Fixed
 
 1. **Staff insurance dropdown empty (silent 403):** Staff onboarding called `/api/patient/care/insurance` which enforces `requireRole("patient")`. Staff gets 403 → catch silences it → dropdown empty. Fixed: use public endpoint `/api/auth/insurance-plans` instead.
 
@@ -255,6 +256,22 @@ Run from: `database/triggers.sql` — use MySQL Workbench (not Railway query edi
    Applied in both `staff_dashboard.js` and `reportController.js`.
 
 3. **Admin edit modal dept dropdowns empty:** `loadDepartments()` had an early-return guard (`_departmentsLoaded`). Edit modal selects (`ep_dept`, `es_dept`) were added later and never got populated. Fixed: include them in the initial population loop alongside `ph_dept` and `st_dept`.
+
+## Teammate Merge (from `main` — applied via rebase)
+
+Two commits from Max's branch were merged in during rebase:
+
+1. **`feat: standardize physician/staff emails to lastname###@audittrailhealth.com`**
+   - All physician/staff login usernames are now auto-generated as `lastnameNNN@audittrailhealth.com` (e.g. `johnson101@audittrailhealth.com`)
+   - `generateStaffEmail(lastName, cb)` function added to `adminController.js` — generates unique 3-digit suffix, retries on collision
+   - Admin "Add Physician" and "Add Staff" forms now **require** a password (no silent default)
+   - Seed updated: physician emails use `@audittrailhealth.com`, staff use `@audittrailhealth.com`
+
+2. **`refactor: rename users.username → users.email`**
+   - `users` table column renamed from `username` to `email`
+   - `staffController.js` login response: `username` field → `email` field
+   - `admin_dashboard.js` sidebar reads `user?.email` (not `user?.username`)
+   - All `INSERT INTO users` queries updated to use `email` column name
 
 ---
 
@@ -386,9 +403,15 @@ App runs at: `http://localhost:3000`
 
 ## Demo Credentials (quick reference)
 
-| Role | Username | Password |
-|------|----------|----------|
+| Role | Username / Email | Password |
+|------|-----------------|----------|
 | Patient | alex.smith@email.com | Patient@123 |
-| Physician | dr.johnson | Doctor@123 |
-| Staff | staff.adams | Staff@123 |
-| Admin | admin | Admin@123 |
+| Patient | taylor.jones@email.com | Patient@123 |
+| Physician (primary, Dallas) | johnson101@audittrailhealth.com | Doctor@123 |
+| Physician (primary, Houston) | moore103@audittrailhealth.com | Doctor@123 |
+| Physician (specialist, Dallas) | garcia102@audittrailhealth.com | Doctor@123 |
+| Staff (Dallas) | adams201@audittrailhealth.com | Staff@123 |
+| Staff (Houston) | brooks202@audittrailhealth.com | Staff@123 |
+| Admin (global) | admin@ath.admin.com | Admin@123 |
+
+> **Note:** Old-style credentials (`dr.johnson`, `staff.adams`) no longer work — emails were standardized in a teammate commit. Use the `@audittrailhealth.com` format above.
