@@ -22,93 +22,46 @@ function clearRateLimit(ip, username) { loginAttempts.delete(`${ip}:${(username 
    POST /api/admin/login
 ───────────────────────────────────────────── */
 const loginAdmin = (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
 
-  if (!username || !password)
-    return res.status(400).json({ message: "Username and password are required" });
+  if (!email || !password)
+    return res.status(400).json({ message: "Email and password are required" });
 
-  if (isRateLimited(ip, username))
+  if (isRateLimited(ip, email))
     return res.status(429).json({ message: "Too many login attempts. Please wait 15 minutes." });
 
-  db.query(
-    `SELECT u.*, a.first_name, a.last_name, a.admin_id,
-            c.clinic_name, c.city AS clinic_city, c.state AS clinic_state
-     FROM users u
-     LEFT JOIN admin a ON u.admin_id = a.admin_id
-     LEFT JOIN clinic c ON u.clinic_id = c.clinic_id
-     WHERE u.email = ? AND u.role = 'admin'`,
-    [username],
-    (err, rows) => {
-      if (err) return res.status(500).json({ message: "Login query failed" });
-      if (!rows.length) return res.status(401).json({ message: "Invalid username or password" });
+  db.query("SELECT * FROM users WHERE email = ? AND role = 'admin'", [email], (err, rows) => {
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    if (!rows.length) return res.status(401).json({ message: "Invalid email or password" });
 
-      const user = rows[0];
-      if (!bcrypt.compareSync(password, user.password_hash))
-        return res.status(401).json({ message: "Invalid username or password" });
+    const user = rows[0];
+    if (!bcrypt.compareSync(password, user.password_hash))
+      return res.status(401).json({ message: "Invalid email or password" });
 
-      clearRateLimit(ip, username);
-      auditLog(user.user_id, "ADMIN_LOGIN", "user", user.user_id, ip);
+    clearRateLimit(ip, email);
+    auditLog(user.user_id, "ADMIN_LOGIN", "user", user.user_id, ip);
 
-      res.json({
-        message: "Login successful",
-        user: {
-          id:          user.user_id,
-          adminId:     user.admin_id,
-          username:    user.email,
-          firstName:   user.first_name,
-          lastName:    user.last_name,
-          role:        user.role,
-          clinicId:    user.clinic_id,
-          clinicName:  user.clinic_name  || "All Locations",
-          clinicCity:  user.clinic_city  || null,
-          clinicState: user.clinic_state || null,
-          isGlobal:    user.clinic_id === null
-        }
-      });
-    }
-  );
+    res.json({
+      message: "Login successful",
+      user: { id: user.user_id, email: user.email, role: user.role }
+    });
+  });
 };
 
 /* ─────────────────────────────────────────────
    GET /api/admin/dashboard
+   Returns clinic-wide stats for the overview
 ───────────────────────────────────────────── */
 const getAdminDashboard = (req, res) => {
-  const cid = req.clinicId; // null = global
-
-  const clinicFilter   = cid ? "WHERE c.clinic_id = ?"         : "";
-  const officeFilter   = cid ? "WHERE o.clinic_id = ?"         : "";
-  const deptFilter     = cid ? "WHERE d.clinic_id = ?"         : "";
-  const apptJoinFilter = cid ? "AND o2.clinic_id = ?"          : "";
-  const params         = cid ? [cid]                           : [];
-
   const statsSql = `
     SELECT
-      (SELECT COUNT(*) FROM physician ph
-         JOIN department d ON ph.department_id = d.department_id
-         ${cid ? "WHERE d.clinic_id = ?" : ""})        AS total_physicians,
-      (SELECT COUNT(*) FROM staff st
-         JOIN department d ON st.department_id = d.department_id
-         ${cid ? "WHERE d.clinic_id = ?" : ""})        AS total_staff,
-      (SELECT COUNT(*) FROM patient pt
-         JOIN physician ph ON pt.primary_physician_id = ph.physician_id
-         JOIN department d ON ph.department_id = d.department_id
-         ${cid ? "WHERE d.clinic_id = ?" : ""})         AS total_patients,
-      (SELECT COUNT(*) FROM appointment a
-         JOIN office o2 ON a.office_id = o2.office_id
-         WHERE a.appointment_date >= CURDATE()
-         ${apptJoinFilter})                             AS upcoming_appointments,
-      (SELECT IFNULL(SUM(b.patient_owed),0) FROM billing b
-         JOIN appointment a ON b.appointment_id = a.appointment_id
-         JOIN office o2 ON a.office_id = o2.office_id
-         WHERE b.payment_status != 'Paid'
-         ${apptJoinFilter})                             AS outstanding_revenue,
-      (SELECT IFNULL(SUM(b.total_amount),0) FROM billing b
-         JOIN appointment a ON b.appointment_id = a.appointment_id
-         JOIN office o2 ON a.office_id = o2.office_id
-         ${apptJoinFilter})                             AS total_billed`;
-
-  const statsParams = cid ? [cid, cid, cid, cid, cid, cid] : [];
+      (SELECT COUNT(*) FROM physician)  AS total_physicians,
+      (SELECT COUNT(*) FROM staff)      AS total_staff,
+      (SELECT COUNT(*) FROM patient)    AS total_patients,
+      (SELECT COUNT(*) FROM appointment WHERE appointment_date >= CURDATE()) AS upcoming_appointments,
+      (SELECT IFNULL(SUM(patient_owed),0) FROM billing WHERE payment_status != 'Paid') AS outstanding_revenue,
+      (SELECT IFNULL(SUM(total_amount),0) FROM billing) AS total_billed`;
 
   const clinicsSql = `
     SELECT c.clinic_id, c.clinic_name, c.city, c.state,
@@ -122,7 +75,6 @@ const getAdminDashboard = (req, res) => {
       AND MONTH(a.appointment_date) = MONTH(CURDATE())
       AND YEAR(a.appointment_date) = YEAR(CURDATE())
     LEFT JOIN physician ph ON ph.department_id = d.department_id
-    ${clinicFilter}
     GROUP BY c.clinic_id, c.clinic_name, c.city, c.state
     ORDER BY c.clinic_name`;
 
@@ -136,38 +88,38 @@ const getAdminDashboard = (req, res) => {
     JOIN physician ph ON a.physician_id = ph.physician_id
     JOIN appointment_status s ON a.status_id = s.status_id
     JOIN office o ON a.office_id = o.office_id
-    ${cid ? "WHERE o.clinic_id = ?" : ""}
     ORDER BY a.appointment_date DESC, a.appointment_time DESC
     LIMIT 10`;
 
-  let data = {}, done = 0;
+  let data = {};
+  let done = 0;
   const total = 3;
   function finish() { done++; if (done === total) res.json(data); }
 
-  db.query(statsSql,      statsParams,                  (e, r) => { data.stats       = e ? null : r[0]; finish(); });
-  db.query(clinicsSql,    params,                       (e, r) => { data.clinics     = e ? []   : r;    finish(); });
-  db.query(recentApptSql, cid ? [cid] : [],             (e, r) => { data.recentAppts = e ? []   : r;    finish(); });
+  db.query(statsSql,      (e, r) => { data.stats        = e ? null : r[0]; finish(); });
+  db.query(clinicsSql,    (e, r) => { data.clinics      = e ? []   : r;    finish(); });
+  db.query(recentApptSql, (e, r) => { data.recentAppts  = e ? []   : r;    finish(); });
 };
 
 /* ─────────────────────────────────────────────
    GET /api/admin/clinic-report
+   Full report per clinic: appointments, revenue, physicians, staff
 ───────────────────────────────────────────── */
 const getClinicReport = (req, res) => {
-  const cid = req.clinicId;
-  const filter = cid ? "WHERE c.clinic_id = ?" : "";
-  const params = cid ? [cid] : [];
-
   const sql = `
     SELECT
-      c.clinic_id, c.clinic_name, c.city, c.state,
-      COUNT(DISTINCT ph.physician_id)  AS total_physicians,
-      COUNT(DISTINCT st.staff_id)      AS total_staff,
-      COUNT(DISTINCT a.appointment_id) AS total_appointments,
-      SUM(CASE WHEN aps.status_name = 'Completed' THEN 1 ELSE 0 END) AS completed,
-      SUM(CASE WHEN aps.status_name = 'No-Show'   THEN 1 ELSE 0 END) AS no_shows,
-      SUM(CASE WHEN aps.status_name = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled,
-      IFNULL(SUM(b.total_amount), 0)   AS total_billed,
-      IFNULL(SUM(b.patient_owed), 0)   AS outstanding_balance,
+      c.clinic_id,
+      c.clinic_name,
+      c.city,
+      c.state,
+      COUNT(DISTINCT ph.physician_id)   AS total_physicians,
+      COUNT(DISTINCT st.staff_id)       AS total_staff,
+      COUNT(DISTINCT a.appointment_id)  AS total_appointments,
+      SUM(CASE WHEN aps.status_name = 'Completed'  THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN aps.status_name = 'No-Show'    THEN 1 ELSE 0 END) AS no_shows,
+      SUM(CASE WHEN aps.status_name = 'Cancelled'  THEN 1 ELSE 0 END) AS cancelled,
+      IFNULL(SUM(b.total_amount), 0)    AS total_billed,
+      IFNULL(SUM(b.patient_owed), 0)    AS outstanding_balance,
       IFNULL(SUM(CASE WHEN b.payment_status = 'Paid' THEN b.total_amount ELSE 0 END), 0) AS total_collected
     FROM clinic c
     LEFT JOIN office o          ON o.clinic_id      = c.clinic_id
@@ -177,24 +129,19 @@ const getClinicReport = (req, res) => {
     LEFT JOIN appointment a     ON a.office_id      = o.office_id
     LEFT JOIN appointment_status aps ON a.status_id = aps.status_id
     LEFT JOIN billing b         ON b.appointment_id = a.appointment_id
-    ${filter}
     GROUP BY c.clinic_id, c.clinic_name, c.city, c.state
     ORDER BY c.clinic_name`;
 
-  db.query(sql, params, (err, rows) => {
+  db.query(sql, (err, rows) => {
     if (err) return res.status(500).json({ message: "Query failed: " + err.message });
     res.json({ clinics: rows });
   });
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/physicians
+   GET /api/admin/physicians  — list all
 ───────────────────────────────────────────── */
 const getAllPhysicians = (req, res) => {
-  const cid = req.clinicId;
-  const filter = cid ? "WHERE d.clinic_id = ?" : "";
-  const params = cid ? [cid] : [];
-
   db.query(
     `SELECT ph.physician_id, ph.first_name, ph.last_name, ph.email,
             ph.phone_number, ph.specialty, ph.physician_type, ph.hire_date,
@@ -202,9 +149,7 @@ const getAllPhysicians = (req, res) => {
      FROM physician ph
      LEFT JOIN department d ON ph.department_id = d.department_id
      LEFT JOIN clinic c ON d.clinic_id = c.clinic_id
-     ${filter}
      ORDER BY ph.last_name, ph.first_name`,
-    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -213,13 +158,9 @@ const getAllPhysicians = (req, res) => {
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/staff-members
+   GET /api/admin/staff-members  — list all
 ───────────────────────────────────────────── */
 const getAllStaff = (req, res) => {
-  const cid = req.clinicId;
-  const filter = cid ? "WHERE d.clinic_id = ?" : "";
-  const params = cid ? [cid] : [];
-
   db.query(
     `SELECT st.staff_id, st.first_name, st.last_name, st.email,
             st.phone_number, st.role, st.hire_date, st.shift_start, st.shift_end,
@@ -227,9 +168,7 @@ const getAllStaff = (req, res) => {
      FROM staff st
      LEFT JOIN department d ON st.department_id = d.department_id
      LEFT JOIN clinic c ON d.clinic_id = c.clinic_id
-     ${filter}
      ORDER BY st.last_name, st.first_name`,
-    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -238,19 +177,13 @@ const getAllStaff = (req, res) => {
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/departments
+   GET /api/admin/departments  — for dropdowns
 ───────────────────────────────────────────── */
 const getDepartments = (req, res) => {
-  const cid = req.clinicId;
-  const filter = cid ? "WHERE d.clinic_id = ?" : "";
-  const params = cid ? [cid] : [];
-
   db.query(
     `SELECT d.department_id, d.department_name, c.clinic_name
      FROM department d JOIN clinic c ON d.clinic_id = c.clinic_id
-     ${filter}
      ORDER BY c.clinic_name, d.department_name`,
-    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -259,19 +192,13 @@ const getDepartments = (req, res) => {
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/offices
+   GET /api/admin/offices  — for dropdowns
 ───────────────────────────────────────────── */
 const getOffices = (req, res) => {
-  const cid = req.clinicId;
-  const filter = cid ? "WHERE o.clinic_id = ?" : "";
-  const params = cid ? [cid] : [];
-
   db.query(
     `SELECT o.office_id, o.city, o.street_address, c.clinic_name
      FROM office o JOIN clinic c ON o.clinic_id = c.clinic_id
-     ${filter}
      ORDER BY c.clinic_name, o.city`,
-    params,
     (err, rows) => {
       if (err) return res.status(500).json({ message: "Query failed" });
       res.json(rows);
@@ -281,56 +208,70 @@ const getOffices = (req, res) => {
 
 /* ─────────────────────────────────────────────
    POST /api/admin/add-physician
+   Body: { first_name, last_name, phone_number, specialty,
+           physician_type, department_id, hire_date, password,
+           schedule: [{ office_id, day_of_week, start_time, end_time }] }
+   Email is auto-generated: lastnameNNN@audittrailhealth.com
 ───────────────────────────────────────────── */
+
+/* Generate a unique lastnameNNN@audittrailhealth.com email */
+function generateStaffEmail(lastName, cb) {
+  const base = lastName.toLowerCase().replace(/[^a-z]/g, "");
+  const tryEmail = () => {
+    const num   = Math.floor(100 + Math.random() * 900); // 100–999
+    const email = `${base}${num}@audittrailhealth.com`;
+    db.query("SELECT user_id FROM users WHERE email = ?", [email], (err, rows) => {
+      if (err) return cb(err);
+      if (rows.length) return tryEmail(); // collision — try again
+      cb(null, email);
+    });
+  };
+  tryEmail();
+}
+
 const addPhysician = (req, res) => {
   const {
-    first_name, last_name, email, phone_number,
+    first_name, last_name, phone_number,
     specialty, physician_type, department_id, hire_date,
-    username, password, schedule
+    password, schedule
   } = req.body;
 
-  if (!first_name || !last_name)
-    return res.status(400).json({ message: "first_name and last_name are required" });
+  if (!first_name || !last_name || !password)
+    return res.status(400).json({ message: "first_name, last_name, and password are required" });
 
-  const defaultPassword = "Doctor@123";
-  const effectivePassword = password || defaultPassword;
+  // Auto-generate unique email: lastnameNNN@audittrailhealth.com
+  generateStaffEmail(last_name, (genErr, autoEmail) => {
+    if (genErr) return res.status(500).json({ message: "Could not generate email" });
 
-  // Auto-generate username: lastname@ath.doctor.com, with numeric suffix if taken
-  const baseSlug = last_name.toLowerCase().replace(/\s+/g, "");
-  const resolveUsername = (cb) => {
-    const trySlug = (n) => {
-      const candidate = n === 0 ? `${baseSlug}@ath.doctor.com` : `${baseSlug}${n}@ath.doctor.com`;
-      db.query("SELECT user_id FROM users WHERE email = ?", [candidate], (err, rows) => {
-        if (err) return cb(err);
-        if (!rows.length) return cb(null, candidate);
-        trySlug(n + 1);
-      });
-    };
-    trySlug(0);
-  };
+    const hash = bcrypt.hashSync(password, 10);
 
-  resolveUsername((err, username) => {
-    if (err) return res.status(500).json({ message: "DB error" });
+    // Insert user FIRST (physician.email FK references users.email)
+    db.query(
+      "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'physician')",
+      [autoEmail, hash],
+      (uErr, uResult) => {
+        if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
 
-    const phSql = `INSERT INTO physician
-      (first_name, last_name, email, phone_number, specialty, physician_type, department_id, hire_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        const user_id = uResult.insertId;
 
-    db.query(phSql, [
-      first_name, last_name, email || null, phone_number || null,
-      specialty || null, physician_type || "primary",
-      department_id || null, hire_date || null
-    ], (phErr, phResult) => {
-      if (phErr) return res.status(500).json({ message: "Could not insert physician: " + phErr.message });
+        const phSql = `INSERT INTO physician
+          (first_name, last_name, email, phone_number, specialty, physician_type, department_id, hire_date)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-      const physician_id = phResult.insertId;
-      const hash = bcrypt.hashSync(password, 10);
+        db.query(phSql, [
+          first_name, last_name, autoEmail, phone_number || null,
+          specialty || null, physician_type || "primary",
+          department_id || null, hire_date || null
+        ], (phErr, phResult) => {
+          if (phErr) {
+            db.query("DELETE FROM users WHERE user_id = ?", [user_id], () => {});
+            return res.status(500).json({ message: "Could not insert physician: " + phErr.message });
+          }
 
-      db.query(
-        "INSERT INTO users (email, password_hash, role, physician_id) VALUES (?, ?, 'physician', ?)",
-        [username, hash, physician_id],
-        (uErr) => {
-          if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
+          const physician_id = phResult.insertId;
+
+          // Link physician_id back to the user row
+          db.query("UPDATE users SET physician_id = ? WHERE user_id = ?", [physician_id, user_id], () => {});
 
           if (schedule && schedule.length > 0) {
             const schSql = "INSERT IGNORE INTO work_schedule (physician_id, office_id, day_of_week, start_time, end_time) VALUES ?";
@@ -338,460 +279,424 @@ const addPhysician = (req, res) => {
             db.query(schSql, [schVals], () => {});
           }
 
-          res.status(201).json({ message: "Physician added successfully", physician_id });
-        }
-      );
-    });
+          res.status(201).json({ message: "Physician added successfully", physician_id, email: autoEmail });
+        });
+      }
+    );
   });
 };
 
 /* ─────────────────────────────────────────────
    POST /api/admin/add-staff
+   Body: { first_name, last_name, phone_number, role,
+           department_id, hire_date, shift_start, shift_end, password }
+   Email is auto-generated: lastnameNNN@audittrailhealth.com
 ───────────────────────────────────────────── */
 const addStaff = (req, res) => {
   const {
-    first_name, last_name, email, phone_number,
+    first_name, last_name, phone_number,
     role, department_id, hire_date,
-    shift_start, shift_end,
-    password
+    shift_start, shift_end, password
   } = req.body;
 
-  if (!first_name || !last_name)
-    return res.status(400).json({ message: "first_name and last_name are required" });
+  if (!first_name || !last_name || !password)
+    return res.status(400).json({ message: "first_name, last_name, and password are required" });
 
-  const finalPassword = password || "Staff@123";
-  const baseSlug = last_name.toLowerCase().replace(/\s+/g, "");
+  generateStaffEmail(last_name, (genErr, autoEmail) => {
+    if (genErr) return res.status(500).json({ message: "Could not generate email" });
 
-  const resolveUsername = (cb) => {
-    const trySlug = (n) => {
-      const candidate = n === 0 ? `${baseSlug}@ath.staff.com` : `${baseSlug}${n}@ath.staff.com`;
-      db.query("SELECT user_id FROM users WHERE email = ?", [candidate], (err, rows) => {
-        if (err) return cb(err);
-        if (!rows.length) return cb(null, candidate);
-        trySlug(n + 1);
-      });
-    };
-    trySlug(0);
-  };
+    const hash = bcrypt.hashSync(password, 10);
 
-  resolveUsername((err, username) => {
-    if (err) return res.status(500).json({ message: "DB error resolving username" });
+    // Insert user FIRST (staff.email FK references users.email)
+    db.query(
+      "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'staff')",
+      [autoEmail, hash],
+      (uErr, uResult) => {
+        if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
 
-    const stSql = `INSERT INTO staff
-      (first_name, last_name, email, phone_number, role, department_id, hire_date, shift_start, shift_end)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const user_id = uResult.insertId;
 
-    db.query(stSql, [
-      first_name, last_name, email || null, phone_number || null,
-      role || "Receptionist", department_id || null,
-      hire_date || null, shift_start || null, shift_end || null
-    ], (stErr, stResult) => {
-      if (stErr) return res.status(500).json({ message: "Could not insert staff: " + stErr.message });
+        const stSql = `INSERT INTO staff
+          (first_name, last_name, email, phone_number, role, department_id, hire_date, shift_start, shift_end)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-      const staff_id = stResult.insertId;
-      const hash = bcrypt.hashSync(finalPassword, 10);
+        db.query(stSql, [
+          first_name, last_name, autoEmail, phone_number || null,
+          role || "Receptionist", department_id || null,
+          hire_date || null, shift_start || null, shift_end || null
+        ], (stErr, stResult) => {
+          if (stErr) {
+            db.query("DELETE FROM users WHERE user_id = ?", [user_id], () => {});
+            return res.status(500).json({ message: "Could not insert staff: " + stErr.message });
+          }
 
-      db.query(
-        "INSERT INTO users (email, password_hash, role, staff_id) VALUES (?, ?, 'staff', ?)",
-        [username, hash, staff_id],
-        (uErr) => {
-          if (uErr) return res.status(500).json({ message: "Could not create user account: " + uErr.message });
-          res.status(201).json({ message: "Staff member added successfully", staff_id, username });
-        }
-      );
-    });
-  });
-};
+          const staff_id = stResult.insertId;
 
-/* ─────────────────────────────────────────────
-   GET /api/admin/reports/revenue
-   Monthly revenue: billed, collected, outstanding
-───────────────────────────────────────────── */
-const getRevenueReport = (req, res) => {
-  const cid  = req.clinicId;
-  const from = req.query.from || '2020-01-01';
-  const to   = req.query.to   || new Date().toISOString().slice(0,10);
+          // Link staff_id back to the user row
+          db.query("UPDATE users SET staff_id = ? WHERE user_id = ?", [staff_id, user_id], () => {});
 
-  const clinicJoin   = cid ? 'AND o.clinic_id = ?' : '';
-  const clinicParams = cid ? [cid] : [];
-
-  const chartSql = `
-    SELECT DATE_FORMAT(b.payment_date,'%Y-%m') AS month,
-      SUM(b.total_amount) AS billed,
-      SUM(CASE WHEN b.payment_status='Paid' THEN b.total_amount ELSE 0 END) AS collected,
-      SUM(b.patient_owed) AS outstanding
-    FROM billing b
-    JOIN appointment a ON b.appointment_id = a.appointment_id
-    JOIN office o ON a.office_id = o.office_id
-    WHERE b.payment_date BETWEEN ? AND ? ${clinicJoin}
-    GROUP BY month ORDER BY month`;
-
-  const listSql = `
-    SELECT b.bill_id, CONCAT(pt.first_name,' ',pt.last_name) AS patient,
-      b.total_amount, b.insurance_paid_amount, b.patient_owed,
-      b.payment_status, b.payment_date, b.due_date, o.city AS clinic_city
-    FROM billing b
-    JOIN appointment a ON b.appointment_id = a.appointment_id
-    JOIN office o ON a.office_id = o.office_id
-    JOIN patient pt ON b.patient_id = pt.patient_id
-    WHERE b.payment_date BETWEEN ? AND ? ${clinicJoin}
-    ORDER BY b.payment_date DESC LIMIT 200`;
-
-  const params = [from, to, ...clinicParams];
-  let data = {}, done = 0;
-  const finish = () => { if (++done === 2) res.json(data); };
-
-  db.query(chartSql, params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.chart = r; finish(); });
-  db.query(listSql,  params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list  = r; finish(); });
-};
-
-/* ─────────────────────────────────────────────
-   GET /api/admin/reports/ar
-   Accounts receivable aging buckets + raw list
-───────────────────────────────────────────── */
-const getARReport = (req, res) => {
-  const cid  = req.clinicId;
-  const clinicJoin   = cid ? 'AND o.clinic_id = ?' : '';
-  const clinicParams = cid ? [cid] : [];
-
-  const agingSql = `
-    SELECT
-      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 0  AND 30 THEN b.patient_owed ELSE 0 END) AS \`0-30\`,
-      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 31 AND 60 THEN b.patient_owed ELSE 0 END) AS \`31-60\`,
-      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) BETWEEN 61 AND 90 THEN b.patient_owed ELSE 0 END) AS \`61-90\`,
-      SUM(CASE WHEN DATEDIFF(CURDATE(), b.due_date) > 90             THEN b.patient_owed ELSE 0 END) AS \`90+\`
-    FROM billing b
-    JOIN appointment a ON b.appointment_id = a.appointment_id
-    JOIN office o ON a.office_id = o.office_id
-    WHERE b.payment_status != 'Paid' ${clinicJoin}`;
-
-  const listSql = `
-    SELECT b.bill_id, CONCAT(pt.first_name,' ',pt.last_name) AS patient,
-      b.patient_owed, b.due_date,
-      DATEDIFF(CURDATE(), b.due_date) AS days_overdue,
-      o.city AS clinic_city
-    FROM billing b
-    JOIN appointment a ON b.appointment_id = a.appointment_id
-    JOIN office o ON a.office_id = o.office_id
-    JOIN patient pt ON b.patient_id = pt.patient_id
-    WHERE b.payment_status != 'Paid' ${clinicJoin}
-    ORDER BY days_overdue DESC LIMIT 200`;
-
-  let data = {}, done = 0;
-  const finish = () => { if (++done === 2) res.json(data); };
-
-  db.query(agingSql, clinicParams, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.aging = r[0]; finish(); });
-  db.query(listSql,  clinicParams, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list  = r;    finish(); });
-};
-
-/* ─────────────────────────────────────────────
-   GET /api/admin/reports/appointments
-   Monthly appointment counts by status + type breakdown
-───────────────────────────────────────────── */
-const getAppointmentReport = (req, res) => {
-  const cid    = req.clinicId;
-  const from   = req.query.from || '2020-01-01';
-  const to     = req.query.to   || new Date().toISOString().slice(0,10);
-  const type   = req.query.type   || null;
-  const phyId  = req.query.physician_id || null;
-
-  const clinicFilter = cid   ? 'AND o.clinic_id = ?'        : '';
-  const typeFilter   = type  ? 'AND a.appointment_type = ?'  : '';
-  const phyFilter    = phyId ? 'AND a.physician_id = ?'      : '';
-
-  const extras = [
-    ...(cid   ? [cid]   : []),
-    ...(type  ? [type]  : []),
-    ...(phyId ? [phyId] : [])
-  ];
-
-  const chartSql = `
-    SELECT DATE_FORMAT(a.appointment_date,'%Y-%m') AS month,
-      s.status_name, COUNT(*) AS count
-    FROM appointment a
-    JOIN appointment_status s ON a.status_id = s.status_id
-    JOIN office o ON a.office_id = o.office_id
-    WHERE a.appointment_date BETWEEN ? AND ?
-      ${clinicFilter} ${typeFilter} ${phyFilter}
-    GROUP BY month, s.status_name ORDER BY month`;
-
-  const typeSql = `
-    SELECT a.appointment_type, COUNT(*) AS count
-    FROM appointment a
-    JOIN office o ON a.office_id = o.office_id
-    WHERE a.appointment_date BETWEEN ? AND ?
-      ${clinicFilter}
-    GROUP BY a.appointment_type`;
-
-  const listSql = `
-    SELECT a.appointment_id, a.appointment_date, a.appointment_time,
-      a.appointment_type, s.status_name,
-      CONCAT(pt.first_name,' ',pt.last_name) AS patient,
-      CONCAT(ph.first_name,' ',ph.last_name) AS physician,
-      o.city
-    FROM appointment a
-    JOIN appointment_status s ON a.status_id = s.status_id
-    JOIN office o ON a.office_id = o.office_id
-    JOIN patient pt ON a.patient_id = pt.patient_id
-    JOIN physician ph ON a.physician_id = ph.physician_id
-    WHERE a.appointment_date BETWEEN ? AND ?
-      ${clinicFilter} ${typeFilter} ${phyFilter}
-    ORDER BY a.appointment_date DESC LIMIT 200`;
-
-  const params      = [from, to, ...extras];
-  const typeParams  = [from, to, ...(cid ? [cid] : [])];
-  let data = {}, done = 0;
-  const finish = () => { if (++done === 3) res.json(data); };
-
-  db.query(chartSql, params,     (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.chart     = r; finish(); });
-  db.query(typeSql,  typeParams, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.typeBreak = r; finish(); });
-  db.query(listSql,  params,     (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list      = r; finish(); });
-};
-
-/* ─────────────────────────────────────────────
-   GET /api/admin/reports/physician-productivity
-   Appointment count + revenue per physician
-───────────────────────────────────────────── */
-const getPhysicianProductivity = (req, res) => {
-  const cid       = req.clinicId;
-  const from      = req.query.from      || '2020-01-01';
-  const to        = req.query.to        || new Date().toISOString().slice(0,10);
-  const specialty = req.query.specialty || null;
-  const phyType   = req.query.physician_type || null;
-
-  const clinicFilter    = cid       ? 'AND d.clinic_id = ?'        : '';
-  const specialtyFilter = specialty ? 'AND ph.specialty = ?'        : '';
-  const typeFilter      = phyType   ? 'AND ph.physician_type = ?'   : '';
-  const dateFilter      = 'AND a.appointment_date BETWEEN ? AND ?';
-
-  const extras = [
-    ...(cid       ? [cid]       : []),
-    ...(specialty ? [specialty] : []),
-    ...(phyType   ? [phyType]   : [])
-  ];
-
-  const sql = `
-    SELECT ph.physician_id,
-      CONCAT(ph.first_name,' ',ph.last_name) AS physician,
-      ph.specialty, ph.physician_type,
-      COUNT(a.appointment_id) AS total_appointments,
-      SUM(CASE WHEN s.status_name='Completed' THEN 1 ELSE 0 END) AS completed,
-      ROUND(SUM(CASE WHEN s.status_name='Completed' THEN 1 ELSE 0 END)*100.0/NULLIF(COUNT(a.appointment_id),0),1) AS completion_rate,
-      IFNULL(SUM(b.total_amount),0) AS total_revenue
-    FROM physician ph
-    LEFT JOIN department d ON ph.department_id = d.department_id
-    LEFT JOIN appointment a ON a.physician_id = ph.physician_id ${dateFilter}
-    LEFT JOIN appointment_status s ON a.status_id = s.status_id
-    LEFT JOIN billing b ON b.appointment_id = a.appointment_id
-    WHERE 1=1 ${clinicFilter} ${specialtyFilter} ${typeFilter}
-    GROUP BY ph.physician_id, physician, ph.specialty, ph.physician_type
-    ORDER BY total_appointments DESC`;
-
-  db.query(sql, [from, to, ...extras], (err, rows) => {
-    if (err) return res.status(500).json({ message: err.message });
-    res.json({ rows });
-  });
-};
-
-/* ─────────────────────────────────────────────
-   GET /api/admin/reports/referrals
-   Referral counts by status + raw list
-───────────────────────────────────────────── */
-const getReferralReport = (req, res) => {
-  const cid  = req.clinicId;
-  const from = req.query.from || '2020-01-01';
-  const to   = req.query.to   || new Date().toISOString().slice(0,10);
-
-  // Referrals don't have office_id directly; filter via primary physician's department
-  const clinicJoin   = cid ? 'JOIN department d ON pph.department_id=d.department_id AND d.clinic_id=?' : '';
-  const clinicParams = cid ? [cid] : [];
-
-  const chartSql = `
-    SELECT rs.referral_status_name AS status, COUNT(*) AS count
-    FROM referral r
-    JOIN referral_status rs ON r.referral_status_id = rs.referral_status_id
-    JOIN physician pph ON r.primary_physician_id = pph.physician_id
-    ${clinicJoin}
-    WHERE r.date_issued BETWEEN ? AND ?
-    GROUP BY rs.referral_status_name ORDER BY count DESC`;
-
-  const listSql = `
-    SELECT r.referral_id,
-      CONCAT(pt.first_name,' ',pt.last_name) AS patient,
-      CONCAT(pph.first_name,' ',pph.last_name) AS referring_doctor,
-      CONCAT(sph.first_name,' ',sph.last_name) AS specialist,
-      rs.referral_status_name AS status,
-      r.date_issued, r.expiration_date, r.referral_reason
-    FROM referral r
-    JOIN referral_status rs ON r.referral_status_id = rs.referral_status_id
-    JOIN patient pt ON r.patient_id = pt.patient_id
-    JOIN physician pph ON r.primary_physician_id = pph.physician_id
-    JOIN physician sph ON r.specialist_id = sph.physician_id
-    ${clinicJoin}
-    WHERE r.date_issued BETWEEN ? AND ?
-    ORDER BY r.date_issued DESC LIMIT 200`;
-
-  const params = [...clinicParams, from, to];
-  let data = {}, done = 0;
-  const finish = () => { if (++done === 2) res.json(data); };
-
-  db.query(chartSql, params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.chart = r; finish(); });
-  db.query(listSql,  params, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.list  = r; finish(); });
-};
-
-/* ─────────────────────────────────────────────
-   GET /api/admin/reports/insurance-breakdown
-   Insurance paid vs patient owed totals
-───────────────────────────────────────────── */
-const getInsuranceBreakdown = (req, res) => {
-  const cid  = req.clinicId;
-  const from = req.query.from || '2020-01-01';
-  const to   = req.query.to   || new Date().toISOString().slice(0,10);
-
-  const clinicJoin   = cid ? 'AND o.clinic_id = ?' : '';
-  const clinicParams = cid ? [cid] : [];
-
-  const sql = `
-    SELECT i.provider_name,
-      COUNT(b.bill_id) AS claims,
-      ROUND(AVG(i.coverage_percentage),1) AS avg_coverage_pct,
-      SUM(b.total_amount) AS total_billed,
-      SUM(b.insurance_paid_amount) AS insurance_paid,
-      SUM(b.patient_owed) AS patient_owed
-    FROM billing b
-    JOIN appointment a ON b.appointment_id = a.appointment_id
-    JOIN office o ON a.office_id = o.office_id
-    JOIN insurance i ON b.insurance_id = i.insurance_id
-    WHERE b.payment_date BETWEEN ? AND ? ${clinicJoin}
-    GROUP BY i.provider_name ORDER BY total_billed DESC`;
-
-  db.query(sql, [from, to, ...clinicParams], (err, rows) => {
-    if (err) return res.status(500).json({ message: err.message });
-    res.json({ rows });
-  });
-};
-
-/* ─────────────────────────────────────────────
-   GET /api/admin/clinic-appointments
-   Past + upcoming appointments, clinic-scoped.
-   Global admin can pass ?clinic_id= to filter.
-───────────────────────────────────────────── */
-const getClinicAppointments = (req, res) => {
-  const cid = req.clinicId ?? (req.query.clinic_id ? parseInt(req.query.clinic_id) : null);
-  const clinicFilter = cid ? "AND o.clinic_id = ?" : "";
-  const params = cid ? [cid] : [];
-
-  const sql = `
-    SELECT
-      a.appointment_id,
-      a.appointment_date,
-      a.appointment_time,
-      a.appointment_type,
-      CONCAT(pt.first_name,' ',pt.last_name) AS patient_name,
-      CONCAT(ph.first_name,' ',ph.last_name) AS physician_name,
-      s.status_name,
-      o.city,
-      c.clinic_name
-    FROM appointment a
-    JOIN patient pt        ON a.patient_id   = pt.patient_id
-    JOIN physician ph      ON a.physician_id  = ph.physician_id
-    JOIN appointment_status s ON a.status_id = s.status_id
-    JOIN office o          ON a.office_id     = o.office_id
-    JOIN clinic c          ON o.clinic_id     = c.clinic_id
-    WHERE 1=1 ${clinicFilter}
-    ORDER BY a.appointment_date DESC, a.appointment_time DESC
-    LIMIT 500`;
-
-  db.query(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ message: err.message });
-    const today = new Date().toISOString().slice(0, 10);
-    const past     = rows.filter(r => r.appointment_date.toISOString().slice(0,10) <  today);
-    const upcoming = rows.filter(r => r.appointment_date.toISOString().slice(0,10) >= today);
-    res.json({ past, upcoming });
+          res.status(201).json({ message: "Staff member added successfully", staff_id, email: autoEmail });
+        });
+      }
+    );
   });
 };
 
 /* ─────────────────────────────────────────────
    GET /api/admin/insurance/scorecard
-   Aggregate stats per payer, clinic-scoped.
+   Returns Query A (financial) + Query B (outcomes) merged per payer.
+   The frontend computes the composite score from this data.
 ───────────────────────────────────────────── */
 const getPayerScorecard = (req, res) => {
-  const cid = req.clinicId;
+  const financialSql = `
+    SELECT
+      ins.insurance_id,
+      ins.provider_name,
+      ins.coverage_percentage                                                  AS contracted_rate,
+      ROUND(SUM(b.insurance_paid_amount) / NULLIF(SUM(b.total_amount),0) * 100, 1) AS actual_rate,
+      COUNT(b.bill_id)                                                         AS total_claims,
+      IFNULL(SUM(b.total_amount), 0)                                           AS total_billed,
+      IFNULL(SUM(b.insurance_paid_amount), 0)                                  AS total_paid,
+      IFNULL(SUM(b.patient_owed), 0)                                           AS total_outstanding,
+      SUM(CASE WHEN b.payment_status = 'Paid'  THEN 1 ELSE 0 END)             AS paid_claims,
+      SUM(CASE WHEN b.payment_status != 'Paid' THEN 1 ELSE 0 END)             AS unpaid_claims
+    FROM insurance ins
+    LEFT JOIN billing b ON ins.insurance_id = b.insurance_id
+    GROUP BY ins.insurance_id, ins.provider_name, ins.coverage_percentage
+    ORDER BY ins.provider_name`;
 
-  const subquery = cid
-    ? `(SELECT b.*, o.clinic_id FROM billing b
-         JOIN appointment a ON b.appointment_id = a.appointment_id
-         JOIN office o ON a.office_id = o.office_id
-         WHERE o.clinic_id = ?) b`
-    : `billing b`;
+  const outcomesSql = `
+    SELECT
+      ins.insurance_id,
+      COUNT(DISTINCT p.patient_id)                                              AS total_patients,
+      COUNT(a.appointment_id)                                                   AS total_appointments,
+      SUM(CASE WHEN s.status_name = 'Completed'  THEN 1 ELSE 0 END)            AS completed,
+      SUM(CASE WHEN s.status_name = 'No-Show'    THEN 1 ELSE 0 END)            AS no_shows,
+      SUM(CASE WHEN s.status_name = 'Cancelled'  THEN 1 ELSE 0 END)            AS cancelled,
+      ROUND(
+        SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END)
+        / NULLIF(COUNT(a.appointment_id), 0) * 100, 1
+      )                                                                         AS completion_rate_pct
+    FROM insurance ins
+    LEFT JOIN patient p ON p.insurance_id = ins.insurance_id
+    LEFT JOIN appointment a ON a.patient_id = p.patient_id
+    LEFT JOIN appointment_status s ON a.status_id = s.status_id
+    GROUP BY ins.insurance_id
+    ORDER BY ins.insurance_id`;
 
+  let financial = null, outcomes = null;
+
+  db.query(financialSql, (e1, r1) => {
+    if (e1) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    financial = r1;
+    if (outcomes !== null) mergeAndRespond();
+  });
+
+  db.query(outcomesSql, (e2, r2) => {
+    if (e2) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    outcomes = r2;
+    if (financial !== null) mergeAndRespond();
+  });
+
+  function mergeAndRespond() {
+    const outcomesMap = {};
+    outcomes.forEach(o => { outcomesMap[o.insurance_id] = o; });
+    const merged = financial.map(f => ({
+      ...f,
+      ...(outcomesMap[f.insurance_id] || {
+        total_patients: 0, total_appointments: 0,
+        completed: 0, no_shows: 0, cancelled: 0, completion_rate_pct: 0
+      })
+    }));
+    res.json(merged);
+  }
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/accepted
+   Returns all clinic_accepted_insurance rows with clinic + insurance names.
+───────────────────────────────────────────── */
+const getAcceptedInsurance = (req, res) => {
   const sql = `
-    SELECT i.insurance_id, i.provider_name, i.coverage_percentage,
-      COUNT(b.bill_id)                                                          AS total_claims,
-      SUM(CASE WHEN b.payment_status='Paid' THEN 1 ELSE 0 END)                 AS paid_claims,
-      ROUND(AVG(b.insurance_paid_amount), 2)                                    AS avg_paid,
-      ROUND(AVG(b.total_amount), 2)                                             AS avg_billed,
-      ROUND(AVG(CASE WHEN b.payment_status='Paid'
-                  AND b.payment_date IS NOT NULL AND b.due_date IS NOT NULL
-                  THEN DATEDIFF(b.payment_date, b.due_date) END), 1)            AS avg_ar_days,
-      COUNT(DISTINCT b.patient_id)                                              AS unique_patients
-    FROM insurance i
-    LEFT JOIN ${subquery} ON b.insurance_id = i.insurance_id
-    GROUP BY i.insurance_id, i.provider_name, i.coverage_percentage
-    ORDER BY i.insurance_id`;
+    SELECT cai.id, cai.clinic_id, c.clinic_name,
+           ins.insurance_id, ins.provider_name, ins.coverage_percentage,
+           cai.reimbursement_threshold_pct, cai.min_participation_rate,
+           cai.is_active, cai.effective_date, cai.removal_reason
+    FROM clinic_accepted_insurance cai
+    JOIN clinic c      ON cai.clinic_id    = c.clinic_id
+    JOIN insurance ins ON cai.insurance_id = ins.insurance_id
+    ORDER BY c.clinic_name, ins.provider_name`;
 
-  db.query(sql, cid ? [cid] : [], (err, rows) => {
-    if (err) return res.status(500).json({ message: err.message });
-    res.json({ payers: rows });
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    res.json(rows);
   });
 };
 
 /* ─────────────────────────────────────────────
-   GET /api/admin/insurance/payer-detail
-   Monthly trend + individual claims for scatter.
+   POST /api/admin/insurance/accept
+   Body: { clinic_id, insurance_id, reimbursement_threshold_pct,
+           min_participation_rate, effective_date, notes, user_id }
+───────────────────────────────────────────── */
+const addAcceptedInsurance = (req, res) => {
+  const {
+    clinic_id, insurance_id,
+    reimbursement_threshold_pct, min_participation_rate,
+    effective_date, user_id
+  } = req.body;
+
+  if (!clinic_id || !insurance_id || !reimbursement_threshold_pct)
+    return res.status(400).json({ message: "clinic_id, insurance_id, and reimbursement_threshold_pct are required" });
+
+  const sql = `
+    INSERT INTO clinic_accepted_insurance
+      (clinic_id, insurance_id, is_active, reimbursement_threshold_pct,
+       min_participation_rate, effective_date, added_by)
+    VALUES (?, ?, TRUE, ?, ?, ?, ?)`;
+
+  db.query(sql, [
+    clinic_id, insurance_id,
+    reimbursement_threshold_pct,
+    min_participation_rate || 75.00,
+    effective_date || null,
+    user_id || null
+  ], (err, result) => {
+    if (err) {
+      if (err.code === "ER_DUP_ENTRY")
+        return res.status(409).json({ message: "This insurance plan is already accepted at that clinic." });
+      return res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
+    res.status(201).json({ message: "Insurance plan added successfully", id: result.insertId });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/insurance/:id/deactivate
+   Body: { removal_reason, user_id }
+───────────────────────────────────────────── */
+const deactivateInsurance = (req, res) => {
+  const { id } = req.params;
+  const { removal_reason, user_id } = req.body;
+
+  if (!removal_reason || !removal_reason.trim())
+    return res.status(400).json({ message: "A removal reason is required." });
+
+  db.query(
+    `UPDATE clinic_accepted_insurance
+     SET is_active = FALSE, removed_date = CURDATE(),
+         removal_reason = ?, removed_by = ?
+     WHERE id = ?`,
+    [removal_reason.trim(), user_id || null, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Record not found." });
+      res.json({ message: "Insurance plan deactivated." });
+    }
+  );
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/alerts
+   Returns unread payer_alert rows with insurance name.
+───────────────────────────────────────────── */
+const getPayerAlerts = (req, res) => {
+  const sql = `
+    SELECT pa.alert_id, pa.alert_type, pa.alert_message,
+           pa.triggered_at, pa.is_read, pa.clinic_id,
+           ins.provider_name, c.clinic_name
+    FROM payer_alert pa
+    JOIN insurance ins ON pa.insurance_id = ins.insurance_id
+    LEFT JOIN clinic c ON pa.clinic_id = c.clinic_id
+    WHERE pa.is_read = FALSE
+    ORDER BY pa.triggered_at DESC
+    LIMIT 20`;
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+    res.json(rows);
+  });
+};
+
+/* ─────────────────────────────────────────────
+   GET /api/admin/insurance/payer-detail?insurance_id=X
+   Per-payer detail for the analytics charts:
+     stats    – aggregate KPIs
+     trend    – monthly avg reimbursement (last 8 months)
+     scatter  – individual billing rows
+     bar      – monthly paid/unpaid counts
 ───────────────────────────────────────────── */
 const getPayerDetail = (req, res) => {
-  const cid = req.clinicId;
-  const iid = parseInt(req.query.insurance_id);
-  if (!iid) return res.status(400).json({ message: 'insurance_id required' });
+  const insId = parseInt(req.query.insurance_id);
+  if (!insId) return res.status(400).json({ message: "insurance_id is required" });
 
-  const clinicJoin  = cid ? 'JOIN office o ON a.office_id = o.office_id' : '';
-  const clinicWhere = cid ? 'AND o.clinic_id = ?' : '';
-  const base = cid ? [iid, cid] : [iid];
+  const statsSql = `
+    SELECT
+      ins.insurance_id,
+      ins.provider_name,
+      ins.coverage_percentage                                                     AS contracted_rate,
+      COUNT(b.bill_id)                                                            AS total_claims,
+      COUNT(DISTINCT b.patient_id)                                                AS total_patients,
+      ROUND(AVG(CASE WHEN b.total_amount > 0
+                     THEN b.insurance_paid_amount / b.total_amount * 100 END), 1) AS avg_reimb_pct,
+      IFNULL(SUM(b.total_amount), 0)                                              AS total_billed,
+      IFNULL(SUM(b.insurance_paid_amount), 0)                                     AS total_paid,
+      SUM(CASE WHEN b.payment_status = 'Paid'  THEN 1 ELSE 0 END)                AS paid_claims,
+      SUM(CASE WHEN b.payment_status != 'Paid' THEN 1 ELSE 0 END)                AS unpaid_claims,
+      SUM(CASE WHEN b.due_date < CURDATE()
+               AND b.payment_status != 'Paid'  THEN 1 ELSE 0 END)                AS overdue_claims
+    FROM insurance ins
+    LEFT JOIN billing b ON ins.insurance_id = b.insurance_id
+    WHERE ins.insurance_id = ?
+    GROUP BY ins.insurance_id, ins.provider_name, ins.coverage_percentage`;
 
-  const monthlySql = `
-    SELECT DATE_FORMAT(b.payment_date,'%Y-%m') AS month,
-      ROUND(AVG(b.insurance_paid_amount / NULLIF(b.total_amount,0) * 100), 1) AS reimb_rate,
-      ROUND(AVG(b.insurance_paid_amount), 2)                                   AS avg_paid,
-      SUM(CASE WHEN b.payment_status='Paid' THEN 1 ELSE 0 END)                AS paid,
-      COUNT(*)                                                                  AS total
+  const trendSql = `
+    SELECT
+      DATE_FORMAT(a.appointment_date, '%Y-%m')   AS month,
+      DATE_FORMAT(a.appointment_date, '%b %Y')   AS month_label,
+      ROUND(AVG(CASE WHEN b.total_amount > 0
+                     THEN b.insurance_paid_amount / b.total_amount * 100 END), 1) AS avg_reimb_pct,
+      COUNT(b.bill_id)                                                             AS claim_count
     FROM billing b
     JOIN appointment a ON b.appointment_id = a.appointment_id
-    ${clinicJoin}
-    WHERE b.insurance_id = ? AND b.payment_date IS NOT NULL ${clinicWhere}
-    GROUP BY month ORDER BY month ASC LIMIT 12`;
+    WHERE b.insurance_id = ?
+    GROUP BY DATE_FORMAT(a.appointment_date, '%Y-%m'),
+             DATE_FORMAT(a.appointment_date, '%b %Y')
+    ORDER BY month`;
 
-  const claimsSql = `
-    SELECT b.insurance_paid_amount AS paid, b.total_amount AS billed,
-      b.payment_status
+  const scatterSql = `
+    SELECT
+      DATE_FORMAT(a.appointment_date, '%Y-%m-%d') AS date_str,
+      ROUND(CASE WHEN b.total_amount > 0
+                 THEN b.insurance_paid_amount / b.total_amount * 100 ELSE 0 END, 1) AS reimb_pct,
+      b.total_amount,
+      b.payment_status,
+      IFNULL(a.appointment_type, 'General') AS appointment_type
     FROM billing b
     JOIN appointment a ON b.appointment_id = a.appointment_id
-    ${clinicJoin}
-    WHERE b.insurance_id = ? ${clinicWhere}
-    ORDER BY b.bill_id LIMIT 60`;
+    WHERE b.insurance_id = ?
+    ORDER BY a.appointment_date`;
 
-  let done = 0, data = {};
-  const finish = () => { if (++done === 2) res.json(data); };
-  db.query(monthlySql, base, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.monthly = r; finish(); });
-  db.query(claimsSql,  base, (e, r) => { if (e) return res.status(500).json({ message: e.message }); data.claims  = r; finish(); });
+  const barSql = `
+    SELECT
+      DATE_FORMAT(a.appointment_date, '%Y-%m')   AS month,
+      DATE_FORMAT(a.appointment_date, '%b %Y')   AS month_label,
+      b.payment_status,
+      COUNT(*)                                    AS cnt
+    FROM billing b
+    JOIN appointment a ON b.appointment_id = a.appointment_id
+    WHERE b.insurance_id = ?
+    GROUP BY DATE_FORMAT(a.appointment_date, '%Y-%m'),
+             DATE_FORMAT(a.appointment_date, '%b %Y'),
+             b.payment_status
+    ORDER BY month`;
+
+  let out = {}, left = 4;
+  const done = () => { if (--left === 0) res.json(out); };
+  const bail = () => res.status(500).json({ message: "Something went wrong. Please try again." });
+
+  db.query(statsSql,   [insId], (e, r) => { if (e) return bail(); out.stats   = r[0] || {}; done(); });
+  db.query(trendSql,   [insId], (e, r) => { if (e) return bail(); out.trend   = r;           done(); });
+  db.query(scatterSql, [insId], (e, r) => { if (e) return bail(); out.scatter = r;           done(); });
+  db.query(barSql,     [insId], (e, r) => { if (e) return bail(); out.bar     = r;           done(); });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/physician/:id  — edit
+───────────────────────────────────────────── */
+const editPhysician = (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, phone_number, specialty, physician_type, department_id, hire_date } = req.body;
+  if (!first_name || !last_name)
+    return res.status(400).json({ message: "First name and last name are required." });
+
+  db.query(
+    `UPDATE physician SET first_name=?, last_name=?, phone_number=?, specialty=?,
+            physician_type=?, department_id=?, hire_date=? WHERE physician_id=?`,
+    [first_name, last_name, phone_number || null, specialty || null,
+     physician_type || "primary", department_id || null, hire_date || null, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Could not update physician: " + err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Physician not found." });
+      res.json({ message: "Physician updated successfully." });
+    }
+  );
+};
+
+/* ─────────────────────────────────────────────
+   DELETE /api/admin/physician/:id
+───────────────────────────────────────────── */
+const deletePhysician = (req, res) => {
+  const { id } = req.params;
+  // Get email to also delete from users
+  db.query("SELECT email FROM physician WHERE physician_id = ?", [id], (e, rows) => {
+    if (e || !rows.length) return res.status(404).json({ message: "Physician not found." });
+    const email = rows[0].email;
+    db.query("DELETE FROM physician WHERE physician_id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ message: "Could not delete physician: " + err.message });
+      if (email) db.query("DELETE FROM users WHERE email = ?", [email], () => {});
+      res.json({ message: "Physician deleted." });
+    });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/staff/:id  — edit
+───────────────────────────────────────────── */
+const editStaff = (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, phone_number, role, department_id, hire_date, shift_start, shift_end } = req.body;
+  if (!first_name || !last_name)
+    return res.status(400).json({ message: "First name and last name are required." });
+
+  db.query(
+    `UPDATE staff SET first_name=?, last_name=?, phone_number=?, role=?,
+            department_id=?, hire_date=?, shift_start=?, shift_end=? WHERE staff_id=?`,
+    [first_name, last_name, phone_number || null, role || "Receptionist",
+     department_id || null, hire_date || null, shift_start || null, shift_end || null, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Could not update staff: " + err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Staff not found." });
+      res.json({ message: "Staff updated successfully." });
+    }
+  );
+};
+
+/* ─────────────────────────────────────────────
+   DELETE /api/admin/staff/:id
+───────────────────────────────────────────── */
+const deleteStaff = (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT email FROM staff WHERE staff_id = ?", [id], (e, rows) => {
+    if (e || !rows.length) return res.status(404).json({ message: "Staff not found." });
+    const email = rows[0].email;
+    db.query("DELETE FROM staff WHERE staff_id = ?", [id], (err) => {
+      if (err) return res.status(500).json({ message: "Could not delete staff: " + err.message });
+      if (email) db.query("DELETE FROM users WHERE email = ?", [email], () => {});
+      res.json({ message: "Staff member deleted." });
+    });
+  });
+};
+
+/* ─────────────────────────────────────────────
+   PUT /api/admin/insurance/alerts/:id/read
+───────────────────────────────────────────── */
+const markAlertRead = (req, res) => {
+  const { id } = req.params;
+  db.query(
+    "UPDATE payer_alert SET is_read = TRUE WHERE alert_id = ?",
+    [id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "Alert not found." });
+      res.json({ message: "Alert dismissed." });
+    }
+  );
 };
 
 module.exports = {
   loginAdmin, getAdminDashboard, getClinicReport,
   getAllPhysicians, getAllStaff, getDepartments, getOffices,
-  addPhysician, addStaff,
-  getRevenueReport, getARReport, getAppointmentReport,
-  getPhysicianProductivity, getReferralReport, getInsuranceBreakdown,
-  getClinicAppointments,
-  getPayerScorecard, getPayerDetail
+  addPhysician, addStaff, editPhysician, deletePhysician, editStaff, deleteStaff,
+  getPayerScorecard, getPayerDetail, getAcceptedInsurance, addAcceptedInsurance,
+  deactivateInsurance, getPayerAlerts, markAlertRead
 };

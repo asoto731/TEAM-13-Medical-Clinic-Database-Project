@@ -21,50 +21,50 @@ function clearRateLimit(ip, username) { loginAttempts.delete(`${ip}:${(username 
 /* ─────────────────────────────────────────────
    Staff / Physician Login
    POST /api/staff/login
-   Body: { username, password }
+   Body: { email, password }
 ───────────────────────────────────────────── */
 const loginStaff = (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
 
-  if (!username || !password) {
-    return res.status(400).json({ message: "Username and password are required" });
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
   }
 
-  // ── Rate limiting: 5 attempts per IP+username per 15 min ──
-  if (isRateLimited(ip, username)) {
+  // ── Rate limiting: 5 attempts per IP+email per 15 min ──
+  if (isRateLimited(ip, email)) {
     return res.status(429).json({ message: "Too many login attempts for this account. Please wait 15 minutes and try again." });
   }
 
   const sql = "SELECT * FROM users WHERE email = ?";
 
-  db.query(sql, [username], (err, results) => {
-    if (err) return res.status(500).json({ message: "Login query failed" });
+  db.query(sql, [email], (err, results) => {
+    if (err) return res.status(500).json({ message: "Something went wrong. Please try again." });
 
     if (results.length === 0) {
-      return res.status(401).json({ message: "Invalid username or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const user = results[0];
     const passwordMatch = bcrypt.compareSync(password, user.password_hash);
 
     if (!passwordMatch) {
-      return res.status(401).json({ message: "Invalid username or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     if (user.role === "patient") {
-      return res.status(401).json({ message: "Invalid username or password." });
+      return res.status(401).json({ message: "Invalid email or password." });
     }
 
     // ── Clear rate limit on success + audit log ──
-    clearRateLimit(ip, username);
+    clearRateLimit(ip, email);
     auditLog(user.user_id, "LOGIN", "user", user.user_id, ip);
 
     res.json({
       message: "Login successful",
       user: {
         id: user.user_id,
-        username: user.email,
+        email: user.email,
         role: user.role,
         physician_id: user.physician_id,
         staff_id: user.staff_id
@@ -578,12 +578,12 @@ const onboardPatient = (req, res) => {
 
     const tempPassword = "Welcome@123";
     const password_hash = bcrypt.hashSync(tempPassword, 10);
-    const username = email.toLowerCase().trim();
+    const userEmail = email.toLowerCase().trim();
 
     // Step 1: Create login account
     db.query(
         "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'patient')",
-        [username, password_hash],
+        [userEmail, password_hash],
         (err, userResult) => {
             if (err) {
                 if (err.code === "ER_DUP_ENTRY") {
@@ -623,7 +623,7 @@ const onboardPatient = (req, res) => {
                             if (err3 || !sched.length) {
                                 return res.json({
                                     message: "Patient created — physician not scheduled that day, book appointment manually.",
-                                    patient_id, user_id, username, temp_password: tempPassword,
+                                    patient_id, user_id, email: userEmail, temp_password: tempPassword,
                                     appointmentError: true
                                 });
                             }
@@ -645,13 +645,13 @@ const onboardPatient = (req, res) => {
                                             : "Could not book appointment. Patient created — book manually.";
                                         return res.json({
                                             message: msg,
-                                            patient_id, user_id, username, temp_password: tempPassword,
+                                            patient_id, user_id, email: userEmail, temp_password: tempPassword,
                                             appointmentError: true
                                         });
                                     }
                                     res.json({
                                         message: "Patient onboarded successfully",
-                                        patient_id, user_id, username,
+                                        patient_id, user_id, email: userEmail,
                                         temp_password: tempPassword,
                                         appointment_id: apptResult.insertId
                                     });
@@ -716,4 +716,63 @@ const getAllPhysicians = (req, res) => {
     );
 };
 
-module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians };
+/* ─────────────────────────────────────────────
+   GET /api/staff/specialists — all specialist physicians
+   Used by physician dashboard Create Referral modal
+───────────────────────────────────────────── */
+const getAllSpecialists = (req, res) => {
+    db.query(
+        `SELECT DISTINCT ph.physician_id, ph.first_name, ph.last_name, ph.specialty, o.city
+         FROM physician ph
+         JOIN work_schedule ws ON ph.physician_id = ws.physician_id
+         JOIN office o ON ws.office_id = o.office_id
+         WHERE ph.physician_type = 'specialist'
+         ORDER BY ph.specialty, ph.last_name`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: "Query failed" });
+            res.json(rows);
+        }
+    );
+};
+
+/* ─────────────────────────────────────────────
+   POST /api/staff/referral/create
+   Body: { physician_id, patient_id, specialist_id, referral_reason, user_id }
+   PCP directly issues a referral (status = "Issued", bypassing patient request step)
+───────────────────────────────────────────── */
+const createReferral = (req, res) => {
+    const { physician_id, patient_id, specialist_id, referral_reason } = req.body;
+    if (!physician_id || !patient_id || !specialist_id) {
+        return res.status(400).json({ message: "physician_id, patient_id, and specialist_id are required." });
+    }
+
+    // Get "Issued" status id
+    db.query(
+        "SELECT referral_status_id FROM referral_status WHERE referral_status_name = 'Issued' LIMIT 1",
+        [],
+        (e, statusRows) => {
+            if (e || !statusRows.length) {
+                return res.status(500).json({ message: "Could not resolve referral status." });
+            }
+            const statusId = statusRows[0].referral_status_id;
+            const expDate  = new Date();
+            expDate.setDate(expDate.getDate() + 90);
+            const expStr   = expDate.toISOString().split("T")[0];
+
+            db.query(
+                `INSERT INTO referral
+                   (patient_id, primary_physician_id, specialist_id, referral_status_id,
+                    referral_reason, date_issued, expiration_date)
+                 VALUES (?, ?, ?, ?, ?, CURDATE(), ?)`,
+                [patient_id, physician_id, specialist_id, statusId,
+                 referral_reason || null, expStr],
+                (err2, result) => {
+                    if (err2) return res.status(500).json({ message: "Could not create referral: " + err2.message });
+                    res.status(201).json({ message: "Referral issued successfully.", referral_id: result.insertId });
+                }
+            );
+        }
+    );
+};
+
+module.exports = { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians, getAllSpecialists, createReferral };

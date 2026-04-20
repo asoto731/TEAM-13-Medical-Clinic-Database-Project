@@ -393,6 +393,7 @@
             <div class="section-block">
                 <div class="section-block-header">
                     <div><h3>Referrals Issued</h3><p>Specialist referrals you have issued to patients</p></div>
+                    <button class="profile-edit-btn" onclick="openCreateReferralModal()" style="background:#4a90d9;color:#fff;border-color:#4a90d9">+ Create Referral</button>
                 </div>
                 <table class="data-table">
                     <thead>
@@ -573,6 +574,47 @@
             <button class="btn-accept" id="refModalAccept">Accept</button>
             <button class="btn-reject" id="refModalReject">Reject</button>
             <button class="btn-cancel" onclick="closeReferralModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Create Referral Modal ── -->
+<div class="modal-overlay hidden" id="createReferralModal">
+    <div class="modal-box" style="max-width:500px">
+        <div class="modal-header">
+            <div>
+                <h3>Issue a Referral</h3>
+                <p>Directly refer one of your patients to a specialist</p>
+            </div>
+            <button class="modal-close" onclick="closeCreateReferralModal()">&#10005;</button>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Patient <span style="color:#e05c5c">*</span></label>
+                <select id="cr_patient" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit">
+                    <option value="">Loading your patients…</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Specialist <span style="color:#e05c5c">*</span></label>
+                <select id="cr_specialist" style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit">
+                    <option value="">Loading specialists…</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Reason for Referral <span style="color:#e05c5c">*</span></label>
+                <textarea id="cr_reason" rows="3" placeholder="Describe why this patient needs specialist care…"
+                    style="width:100%;padding:9px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+            <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46">
+                The referral will be sent with status <strong>Issued</strong> — the patient and specialist will see it immediately.
+                Expires in 90 days.
+            </div>
+            <div id="crError" style="color:#e05c5c;font-size:13px;display:none"></div>
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+                <button class="modal-cancel-btn" onclick="closeCreateReferralModal()">Cancel</button>
+                <button class="modal-save-btn" onclick="submitCreateReferral()" id="crSubmitBtn">Issue Referral</button>
+            </div>
         </div>
     </div>
 </div>

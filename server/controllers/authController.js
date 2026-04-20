@@ -5,7 +5,7 @@ const { validatePassword } = require("../utils/validatePassword");
 // ── In-memory rate limiter: 5 attempts per IP per 15 minutes ──
 const loginAttempts = new Map();
 
-// Key = IP + username so different accounts don't share the same counter
+// Key = IP + email so different accounts don't share the same counter
 function isRateLimited(ip, username) {
   const key = `${ip}:${(username || "").toLowerCase()}`;
   const now = Date.now();
@@ -155,7 +155,7 @@ const loginUser = (req, res) => {
 
   db.query(sql, [email], (err, results) => {
     if (err) {
-      return res.status(500).json({ error: "Login query failed" });
+      return res.status(500).json({ error: "Something went wrong. Please try again." });
     }
 
     if (results.length === 0) {

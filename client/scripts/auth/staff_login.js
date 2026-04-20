@@ -1,10 +1,10 @@
 document.getElementById('btn').addEventListener('click', async () => {
-    const username = document.getElementById('username').value.trim();
+    const email    = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const message  = document.getElementById('message');
 
-    if (!username || !password) {
-        message.textContent = 'Please enter your username and password.';
+    if (!email || !password) {
+        message.textContent = 'Please enter your email and password.';
         return;
     }
 
@@ -12,7 +12,7 @@ document.getElementById('btn').addEventListener('click', async () => {
         const res = await fetch('/api/staff/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ email, password })
         });
 
         const data = await res.json();
@@ -30,7 +30,7 @@ document.getElementById('btn').addEventListener('click', async () => {
             }, 1000);
         } else {
             message.style.color = '#c0392b';
-            message.textContent = data.message || 'Invalid username or password.';
+            message.textContent = data.message || 'Invalid email or password.';
         }
     } catch (err) {
         message.style.color = '#c0392b';

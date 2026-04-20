@@ -618,22 +618,13 @@
                 </div>
             </div>
 
-            <!-- Step 3 -->
-            <div id="ls-row-3" style="display:flex;align-items:flex-start;gap:14px">
-                <div style="display:flex;flex-direction:column;align-items:center">
-                    <div class="reg-step-bubble" id="lbubble-3">3</div>
-                    <div class="reg-step-line" id="lline-3"></div>
-                </div>
-                <div class="reg-step-meta" style="padding-top:6px">
-                    <div class="reg-step-title" id="ltitle-3">Insurance &amp; Payment</div>
-                    <div class="reg-step-desc" id="ldesc-3">Select your coverage plan</div>
-                </div>
-            </div>
+            <!-- Step 3 (Insurance removed — handled by staff/profile) -->
+            <div id="ls-row-3" style="display:none"></div>
 
-            <!-- Step 4 -->
+            <!-- Step 3 of 3 (was Step 4) -->
             <div id="ls-row-4" style="display:flex;align-items:flex-start;gap:14px">
                 <div style="display:flex;flex-direction:column;align-items:center">
-                    <div class="reg-step-bubble" id="lbubble-4">4</div>
+                    <div class="reg-step-bubble" id="lbubble-4">3</div>
                 </div>
                 <div class="reg-step-meta" style="padding-top:6px">
                     <div class="reg-step-title" id="ltitle-4">Review &amp; Confirm</div>
@@ -658,7 +649,7 @@
             <!-- ── Step 1: Personal Information ── -->
             <div id="step1">
                 <div class="reg-form-header">
-                    <div class="reg-step-label">Step 1 of 4</div>
+                    <div class="reg-step-label">Step 1 of 3</div>
                     <h1>Personal Information</h1>
                     <p>This information is used to create your medical record. Please enter accurate details — your date of birth cannot be changed after registration.</p>
                 </div>
@@ -704,7 +695,7 @@
             <!-- ── Step 2: Account Security ── -->
             <div id="step2" class="hidden">
                 <div class="reg-form-header">
-                    <div class="reg-step-label">Step 2 of 4</div>
+                    <div class="reg-step-label">Step 2 of 3</div>
                     <h1>Account Security</h1>
                     <p>Your email will be your login. Your password is hashed with bcrypt and never stored in plain text.</p>
                 </div>
@@ -735,11 +726,11 @@
 
                 <div class="reg-nav">
                     <button class="reg-btn-back" onclick="goStep(1)">&#8592; Back</button>
-                    <button class="reg-btn-next" onclick="step2Next()">Next: Insurance &#8594;</button>
+                    <button class="reg-btn-next" onclick="step2Next()">Review &amp; Confirm &#8594;</button>
                 </div>
             </div>
 
-            <!-- ── Step 3: Insurance & Payment ── -->
+            <!-- ── Step 3: Insurance & Payment (hidden — managed via profile after registration) ── -->
             <div id="step3" class="hidden">
                 <div class="reg-form-header">
                     <div class="reg-step-label">Step 3 of 4</div>
@@ -759,10 +750,10 @@
                 </div>
             </div>
 
-            <!-- ── Step 4: Review ── -->
+            <!-- ── Step 4: Review (shown as Step 3 of 3) ── -->
             <div id="step4" class="hidden">
                 <div class="reg-form-header">
-                    <div class="reg-step-label">Step 4 of 4</div>
+                    <div class="reg-step-label">Step 3 of 3</div>
                     <h1>Review &amp; Create Account</h1>
                     <p>Please confirm your information before creating your account. You can go back to make changes.</p>
                 </div>
@@ -772,7 +763,7 @@
                 <div id="step4-error" class="reg-error"></div>
 
                 <div class="reg-nav">
-                    <button class="reg-btn-back" onclick="goStep(3)">&#8592; Back</button>
+                    <button class="reg-btn-back" onclick="goStep(2)">&#8592; Back</button>
                     <button class="reg-btn-next green" id="createBtn" onclick="submitRegistration()">Create My Account &#10003;</button>
                 </div>
             </div>

@@ -62,9 +62,94 @@
         .schedule-row { display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:10px; align-items:center; background:#f8faff; border-radius:8px; padding:10px 14px; margin-bottom:8px; }
         html[data-theme="dark"] .schedule-row { background:#141c2e; }
         .remove-sched-btn { background:none; border:none; color:#e05c5c; cursor:pointer; font-size:18px; font-weight:700; line-height:1; }
+
+        /* ── Insurance Analytics ── */
+        .ins-tabs { display:flex; gap:0; border-bottom:2px solid #e8ecf4; margin-bottom:22px; }
+        .ins-tab { background:none; border:none; border-bottom:3px solid transparent; padding:10px 20px; font-size:13px; font-weight:600; color:#888; cursor:pointer; font-family:inherit; transition:color 0.15s,border-color 0.15s; margin-bottom:-2px; }
+        .ins-tab.active { color:#1a3a6d; border-bottom-color:#4a90d9; }
+        html[data-theme="dark"] .ins-tab.active { color:#7ab4f5; border-bottom-color:#4a90d9; }
+        .ins-tab-panel { display:none; }
+        .ins-tab-panel.active { display:block; }
+
+        /* Payer pills */
+        .ins-payer-pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+        .ins-payer-pill { padding:7px 16px; border:2px solid #e0e4f0; border-radius:20px; background:white; font-size:12px; font-weight:700; color:#555; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+        .ins-payer-pill.active { background:#1a3a6d; border-color:#1a3a6d; color:white; }
+        .ins-payer-pill:hover:not(.active) { border-color:#4a90d9; color:#1a3a6d; }
+        html[data-theme="dark"] .ins-payer-pill { background:#1e2535; border-color:#2a3348; color:#c0c8dc; }
+        html[data-theme="dark"] .ins-payer-pill.active { background:#4a90d9; border-color:#4a90d9; color:white; }
+
+        /* KPI Row */
+        .ins-kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:18px; }
+        .ins-kpi { background:white; border:1px solid #e8ecf4; border-radius:10px; padding:12px 14px; text-align:center; }
+        html[data-theme="dark"] .ins-kpi { background:#1e2535; border-color:#2a3348; }
+        .ins-kpi-val { font-size:20px; font-weight:800; color:#1a3a6d; line-height:1; margin-bottom:4px; }
+        html[data-theme="dark"] .ins-kpi-val { color:#7ab4f5; }
+        .ins-kpi-val.good  { color:#0d7a60; }
+        .ins-kpi-val.warn  { color:#c87d00; }
+        .ins-kpi-val.bad   { color:#e05c5c; }
+        .ins-kpi-label { font-size:10px; color:#aaa; text-transform:uppercase; letter-spacing:0.4px; font-weight:600; }
+
+        /* Alert Banner */
+        .ins-alert-banner { background:#fff8e1; border:1px solid #ffe082; border-radius:10px; padding:12px 18px; margin-bottom:16px; display:flex; align-items:flex-start; gap:12px; }
+        html[data-theme="dark"] .ins-alert-banner { background:#1e1800; border-color:#4a3a00; }
+        .ins-alert-banner .alert-icon { font-size:17px; flex-shrink:0; margin-top:1px; }
+        .ins-alert-banner .alert-body { flex:1; font-size:12px; }
+        .ins-alert-banner .alert-title { font-size:13px; font-weight:700; color:#7a5a00; margin:0 0 3px; }
+        html[data-theme="dark"] .ins-alert-banner .alert-title { color:#ffd54f; }
+        .ins-alert-banner .alert-list { margin:0; padding:0 0 0 16px; color:#7a5a00; }
+        html[data-theme="dark"] .ins-alert-banner .alert-list { color:#ffe082; }
+        .ins-alert-dismiss { background:none; border:1px solid #ffe082; border-radius:6px; padding:5px 12px; font-size:11px; font-weight:700; color:#7a5a00; cursor:pointer; flex-shrink:0; font-family:inherit; }
+
+        /* Chart containers */
+        .ins-chart-full { background:white; border:1px solid #e8ecf4; border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+        html[data-theme="dark"] .ins-chart-full { background:#1e2535; border-color:#2a3348; }
+        .ins-chart-full h4, .ins-chart-box h4 { margin:0 0 2px; font-size:13px; font-weight:700; color:#1a3a6d; }
+        html[data-theme="dark"] .ins-chart-full h4, html[data-theme="dark"] .ins-chart-box h4 { color:#7ab4f5; }
+        .ins-chart-sub { font-size:11px; color:#aaa; margin:0 0 12px; }
+        .ins-charts-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+        .ins-charts-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+        .ins-chart-box { background:white; border:1px solid #e8ecf4; border-radius:12px; padding:16px 18px; }
+        html[data-theme="dark"] .ins-chart-box { background:#1e2535; border-color:#2a3348; }
+
+        /* Gauge & Ring */
+        .ins-gauge-val { font-size:11px; color:#aaa; text-align:center; margin-top:4px; font-weight:600; }
+
+        /* Score Breakdown */
+        .ins-breakdown-item { margin-bottom:10px; }
+        .ins-breakdown-row { display:flex; justify-content:space-between; font-size:11px; color:#666; font-weight:600; margin-bottom:3px; text-transform:uppercase; letter-spacing:0.3px; }
+        html[data-theme="dark"] .ins-breakdown-row { color:#a0aabf; }
+        .ins-breakdown-track { background:#f0f2f8; border-radius:4px; height:7px; overflow:hidden; }
+        html[data-theme="dark"] .ins-breakdown-track { background:#141c2e; }
+        .ins-breakdown-fill { height:7px; border-radius:4px; transition:width 0.6s ease; }
+
+        /* Triggered Alerts */
+        .ins-alert-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #f0f2f8; }
+        html[data-theme="dark"] .ins-alert-row { border-color:#2a3348; }
+        .ins-alert-row:last-child { border-bottom:none; }
+        .ins-tbadge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:0.4px; }
+        .ins-tbadge.alert { background:#fce4e4; color:#c0392b; }
+        .ins-tbadge.watch { background:#fff3cd; color:#7a5a00; }
+        .ins-tbadge.ok    { background:#e4f7ee; color:#0d7a60; }
+
+        /* Insurance manage form */
+        .ins-form-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:14px; }
+        .ins-form-row .form-field { margin:0; }
+
+        /* Status dot */
+        .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+        .dot.active { background:#0d7a60; }
+        .dot.inactive { background:#aaa; }
+
+        /* Edit modal */
+        .edit-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; display:flex; align-items:center; justify-content:center; }
+        .edit-modal-box { background:white; border-radius:14px; padding:28px 32px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; }
+        html[data-theme="dark"] .edit-modal-box { background:#1e2535; }
+        .edit-modal-title { font-size:18px; font-weight:700; color:#1a3a6d; margin:0 0 20px; }
+        html[data-theme="dark"] .edit-modal-title { color:#7ab4f5; }
     </style>
     <script>if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark");</script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -75,16 +160,13 @@
         <div class="sidebar-logo">
             <div class="clinic-name">Audit Trail Health</div>
             <div class="portal-label">Admin Portal</div>
-            <div id="sidebarLocation" style="font-size:11px;font-weight:700;color:#4a90d9;margin-top:4px;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-label">Menu</div>
             <button class="nav-item active"  onclick="showSection('overview')">Overview</button>
             <button class="nav-item"         onclick="showSection('physicians')">Physicians</button>
             <button class="nav-item"         onclick="showSection('staff')">Staff Members</button>
-            <button class="nav-item"         onclick="showSection('appointments')">Appointments</button>
             <button class="nav-item"         onclick="showSection('reports')">Clinic Reports</button>
-            <button class="nav-item"         onclick="showSection('analytics')">Analytics</button>
             <button class="nav-item"         onclick="showSection('insurance')">Insurance</button>
             <button class="nav-item"         onclick="showSection('settings')">Settings</button>
         </nav>
@@ -112,14 +194,11 @@
 
             <div class="greeting-card">
                 <div>
-                    <h2 id="greetName">Welcome, Administrator.</h2>
+                    <h2>Welcome, Administrator.</h2>
                     <p id="greetSub">Loading system overview…</p>
-                    <div id="greetLocation" style="margin-top:8px;font-size:15px;font-weight:700;color:#1a3a6d;display:none;">
-                        📍 <span id="greetLocationText"></span>
-                    </div>
                 </div>
                 <div class="greeting-meta">
-                    <span class="greeting-badge" id="adminBadge">Admin</span>
+                    <span class="greeting-badge">Admin</span>
                     <span style="font-size:11px;color:#aaa;margin-top:4px" id="todayDate"></span>
                 </div>
             </div>
@@ -203,12 +282,8 @@
                             <select id="ph_dept"><option value="">Loading…</option></select>
                         </div>
                         <div class="form-field"><label>Hire Date</label><input type="date" id="ph_hire"></div>
-                        <div class="form-field full">
-                            <label>Login Username (auto-generated)</label>
-                            <input type="text" id="ph_user" readonly style="background:#f5f7ff;color:#555;cursor:not-allowed" placeholder="Enter last name to generate…">
-                            <span style="font-size:11px;color:#888;margin-top:4px;display:block">Format: <strong>lastname@ath.doctor.com</strong> — auto-filled from Last Name</span>
-                        </div>
-                        <div class="form-field"><label>Login Password</label><input type="password" id="ph_pass" placeholder="Default: Doctor@123"></div>
+                        <div class="form-field"><label>Login Username *</label><input type="text" id="ph_user" placeholder="Username for login"></div>
+                        <div class="form-field"><label>Login Password *</label><input type="password" id="ph_pass" placeholder="Temporary password"></div>
 
                         <!-- Schedule builder -->
                         <div class="form-field full">
@@ -229,8 +304,8 @@
                 <div class="section-block-header"><h3>All Physicians</h3></div>
                 <div style="overflow-x:auto">
                     <table class="data-table">
-                        <thead><tr><th>Name</th><th>Specialty</th><th>Type</th><th>Department</th><th>Clinic</th><th>Email</th><th>Hire Date</th></tr></thead>
-                        <tbody id="physicianListBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                        <thead><tr><th>Name</th><th>Specialty</th><th>Type</th><th>Department</th><th>Clinic</th><th>Email</th><th>Hire Date</th><th>Actions</th></tr></thead>
+                        <tbody id="physicianListBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -267,12 +342,8 @@
                         <div class="form-field"><label>Hire Date</label><input type="date" id="st_hire"></div>
                         <div class="form-field"><label>Shift Start</label><input type="time" id="st_shift_start"></div>
                         <div class="form-field"><label>Shift End</label><input type="time" id="st_shift_end"></div>
-                        <div class="form-field full">
-                            <label>Login Username (auto-generated)</label>
-                            <input type="text" id="st_user" readonly style="background:#f5f7ff;color:#555;cursor:not-allowed" placeholder="Enter last name to generate…">
-                            <span style="font-size:11px;color:#888;margin-top:4px;display:block">Format: <strong>lastname@ath.staff.com</strong> — auto-filled from Last Name</span>
-                        </div>
-                        <div class="form-field"><label>Login Password</label><input type="password" id="st_pass" placeholder="Default: Staff@123"></div>
+                        <div class="form-field"><label>Login Username *</label><input type="text" id="st_user" placeholder="Username for login"></div>
+                        <div class="form-field"><label>Login Password *</label><input type="password" id="st_pass" placeholder="Temporary password"></div>
                         <div class="form-field full">
                             <div id="stError" style="color:#e05c5c;font-size:13px;display:none;margin-bottom:8px"></div>
                             <button class="add-btn" onclick="submitAddStaff()">Add Staff Member</button>
@@ -285,65 +356,13 @@
                 <div class="section-block-header"><h3>All Staff Members</h3></div>
                 <div style="overflow-x:auto">
                     <table class="data-table">
-                        <thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Clinic</th><th>Email</th><th>Shift</th><th>Hire Date</th></tr></thead>
-                        <tbody id="staffListBody"><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
+                        <thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Clinic</th><th>Email</th><th>Shift</th><th>Hire Date</th><th>Actions</th></tr></thead>
+                        <tbody id="staffListBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
                     </table>
                 </div>
             </div>
 
         </div><!-- /staff -->
-
-        <!-- ══════════════ APPOINTMENTS ══════════════ -->
-        <div class="page-section hidden" id="sec-appointments">
-
-            <!-- Global admin: clinic picker (hidden for clinic admins) -->
-            <div id="appt-clinic-picker" class="hidden" style="margin-bottom:20px">
-                <div class="section-block-header"><h3>Select a Clinic</h3></div>
-                <div id="appt-clinic-pills" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px"></div>
-            </div>
-
-            <!-- Filter bar -->
-            <div class="filter-bar" style="margin-bottom:16px">
-                <input type="text" id="appt-search" placeholder="Search patient, physician…" class="search-input" style="width:260px;margin:0">
-                <select id="appt-status-filter" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc">
-                    <option value="">All Statuses</option>
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                    <option value="No-Show">No-Show</option>
-                </select>
-                <button class="btn-apply" onclick="applyApptFilters()">Apply</button>
-            </div>
-
-            <!-- Upcoming -->
-            <div class="section-block" style="margin-bottom:24px">
-                <div class="section-block-header"><h3>Upcoming Appointments</h3><span id="appt-upcoming-count" style="font-size:13px;color:#888"></span></div>
-                <div style="overflow-x:auto">
-                    <table class="data-table" id="appt-upcoming-table">
-                        <thead><tr>
-                            <th>Date</th><th>Time</th><th>Patient</th>
-                            <th>Physician</th><th>Type</th><th>Status</th><th>Location</th>
-                        </tr></thead>
-                        <tbody><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Past -->
-            <div class="section-block">
-                <div class="section-block-header"><h3>Past Appointments</h3><span id="appt-past-count" style="font-size:13px;color:#888"></span></div>
-                <div style="overflow-x:auto">
-                    <table class="data-table" id="appt-past-table">
-                        <thead><tr>
-                            <th>Date</th><th>Time</th><th>Patient</th>
-                            <th>Physician</th><th>Type</th><th>Status</th><th>Location</th>
-                        </tr></thead>
-                        <tbody><tr><td colspan="7" class="table-empty">Loading…</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div><!-- /appointments -->
 
         <!-- ══════════════ CLINIC REPORTS ══════════════ -->
         <div class="page-section hidden" id="sec-reports">
@@ -372,248 +391,207 @@
 
             <div id="clinicReportCards"><p style="color:#aaa;padding:20px">Loading clinic reports…</p></div>
 
+            <!-- ── Appointments by Location ── -->
+            <div class="section-block" style="margin-top:20px">
+                <div class="section-block-header">
+                    <div><h3>Appointments by Date &amp; Location</h3><p>View any day's schedule filtered by clinic</p></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-end;padding:16px 20px;border-bottom:1px solid #f0f2f8;flex-wrap:wrap">
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:5px">Date</label>
+                        <input type="date" id="rptDate" style="padding:8px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:5px">Location</label>
+                        <select id="rptClinic" style="padding:8px 12px;border:1px solid #e0e3ed;border-radius:7px;font-size:13px;font-family:inherit;min-width:200px">
+                            <option value="">All Locations</option>
+                        </select>
+                    </div>
+                    <button onclick="loadAdminAppointments()" class="quick-btn blue" style="padding:9px 18px;margin-bottom:1px">Load Schedule</button>
+                </div>
+                <div id="rptApptStats" style="display:none;padding:12px 20px;border-bottom:1px solid #f0f2f8;display:flex;gap:24px;font-size:13px"></div>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead><tr><th>Time</th><th>Patient</th><th>Physician</th><th>Type</th><th>Reason</th><th>Location</th><th>Status</th></tr></thead>
+                        <tbody id="rptApptBody"><tr><td colspan="7" class="table-empty">Select a date and click "Load Schedule"</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
         </div><!-- /reports -->
-
-        <!-- ══════════════ ANALYTICS ══════════════ -->
-        <div class="page-section hidden" id="sec-analytics">
-
-            <div class="greeting-card" style="margin-bottom:20px">
-                <div>
-                    <h2 style="font-size:20px">Analytics & Reports</h2>
-                    <p style="color:#888;margin:0">Charts, trends, and detailed data exports</p>
-                </div>
-            </div>
-
-            <!-- Sub-tab pills -->
-            <div class="report-tabs">
-                <button class="report-tab active" data-tab="financial" onclick="switchReportTab('financial',this)">Financial</button>
-                <button class="report-tab" data-tab="appointments"     onclick="switchReportTab('appointments',this)">Appointments</button>
-                <button class="report-tab" data-tab="physicians"       onclick="switchReportTab('physicians',this)">Physicians</button>
-                <button class="report-tab" data-tab="referrals"        onclick="switchReportTab('referrals',this)">Referrals</button>
-            </div>
-
-            <!-- ── FINANCIAL ── -->
-            <div id="report-financial" class="report-panel active">
-                <div class="filter-bar">
-                    <label>From</label><input type="date" id="fin-from">
-                    <label>To</label><input type="date" id="fin-to">
-                    <select id="fin-insurance"><option value="">All Insurers</option></select>
-                    <button class="btn-apply" onclick="loadFinancialReports()">Apply</button>
-                    <div class="view-toggle">
-                        <button class="active" onclick="toggleView('financial','chart',this)">Chart</button>
-                        <button onclick="toggleView('financial','list',this)">List</button>
-                    </div>
-                </div>
-                <div class="chart-view" id="fin-chart-view">
-                    <div class="chart-grid">
-                        <div class="chart-card full-width"><h4>Revenue Over Time</h4><canvas id="chart-revenue"></canvas></div>
-                        <div class="chart-card"><h4>Accounts Receivable Aging</h4><canvas id="chart-ar"></canvas></div>
-                        <div class="chart-card"><h4>Insurance vs Out-of-Pocket</h4><canvas id="chart-insurance"></canvas></div>
-                    </div>
-                </div>
-                <div class="list-view" id="fin-list-view">
-                    <input class="report-search" id="fin-search" placeholder="Search by patient, status…" oninput="filterTable('fin-table',this.value)">
-                    <div class="section-block" style="padding:0">
-                        <table class="data-table" id="fin-table">
-                            <thead><tr><th>Patient</th><th>Billed</th><th>Insurance Paid</th><th>Patient Owes</th><th>Status</th><th>Payment Date</th><th>Due Date</th><th>City</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- AR list (always visible below charts) -->
-                <div id="fin-ar-list" class="chart-view" style="margin-top:20px">
-                    <div class="section-block" style="padding:0">
-                        <div class="section-block-header" style="padding:16px 20px 0"><h3>Outstanding Bills (Aging Detail)</h3></div>
-                        <table class="data-table" id="ar-table">
-                            <thead><tr><th>Patient</th><th>Amount Owed</th><th>Due Date</th><th>Days Overdue</th><th>City</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── APPOINTMENTS ── -->
-            <div id="report-appointments" class="report-panel">
-                <div class="filter-bar">
-                    <label>From</label><input type="date" id="appt-from">
-                    <label>To</label><input type="date" id="appt-to">
-                    <select id="appt-type">
-                        <option value="">All Types</option>
-                        <option>Physical</option><option>Follow-Up</option>
-                        <option>General</option><option>Specialist</option>
-                    </select>
-                    <select id="appt-physician"><option value="">All Physicians</option></select>
-                    <button class="btn-apply" onclick="loadAppointmentReports()">Apply</button>
-                    <div class="view-toggle">
-                        <button class="active" onclick="toggleView('appointments','chart',this)">Chart</button>
-                        <button onclick="toggleView('appointments','list',this)">List</button>
-                    </div>
-                </div>
-                <div class="chart-view" id="appointments-chart-view">
-                    <div class="chart-grid">
-                        <div class="chart-card full-width"><h4>Appointment Volume by Month</h4><canvas id="chart-appt-volume"></canvas></div>
-                        <div class="chart-card"><h4>Appointment Type Breakdown</h4><canvas id="chart-appt-type"></canvas></div>
-                    </div>
-                </div>
-                <div class="list-view" id="appointments-list-view">
-                    <input class="report-search" id="appt-search" placeholder="Search by patient, physician, type…" oninput="filterTable('appt-table',this.value)">
-                    <div class="section-block" style="padding:0">
-                        <table class="data-table" id="appt-table">
-                            <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Physician</th><th>Type</th><th>Status</th><th>City</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── PHYSICIANS ── -->
-            <div id="report-physicians" class="report-panel">
-                <div class="filter-bar">
-                    <label>From</label><input type="date" id="phy-from">
-                    <label>To</label><input type="date" id="phy-to">
-                    <select id="phy-specialty"><option value="">All Specialties</option></select>
-                    <select id="phy-type"><option value="">All Types</option><option value="primary">Primary</option><option value="specialist">Specialist</option></select>
-                    <button class="btn-apply" onclick="loadPhysicianReports()">Apply</button>
-                    <div class="view-toggle">
-                        <button class="active" onclick="toggleView('physicians','chart',this)">Chart</button>
-                        <button onclick="toggleView('physicians','list',this)">List</button>
-                    </div>
-                </div>
-                <div class="chart-view" id="physicians-chart-view">
-                    <div class="chart-grid">
-                        <div class="chart-card full-width"><h4>Appointments per Physician</h4><canvas id="chart-phy-productivity"></canvas></div>
-                        <div class="chart-card full-width"><h4>Revenue by Physician</h4><canvas id="chart-phy-revenue"></canvas></div>
-                    </div>
-                </div>
-                <div class="list-view" id="physicians-list-view">
-                    <input class="report-search" id="phy-search" placeholder="Search by name, specialty…" oninput="filterTable('phy-table',this.value)">
-                    <div class="section-block" style="padding:0">
-                        <table class="data-table" id="phy-table">
-                            <thead><tr><th>Physician</th><th>Specialty</th><th>Type</th><th>Total Appts</th><th>Completed</th><th>Completion %</th><th>Revenue</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── REFERRALS ── -->
-            <div id="report-referrals" class="report-panel">
-                <div class="filter-bar">
-                    <label>From</label><input type="date" id="ref-from">
-                    <label>To</label><input type="date" id="ref-to">
-                    <select id="ref-status"><option value="">All Statuses</option><option>Requested</option><option>Issued</option><option>Accepted</option><option>Rejected</option><option>Scheduled</option><option>Completed</option><option>Expired</option></select>
-                    <button class="btn-apply" onclick="loadReferralReport()">Apply</button>
-                    <div class="view-toggle">
-                        <button class="active" onclick="toggleView('referrals','chart',this)">Chart</button>
-                        <button onclick="toggleView('referrals','list',this)">List</button>
-                    </div>
-                </div>
-                <div class="chart-view" id="referrals-chart-view">
-                    <div class="chart-grid">
-                        <div class="chart-card full-width"><h4>Referral Status Funnel</h4><canvas id="chart-referrals"></canvas></div>
-                    </div>
-                </div>
-                <div class="list-view" id="referrals-list-view">
-                    <input class="report-search" id="ref-search" placeholder="Search by patient, doctor, status…" oninput="filterTable('ref-table',this.value)">
-                    <div class="section-block" style="padding:0">
-                        <table class="data-table" id="ref-table">
-                            <thead><tr><th>Patient</th><th>Referring Doctor</th><th>Specialist</th><th>Status</th><th>Date Issued</th><th>Expiration</th><th>Reason</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-        </div><!-- /analytics -->
 
         <!-- ══════════════ INSURANCE ══════════════ -->
         <div class="page-section hidden" id="sec-insurance">
 
-            <!-- Sub-tabs -->
-            <div class="report-tabs" style="margin-bottom:20px">
-                <button class="report-tab active" onclick="switchInsTab('scorecard',this)">Payer Scorecard</button>
-                <button class="report-tab"        onclick="switchInsTab('manage',this)">Insurance Plans</button>
+            <div class="greeting-card" style="margin-bottom:20px">
+                <div>
+                    <h2 style="font-size:20px">Insurance Analytics</h2>
+                    <p style="color:#888;margin:0">Payer performance scores built from financial, reliability, and access metrics</p>
+                </div>
+                <button class="quick-btn blue" onclick="loadInsurance()" style="padding:10px 20px">Refresh</button>
             </div>
 
-            <!-- ── Scorecard panel ── -->
-            <div id="ins-tab-scorecard" class="ins-panel">
-                <div class="section-label" style="margin-bottom:8px">Select payer</div>
-                <div id="ins-payer-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px"></div>
+            <!-- Tabs: Performance | Manage Plans -->
+            <div class="ins-tabs">
+                <button class="ins-tab active" onclick="switchInsTab('performance',this)">Performance Dashboard</button>
+                <button class="ins-tab"        onclick="switchInsTab('manage',this)">Manage Accepted Plans</button>
+            </div>
 
-                <!-- KPI row -->
-                <div id="ins-kpi-row" class="ins-kpi-row"></div>
+            <!-- ── Tab 1: Performance ── -->
+            <div class="ins-tab-panel active" id="ins-panel-performance">
 
-                <!-- Top 2 charts -->
+                <!-- Payer selector pills -->
+                <div class="ins-payer-pills" id="insPayerPills">
+                    <span style="color:#aaa;font-size:13px">Loading payers…</span>
+                </div>
+
+                <!-- DB-triggered alert banner -->
+                <div id="payerAlertBanner" class="ins-alert-banner" style="display:none">
+                    <div class="alert-icon">⚠</div>
+                    <div class="alert-body">
+                        <div class="alert-title">Billing Threshold Alerts</div>
+                        <ul class="alert-list" id="payerAlertList"></ul>
+                    </div>
+                    <button class="ins-alert-dismiss" onclick="dismissAllAlerts()">Dismiss</button>
+                </div>
+
+                <!-- KPI Row (6 metrics) -->
+                <div class="ins-kpi-row">
+                    <div class="ins-kpi"><div class="ins-kpi-val" id="kpiReimb">—</div><div class="ins-kpi-label">Avg Reimb %</div></div>
+                    <div class="ins-kpi"><div class="ins-kpi-val" id="kpiThreshold">—</div><div class="ins-kpi-label">Contracted Rate</div></div>
+                    <div class="ins-kpi"><div class="ins-kpi-val" id="kpiClaims">—</div><div class="ins-kpi-label">Total Claims</div></div>
+                    <div class="ins-kpi"><div class="ins-kpi-val" id="kpiPatients">—</div><div class="ins-kpi-label">Patients</div></div>
+                    <div class="ins-kpi"><div class="ins-kpi-val" id="kpiPaid">—</div><div class="ins-kpi-label">Paid Claims</div></div>
+                    <div class="ins-kpi"><div class="ins-kpi-val" id="kpiOverdue">—</div><div class="ins-kpi-label">Overdue</div></div>
+                </div>
+
+                <!-- Row 1: Monthly trend (full width) -->
+                <div class="ins-chart-full">
+                    <h4>Monthly Reimbursement Trend vs Contracted Threshold</h4>
+                    <p class="ins-chart-sub">Average reimbursement % per month — red dots = below threshold</p>
+                    <canvas id="insChartLine" height="80"></canvas>
+                </div>
+
+                <!-- Row 2: Scatter + Stacked bar -->
                 <div class="ins-charts-2">
-                    <div class="chart-card">
-                        <h4 class="ins-card-title">Reimbursement vs Threshold</h4>
-                        <p class="ins-card-sub">Monthly avg paid % — dashed line = contracted rate</p>
-                        <div style="position:relative;height:190px"><canvas id="ins-reimb-chart"></canvas></div>
+                    <div class="ins-chart-box">
+                        <h4>Individual Claims — Reimbursement %</h4>
+                        <p class="ins-chart-sub">Each dot = one billing row. Red = below contracted threshold.</p>
+                        <canvas id="insChartScatter" height="180"></canvas>
                     </div>
-                    <div class="chart-card">
-                        <h4 class="ins-card-title">Claim Range</h4>
-                        <p class="ins-card-sub">Each dot = one claim · shaded band = acceptable window</p>
-                        <div style="position:relative;height:190px"><canvas id="ins-scatter-chart"></canvas></div>
+                    <div class="ins-chart-box">
+                        <h4>Claims Reliability by Month</h4>
+                        <p class="ins-chart-sub">Paid vs unpaid claims per period</p>
+                        <canvas id="insChartBar" height="180"></canvas>
                     </div>
                 </div>
 
-                <!-- Middle 3 charts -->
+                <!-- Row 3: Gauge + Score Ring + Breakdown -->
                 <div class="ins-charts-3">
-                    <div class="chart-card">
-                        <h4 class="ins-card-title">Network Participation</h4>
-                        <p class="ins-card-sub">Coverage rate — minimum 70%</p>
-                        <div style="display:flex;flex-direction:column;align-items:center;padding-top:4px">
-                            <canvas id="ins-gauge" width="200" height="110"></canvas>
-                            <div id="ins-gauge-label" style="font-size:26px;font-weight:700;margin-top:2px"></div>
-                            <div id="ins-gauge-status" style="font-size:12px;font-weight:600;margin-top:2px"></div>
+                    <div class="ins-chart-box" style="text-align:center">
+                        <h4>Reimbursement vs Threshold</h4>
+                        <p class="ins-chart-sub">Blue needle = contracted floor</p>
+                        <canvas id="insGauge" width="200" height="110" style="display:block;margin:6px auto 0"></canvas>
+                        <div class="ins-gauge-val" id="insGaugeLabel"></div>
+                    </div>
+                    <div class="ins-chart-box" style="text-align:center">
+                        <h4>Composite Score</h4>
+                        <p class="ins-chart-sub">50% financial · 30% access · 20% reliability</p>
+                        <canvas id="insScoreRing" width="130" height="130" style="display:block;margin:6px auto"></canvas>
+                        <div id="insRingLabel" style="font-size:12px;color:#aaa;margin-top:4px;font-weight:700"></div>
+                    </div>
+                    <div class="ins-chart-box">
+                        <h4>Score Breakdown</h4>
+                        <p class="ins-chart-sub">Sub-score contributions</p>
+                        <div id="insBreakdown" style="margin-top:8px"></div>
+                    </div>
+                </div>
+
+                <!-- Triggered Alerts (computed in JS) -->
+                <div class="section-block" style="margin-bottom:16px">
+                    <div class="section-block-header"><h3>Payer Risk Indicators</h3></div>
+                    <div style="padding:0 24px 16px">
+                        <div id="insTriggeredAlerts">
+                            <div style="color:#aaa;font-size:13px;padding:10px 0">Select a payer above to see alerts.</div>
                         </div>
                     </div>
-                    <div class="chart-card">
-                        <h4 class="ins-card-title">Claims Reliability</h4>
-                        <p class="ins-card-sub">Paid / Pending by month</p>
-                        <div style="position:relative;height:160px"><canvas id="ins-claims-chart"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <h4 class="ins-card-title">Payer Score</h4>
-                        <p class="ins-card-sub">Weighted composite</p>
-                        <div style="display:flex;flex-direction:column;align-items:center;margin-top:4px">
-                            <canvas id="ins-score-ring" width="130" height="130"></canvas>
-                            <div id="ins-score-label" style="font-size:30px;font-weight:700;margin-top:6px"></div>
-                            <div id="ins-score-status" style="font-size:12px;font-weight:600;margin-top:2px"></div>
-                        </div>
-                        <div id="ins-flags" style="margin-top:12px"></div>
-                    </div>
                 </div>
 
-                <!-- Score breakdown -->
-                <div class="chart-card" style="margin-bottom:12px">
-                    <h4 class="ins-card-title">Score Breakdown</h4>
-                    <p class="ins-card-sub">Each component is weighted and feeds the overall score ring above</p>
-                    <div id="ins-breakdown-grid" class="ins-breakdown-grid"></div>
-                </div>
-
-                <!-- Auto alerts -->
-                <div class="chart-card">
-                    <h4 class="ins-card-title">Auto-triggered Alerts</h4>
-                    <p class="ins-card-sub">System flags based on this payer's live data</p>
-                    <div id="ins-triggers" style="margin-top:12px"></div>
-                </div>
-            </div>
-
-            <!-- ── Insurance Plans panel ── -->
-            <div id="ins-tab-manage" class="ins-panel hidden">
+                <!-- All-payers summary table -->
                 <div class="section-block">
-                    <div class="section-block-header"><h3>Accepted Insurance Plans</h3></div>
-                    <div style="overflow-x:auto;margin-top:12px">
-                        <table class="data-table" id="ins-plans-table">
+                    <div class="section-block-header"><h3>All Payers — Performance Summary</h3></div>
+                    <div style="overflow-x:auto">
+                        <table class="data-table">
                             <thead><tr>
-                                <th>Provider</th><th>Policy #</th><th>Coverage %</th><th>Group #</th><th>Phone</th>
+                                <th>Provider</th><th>Patients</th><th>Claims</th>
+                                <th>Contracted</th><th>Actual Reimb</th>
+                                <th>Total Paid</th><th>Outstanding</th>
+                                <th>Completion %</th><th>Score</th>
                             </tr></thead>
-                            <tbody><tr><td colspan="5" class="table-empty">Loading…</td></tr></tbody>
+                            <tbody id="payerDetailBody"><tr><td colspan="9" class="table-empty">Loading…</td></tr></tbody>
                         </table>
                     </div>
                 </div>
-            </div>
+
+            </div><!-- /performance -->
+
+            <!-- ── Tab 2: Manage Plans ── -->
+            <div class="ins-tab-panel" id="ins-panel-manage">
+
+                <!-- Add Insurance Form -->
+                <div class="section-block" style="margin-bottom:24px">
+                    <div class="section-block-header"><h3>Add Insurance Plan to Clinic</h3></div>
+                    <div style="padding:0 24px 24px">
+                        <p style="font-size:12px;color:#888;margin:0 0 16px">Enter the contracted terms agreed with the payer. The system will track actual performance against these thresholds.</p>
+                        <div class="ins-form-row">
+                            <div class="form-field">
+                                <label>Insurance Plan *</label>
+                                <select id="ins_plan"><option value="">Select plan…</option></select>
+                            </div>
+                            <div class="form-field">
+                                <label>Clinic Location *</label>
+                                <select id="ins_clinic"><option value="">Select clinic…</option></select>
+                            </div>
+                            <div class="form-field">
+                                <label>Contracted Min Reimbursement % *</label>
+                                <input type="number" id="ins_threshold" min="0" max="100" step="0.5" placeholder="e.g. 78">
+                            </div>
+                        </div>
+                        <div class="ins-form-row">
+                            <div class="form-field">
+                                <label>Network Participation Target %</label>
+                                <input type="number" id="ins_participation" min="0" max="100" step="0.5" value="75" placeholder="75">
+                            </div>
+                            <div class="form-field">
+                                <label>Effective Date</label>
+                                <input type="date" id="ins_effective">
+                            </div>
+                            <div class="form-field" style="display:flex;align-items:flex-end">
+                                <div style="width:100%">
+                                    <div id="insError" style="color:#e05c5c;font-size:12px;display:none;margin-bottom:8px"></div>
+                                    <button class="add-btn" onclick="submitAddInsurance()">Accept Insurance Plan</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accepted Plans Table -->
+                <div class="section-block">
+                    <div class="section-block-header"><h3>Currently Accepted Plans</h3></div>
+                    <div style="overflow-x:auto">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Status</th><th>Insurance Plan</th><th>Clinic</th>
+                                <th>Contracted Rate</th><th>Min Threshold</th>
+                                <th>Participation Target</th><th>Effective Date</th><th>Action</th>
+                            </tr></thead>
+                            <tbody id="acceptedInsBody"><tr><td colspan="8" class="table-empty">Loading…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div><!-- /manage -->
 
         </div><!-- /insurance -->
 
@@ -641,6 +619,79 @@
 
     </div><!-- /main-content -->
 </div><!-- /dashboard-wrap -->
+
+<!-- ── Edit Physician Modal ── -->
+<div class="edit-modal-overlay hidden" id="editPhysicianModal">
+    <div class="edit-modal-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div class="edit-modal-title">Edit Physician</div>
+            <button onclick="closeEditPhysicianModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="form-field"><label>First Name *</label><input type="text" id="ep_first"></div>
+            <div class="form-field"><label>Last Name *</label><input type="text" id="ep_last"></div>
+            <div class="form-field"><label>Phone</label><input type="tel" id="ep_phone"></div>
+            <div class="form-field"><label>Specialty</label><input type="text" id="ep_specialty"></div>
+            <div class="form-field">
+                <label>Physician Type</label>
+                <select id="ep_type"><option value="primary">Primary</option><option value="specialist">Specialist</option></select>
+            </div>
+            <div class="form-field">
+                <label>Department</label>
+                <select id="ep_dept"><option value="">Loading…</option></select>
+            </div>
+            <div class="form-field"><label>Hire Date</label><input type="date" id="ep_hire"></div>
+            <div class="form-field full">
+                <div id="epError" style="color:#e05c5c;font-size:13px;display:none;margin-bottom:8px"></div>
+                <div style="display:flex;gap:10px">
+                    <button class="add-btn" onclick="submitEditPhysician()">Save Changes</button>
+                    <button onclick="closeEditPhysicianModal()" style="padding:10px 20px;background:none;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Edit Staff Modal ── -->
+<div class="edit-modal-overlay hidden" id="editStaffModal">
+    <div class="edit-modal-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div class="edit-modal-title">Edit Staff Member</div>
+            <button onclick="closeEditStaffModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="form-field"><label>First Name *</label><input type="text" id="es_first"></div>
+            <div class="form-field"><label>Last Name *</label><input type="text" id="es_last"></div>
+            <div class="form-field"><label>Phone</label><input type="tel" id="es_phone"></div>
+            <div class="form-field">
+                <label>Role</label>
+                <select id="es_role">
+                    <option value="Receptionist">Receptionist</option>
+                    <option value="Nurse">Nurse</option>
+                    <option value="Medical Assistant">Medical Assistant</option>
+                    <option value="Billing Specialist">Billing Specialist</option>
+                    <option value="Lab Technician">Lab Technician</option>
+                    <option value="Office Manager">Office Manager</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Department</label>
+                <select id="es_dept"><option value="">Loading…</option></select>
+            </div>
+            <div class="form-field"><label>Hire Date</label><input type="date" id="es_hire"></div>
+            <div class="form-field"><label>Shift Start</label><input type="time" id="es_shift_start"></div>
+            <div class="form-field"><label>Shift End</label><input type="time" id="es_shift_end"></div>
+            <div class="form-field full">
+                <div id="esError" style="color:#e05c5c;font-size:13px;display:none;margin-bottom:8px"></div>
+                <div style="display:flex;gap:10px">
+                    <button class="add-btn" onclick="submitEditStaff()">Save Changes</button>
+                    <button onclick="closeEditStaffModal()" style="padding:10px 20px;background:none;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="/client/scripts/dark-mode.js"></script>
 <script src="/client/scripts/portals/admin_dashboard.js"></script>

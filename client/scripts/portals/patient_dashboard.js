@@ -1431,6 +1431,84 @@ function applyBillingFilters() {
     }
 }
 
+/* ── Billing Statement Report ── */
+async function openBillingStatement() {
+    const modal = document.getElementById("billingStatementModal");
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+
+    document.getElementById("bsBody").innerHTML = `<tr><td colspan="8" class="table-empty">Loading…</td></tr>`;
+    document.getElementById("bsSummary").innerHTML = "";
+    document.getElementById("bsPatientName").textContent = "";
+
+    try {
+        const r = await fetch(`/api/reports/billing-statement?patient_id=${_patientId}&user_id=${user.id}`);
+        if (!r.ok) throw new Error("fetch failed");
+        const data = await r.json();
+
+        // Patient name in header
+        document.getElementById("bsPatientName").textContent = `Statement for ${data.patient_name}`;
+
+        // Summary cards
+        const s = data.summary || {};
+        const fmt$ = v => `$${parseFloat(v || 0).toFixed(2)}`;
+        document.getElementById("bsSummary").innerHTML = `
+            <div style="background:#f5f7ff;border-radius:10px;padding:12px 16px;text-align:center">
+                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Billed</div>
+                <div style="font-size:20px;font-weight:700;color:#1f2a6d">${fmt$(s.totalCharged)}</div>
+            </div>
+            <div style="background:#eff6ff;border-radius:10px;padding:12px 16px;text-align:center">
+                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Insurance Paid</div>
+                <div style="font-size:20px;font-weight:700;color:#3b82f6">${fmt$(s.totalInsurance)}</div>
+            </div>
+            <div style="background:#fefce8;border-radius:10px;padding:12px 16px;text-align:center">
+                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Your Total Owed</div>
+                <div style="font-size:20px;font-weight:700;color:#d97706">${fmt$(s.totalOwed)}</div>
+            </div>
+            <div style="background:${s.unpaidCount > 0 ? "#fef2f2" : "#f0fdf4"};border-radius:10px;padding:12px 16px;text-align:center">
+                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Unpaid Bills</div>
+                <div style="font-size:20px;font-weight:700;color:${s.unpaidCount > 0 ? "#dc2626" : "#10b981"}">${s.unpaidCount || 0}</div>
+            </div>`;
+
+        // Table rows
+        const bills = data.bills || [];
+        const today = new Date(); today.setHours(0,0,0,0);
+        document.getElementById("bsBody").innerHTML = bills.length
+            ? bills.map(b => {
+                const isPaid    = (b.payment_status || "").toLowerCase() === "paid";
+                const isOverdue = !isPaid && b.due_date && new Date(b.due_date) < today;
+                const statusColor = isPaid ? "#10b981" : isOverdue ? "#e05c5c" : "#f59e0b";
+                const statusLabel = isPaid ? "Paid" : isOverdue ? "Overdue" : "Unpaid";
+                return `<tr>
+                    <td class="primary">${fmt(b.appointment_date)}</td>
+                    <td>Dr. ${(b.physician_name || "").split(" ").pop()}<br><span style="font-size:10px;color:#aaa">${b.specialty || ""}</span></td>
+                    <td>${b.appointment_type || "—"}</td>
+                    <td>$${parseFloat(b.total_amount || 0).toFixed(2)}</td>
+                    <td style="color:#3b82f6">
+                        $${parseFloat(b.insurance_paid || 0).toFixed(2)}
+                        ${b.provider_name ? `<br><span style="font-size:10px;color:#aaa">${b.provider_name} (${b.coverage_percentage}%)</span>` : ""}
+                    </td>
+                    <td style="font-weight:600;color:${statusColor}">$${parseFloat(b.patient_owed || 0).toFixed(2)}</td>
+                    <td><span style="background:${statusColor}22;color:${statusColor};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${statusLabel}</span></td>
+                    <td style="color:${isOverdue ? "#e05c5c" : "inherit"}">${fmt(b.due_date)}</td>
+                </tr>`;
+            }).join("")
+            : `<tr><td colspan="8" class="table-empty">No billing records found.</td></tr>`;
+
+    } catch(e) {
+        document.getElementById("bsBody").innerHTML = `<tr><td colspan="8" class="table-empty" style="color:#e05c5c">Could not load billing statement. Please try again.</td></tr>`;
+    }
+}
+
+function closeBillingStatement() {
+    document.getElementById("billingStatementModal").classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
+function closeBillingStatementOutside(e) {
+    if (e.target === document.getElementById("billingStatementModal")) closeBillingStatement();
+}
+
 /* ── Booking Modal ── */
 let _bookingOfficeId = null;
 

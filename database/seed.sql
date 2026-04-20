@@ -4,25 +4,10 @@
 --  number, special character — all pre-hashed with bcrypt.
 --
 --  Demo credentials:
---    Super Admin → username: admin@ath.admin.com          | password: Admin@123
---    Clinic Admin→ username: lastname@ath.admin.com       | password: Admin@123
---    Physicians  → username: lastname@ath.doctor.com      | password: Doctor@123
---    Staff       → username: lastname@ath.staff.com       | password: Staff@123
---    Patients    → username: their email                  | password: Patient@123
---
---  Clinic Admins (one per clinic):
---    henderson@ath.admin.com  → Dallas (clinic 1)
---    patel@ath.admin.com      → Houston (clinic 2)
---    morrison@ath.admin.com   → Austin (clinic 3)
---    fitzgerald@ath.admin.com → New York (clinic 4)
---    oconnor@ath.admin.com    → Chicago (clinic 5)
---    ramirez@ath.admin.com    → Los Angeles (clinic 6)
---    blackwood@ath.admin.com  → Phoenix (clinic 7)
---    chen@ath.admin.com       → Seattle (clinic 8)
+--    Patients   → email: their signup email              | password: Patient@123
+--    Physicians → email: lastnameNNN@audittrailhealth.com | password: Doctor@123
+--    Staff      → email: lastnameNNN@audittrailhealth.com | password: Staff@123
 -- ============================================================
-
--- Add clinic_id to users table (NULL = global super admin)
-ALTER TABLE users ADD COLUMN IF NOT EXISTS clinic_id INT NULL DEFAULT NULL;
 
 -- ─── Reference Tables ───────────────────────────────────────
 
@@ -44,11 +29,18 @@ INSERT IGNORE INTO referral_status (referral_status_id, referral_status_name) VA
 -- ─── Insurance (5 providers) ────────────────────────────────
 
 INSERT IGNORE INTO insurance (insurance_id, provider_name, policy_number, coverage_percentage, group_number, phone_number) VALUES
-  (1, 'BlueCross BlueShield', 'BCB-100001', 80.00, 'GRP-001', '(800) 555-2583'),
-  (2, 'Aetna',                'AET-200002', 75.00, 'GRP-002', '(800) 555-2386'),
-  (3, 'UnitedHealth',         'UHC-300003', 85.00, 'GRP-003', '(800) 555-4822'),
-  (4, 'Cigna',                'CIG-400004', 78.00, 'GRP-004', '(800) 555-2446'),
-  (5, 'Humana',               'HUM-500005', 82.00, 'GRP-005', '(800) 555-4862');
+  (1,  'BlueCross BlueShield', 'BCB-100001', 80.00, 'GRP-001', '(800) 555-2583'),
+  (2,  'Aetna',                'AET-200002', 75.00, 'GRP-002', '(800) 555-2386'),
+  (3,  'UnitedHealth',         'UHC-300003', 85.00, 'GRP-003', '(800) 555-4822'),
+  (4,  'Cigna',                'CIG-400004', 78.00, 'GRP-004', '(800) 555-2446'),
+  (5,  'Humana',               'HUM-500005', 82.00, 'GRP-005', '(800) 555-4862'),
+  (6,  'Kaiser Permanente',    'KAI-600006', 88.00, 'GRP-006', '(800) 555-5774'),
+  (7,  'Anthem Blue Cross',    'ANT-700007', 79.00, 'GRP-007', '(800) 555-8742'),
+  (8,  'Molina Healthcare',    'MOL-800008', 72.00, 'GRP-008', '(800) 555-6654'),
+  (9,  'WellCare',             'WLC-900009', 70.00, 'GRP-009', '(800) 555-9355'),
+  (10, 'Medicare',             'MED-100010', 80.00, 'GRP-010', '(800) 555-1800'),
+  (11, 'Medicaid',             'MCD-110011', 90.00, 'GRP-011', '(800) 555-7200'),
+  (12, 'Oscar Health',         'OSC-120012', 77.00, 'GRP-012', '(855) 555-6727');
 
 -- ─── Clinics (8 locations across the US) ────────────────────
 
@@ -120,43 +112,43 @@ INSERT IGNORE INTO department (department_id, department_name, description, clin
 
 INSERT IGNORE INTO physician (physician_id, first_name, last_name, email, phone_number, specialty, department_id, hire_date, physician_type) VALUES
   -- Dallas (office 1)
-  (1,  'Emily',      'Johnson',   'johnson@ath.doctor.com',   '(214) 555-0301', 'Internal Medicine', 1,  '2019-01-10', 'primary'),
-  (2,  'Maria',      'Garcia',    'garcia@ath.doctor.com',    '(214) 555-0302', 'Orthopedics',       2,  '2018-03-15', 'specialist'),
-  (7,  'Michael',    'Chen',      'chen@ath.doctor.com',      '(214) 555-0303', 'Family Medicine',   7,  '2020-06-01', 'primary'),
-  (8,  'Sarah',      'Kim',       'kim@ath.doctor.com',       '(214) 555-0304', 'Internal Medicine', 1,  '2017-09-15', 'primary'),
+  (1,  'Emily',      'Johnson',   'johnson101@audittrailhealth.com',   '(214) 555-0301', 'Internal Medicine', 1,  '2019-01-10', 'primary'),
+  (2,  'Maria',      'Garcia',    'garcia102@audittrailhealth.com',    '(214) 555-0302', 'Orthopedics',       2,  '2018-03-15', 'specialist'),
+  (7,  'Michael',    'Chen',      'chen107@audittrailhealth.com',      '(214) 555-0303', 'Family Medicine',   7,  '2020-06-01', 'primary'),
+  (8,  'Sarah',      'Kim',       'kim108@audittrailhealth.com',       '(214) 555-0304', 'Internal Medicine', 1,  '2017-09-15', 'primary'),
   -- Houston (office 2)
-  (3,  'Patricia',   'Moore',     'moore@ath.doctor.com',     '(713) 555-0301', 'Family Medicine',   3,  '2015-04-01', 'primary'),
-  (4,  'Angela',     'White',     'white@ath.doctor.com',     '(713) 555-0302', 'Cardiology',        4,  '2016-09-01', 'specialist'),
-  (9,  'James',      'Martinez',  'martinez@ath.doctor.com',  '(713) 555-0303', 'Family Medicine',   3,  '2021-02-15', 'primary'),
-  (10, 'Karen',      'Thompson',  'thompson@ath.doctor.com',  '(713) 555-0304', 'Internal Medicine', 9,  '2018-11-01', 'primary'),
+  (3,  'Patricia',   'Moore',     'moore103@audittrailhealth.com',     '(713) 555-0301', 'Family Medicine',   3,  '2015-04-01', 'primary'),
+  (4,  'Angela',     'White',     'white104@audittrailhealth.com',     '(713) 555-0302', 'Cardiology',        4,  '2016-09-01', 'specialist'),
+  (9,  'James',      'Martinez',  'martinez109@audittrailhealth.com',  '(713) 555-0303', 'Family Medicine',   3,  '2021-02-15', 'primary'),
+  (10, 'Karen',      'Thompson',  'thompson110@audittrailhealth.com',  '(713) 555-0304', 'Internal Medicine', 9,  '2018-11-01', 'primary'),
   -- Austin (office 3)
-  (5,  'Robert',     'Davis',     'davis@ath.doctor.com',     '(512) 555-0301', 'General Practice',  5,  '2014-04-01', 'primary'),
-  (6,  'Rachel',     'Foster',    'foster@ath.doctor.com',    '(512) 555-0302', 'Neurology',         6,  '2019-06-15', 'specialist'),
-  (11, 'David',      'Lee',       'lee@ath.doctor.com',       '(512) 555-0303', 'Geriatrics',        11, '2016-03-01', 'primary'),
-  (12, 'Susan',      'Nguyen',    'nguyen@ath.doctor.com',    '(512) 555-0304', 'General Practice',  5,  '2020-08-01', 'primary'),
+  (5,  'Robert',     'Davis',     'davis105@audittrailhealth.com',     '(512) 555-0301', 'General Practice',  5,  '2014-04-01', 'primary'),
+  (6,  'Rachel',     'Foster',    'foster106@audittrailhealth.com',    '(512) 555-0302', 'Neurology',         6,  '2019-06-15', 'specialist'),
+  (11, 'David',      'Lee',       'lee111@audittrailhealth.com',       '(512) 555-0303', 'Geriatrics',        11, '2016-03-01', 'primary'),
+  (12, 'Susan',      'Nguyen',    'nguyen112@audittrailhealth.com',    '(512) 555-0304', 'General Practice',  5,  '2020-08-01', 'primary'),
   -- San Antonio (office 4)
-  (13, 'Carlos',     'Rivera',    'rivera@ath.doctor.com',    '(210) 555-0301', 'Family Medicine',   13, '2017-05-01', 'primary'),
-  (14, 'Amanda',     'Scott',     'scott@ath.doctor.com',     '(210) 555-0302', 'Internal Medicine', 14, '2019-03-15', 'primary'),
-  (15, 'Thomas',     'Brown',     'brown@ath.doctor.com',     '(210) 555-0303', 'Oncology',          15, '2015-07-01', 'specialist'),
-  (16, 'Nina',       'Patel',     'patel@ath.doctor.com',     '(210) 555-0304', 'Rheumatology',      16, '2018-01-10', 'specialist'),
+  (13, 'Carlos',     'Rivera',    'rivera113@audittrailhealth.com',    '(210) 555-0301', 'Family Medicine',   13, '2017-05-01', 'primary'),
+  (14, 'Amanda',     'Scott',     'scott114@audittrailhealth.com',     '(210) 555-0302', 'Internal Medicine', 14, '2019-03-15', 'primary'),
+  (15, 'Thomas',     'Brown',     'brown115@audittrailhealth.com',     '(210) 555-0303', 'Oncology',          15, '2015-07-01', 'specialist'),
+  (16, 'Nina',       'Patel',     'patel116@audittrailhealth.com',     '(210) 555-0304', 'Rheumatology',      16, '2018-01-10', 'specialist'),
   -- Fort Worth (office 5)
-  (17, 'Jennifer',   'Hall',      'hall@ath.doctor.com',      '(817) 555-0301', 'Family Medicine',   17, '2016-10-01', 'primary'),
-  (18, 'Kevin',      'Wright',    'wright@ath.doctor.com',    '(817) 555-0302', 'General Practice',  18, '2020-04-01', 'primary'),
-  (19, 'Robert',     'Chan',      'chan@ath.doctor.com',      '(817) 555-0303', 'Cardiology',        19, '2017-08-15', 'specialist'),
-  (20, 'Lisa',       'Monroe',    'monroe@ath.doctor.com',    '(817) 555-0304', 'Pulmonology',       20, '2019-11-01', 'specialist'),
+  (17, 'Jennifer',   'Hall',      'hall117@audittrailhealth.com',      '(817) 555-0301', 'Family Medicine',   17, '2016-10-01', 'primary'),
+  (18, 'Kevin',      'Wright',    'wright118@audittrailhealth.com',    '(817) 555-0302', 'General Practice',  18, '2020-04-01', 'primary'),
+  (19, 'Robert',     'Chan',      'chan119@audittrailhealth.com',      '(817) 555-0303', 'Cardiology',        19, '2017-08-15', 'specialist'),
+  (20, 'Lisa',       'Monroe',    'monroe120@audittrailhealth.com',    '(817) 555-0304', 'Pulmonology',       20, '2019-11-01', 'specialist'),
   -- Plano (office 6)
-  (21, 'Brian',      'Wilson',    'wilson@ath.doctor.com',    '(972) 555-0301', 'Internal Medicine', 21, '2018-06-01', 'primary'),
-  (22, 'Michelle',   'Clark',     'clark@ath.doctor.com',     '(972) 555-0302', 'Family Medicine',   22, '2021-01-15', 'primary'),
-  (23, 'Steven',     'Lewis',     'lewis@ath.doctor.com',     '(972) 555-0303', 'Orthopedics',       23, '2016-05-01', 'specialist'),
-  (24, 'Priya',      'Sharma',    'sharma@ath.doctor.com',    '(972) 555-0304', 'Urology',           24, '2020-09-01', 'specialist'),
+  (21, 'Brian',      'Wilson',    'wilson121@audittrailhealth.com',    '(972) 555-0301', 'Internal Medicine', 21, '2018-06-01', 'primary'),
+  (22, 'Michelle',   'Clark',     'clark122@audittrailhealth.com',     '(972) 555-0302', 'Family Medicine',   22, '2021-01-15', 'primary'),
+  (23, 'Steven',     'Lewis',     'lewis123@audittrailhealth.com',     '(972) 555-0303', 'Orthopedics',       23, '2016-05-01', 'specialist'),
+  (24, 'Priya',      'Sharma',    'sharma124@audittrailhealth.com',    '(972) 555-0304', 'Urology',           24, '2020-09-01', 'specialist'),
   -- El Paso (office 7)
-  (25, 'Diana',      'Torres',    'torres@ath.doctor.com',    '(915) 555-0301', 'General Practice',  25, '2015-02-01', 'primary'),
-  (26, 'Richard',    'Evans',     'evans@ath.doctor.com',     '(915) 555-0302', 'Family Medicine',   26, '2019-04-15', 'primary'),
-  (27, 'Sandra',     'Collins',   'collins@ath.doctor.com',   '(915) 555-0303', 'Neurology',         27, '2017-10-01', 'specialist'),
+  (25, 'Diana',      'Torres',    'torres125@audittrailhealth.com',    '(915) 555-0301', 'General Practice',  25, '2015-02-01', 'primary'),
+  (26, 'Richard',    'Evans',     'evans126@audittrailhealth.com',     '(915) 555-0302', 'Family Medicine',   26, '2019-04-15', 'primary'),
+  (27, 'Sandra',     'Collins',   'collins127@audittrailhealth.com',   '(915) 555-0303', 'Neurology',         27, '2017-10-01', 'specialist'),
   -- Corpus Christi (office 8)
-  (28, 'Christopher','Hill',      'hill@ath.doctor.com',      '(361) 555-0301', 'Family Medicine',   28, '2018-08-01', 'primary'),
-  (29, 'Patricia',   'Baker',     'baker@ath.doctor.com',     '(361) 555-0302', 'Internal Medicine', 29, '2020-03-01', 'primary'),
-  (30, 'Joshua',     'Nelson',    'nelson@ath.doctor.com',    '(361) 555-0303', 'Pulmonology',       30, '2016-12-01', 'specialist');
+  (28, 'Christopher','Hill',      'hill128@audittrailhealth.com',      '(361) 555-0301', 'Family Medicine',   28, '2018-08-01', 'primary'),
+  (29, 'Patricia',   'Baker',     'baker129@audittrailhealth.com',     '(361) 555-0302', 'Internal Medicine', 29, '2020-03-01', 'primary'),
+  (30, 'Joshua',     'Nelson',    'nelson130@audittrailhealth.com',    '(361) 555-0303', 'Pulmonology',       30, '2016-12-01', 'specialist');
 
 -- ─── Work Schedules ──────────────────────────────────────────
 
@@ -242,112 +234,70 @@ INSERT IGNORE INTO work_schedule (schedule_id, physician_id, office_id, day_of_w
 -- ─── Staff (8 members — one per city) ───────────────────────
 
 INSERT IGNORE INTO staff (staff_id, first_name, last_name, date_of_birth, department_id, role, hire_date, phone_number, email, shift_start, shift_end) VALUES
-  (1, 'Nicole',   'Adams',   '1990-04-12', 1,  'Medical Assistant',  '2021-01-10', '(214) 555-0401', 'adams@ath.staff.com',    '08:00:00', '16:00:00'),
-  (2, 'Jordan',   'Brooks',  '1988-09-23', 4,  'Billing Specialist', '2019-06-15', '(713) 555-0401', 'brooks@ath.staff.com',   '09:00:00', '17:00:00'),
-  (3, 'Morgan',   'Taylor',  '1993-02-17', 3,  'Receptionist',       '2020-03-01', '(512) 555-0401', 'taylor@ath.staff.com',   '08:00:00', '16:00:00'),
-  (4, 'Maria',    'Gomez',   '1991-07-22', 13, 'Receptionist',       '2021-05-10', '(210) 555-0401', 'gomez@ath.staff.com',    '08:00:00', '16:00:00'),
-  (5, 'David',    'Kim',     '1989-11-04', 17, 'Medical Assistant',  '2022-01-15', '(817) 555-0401', 'kim@ath.staff.com',      '08:00:00', '16:00:00'),
-  (6, 'Rachel',   'Lin',     '1994-03-30', 21, 'Billing Specialist', '2020-09-01', '(972) 555-0401', 'lin@ath.staff.com',      '09:00:00', '17:00:00'),
-  (7, 'Carlos',   'Mendez',  '1987-06-18', 25, 'Receptionist',       '2019-11-01', '(915) 555-0401', 'mendez@ath.staff.com',   '08:00:00', '16:00:00'),
-  (8, 'Brittany', 'Ross',    '1995-01-09', 28, 'Medical Assistant',  '2023-03-01', '(361) 555-0401', 'ross@ath.staff.com',     '08:00:00', '16:00:00');
-
--- ─── Admin table ────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS admin (
-  admin_id      INT AUTO_INCREMENT PRIMARY KEY,
-  first_name    VARCHAR(50)  NOT NULL,
-  last_name     VARCHAR(50)  NOT NULL,
-  date_of_birth DATE         NOT NULL,
-  phone_number  VARCHAR(20)  NOT NULL,
-  email         VARCHAR(100) NOT NULL UNIQUE,
-  city          VARCHAR(50)  NOT NULL,
-  state         CHAR(2)      NOT NULL,
-  start_date    DATE         NOT NULL,
-  clinic_id     INT          NULL,
-  CONSTRAINT fk_admin_clinic FOREIGN KEY (clinic_id) REFERENCES clinic(clinic_id)
-);
-
-INSERT IGNORE INTO admin (admin_id, first_name, last_name, date_of_birth, phone_number, email, city, state, start_date, clinic_id) VALUES
-  (1, 'System',  'Administrator', '1980-01-01', '(800) 555-0001', 'admin@ath.admin.com',       'Dallas',      'TX', '2018-01-01', NULL),
-  (2, 'James',   'Henderson',     '1979-03-15', '(214) 555-0901', 'henderson@ath.admin.com',   'Dallas',      'TX', '2019-02-01', 1),
-  (3, 'Priya',   'Patel',         '1983-07-22', '(713) 555-0902', 'patel@ath.admin.com',       'Houston',     'TX', '2019-04-15', 2),
-  (4, 'Claire',  'Morrison',      '1985-11-08', '(512) 555-0903', 'morrison@ath.admin.com',    'Austin',      'TX', '2020-01-10', 3),
-  (5, 'Sean',    'Fitzgerald',    '1977-05-30', '(212) 555-0904', 'fitzgerald@ath.admin.com',  'New York',    'NY', '2020-06-01', 4),
-  (6, 'Erin',    'OConnor',       '1982-09-14', '(312) 555-0905', 'oconnor@ath.admin.com',     'Chicago',     'IL', '2020-08-20', 5),
-  (7, 'Diego',   'Ramirez',       '1981-02-27', '(310) 555-0906', 'ramirez@ath.admin.com',     'Los Angeles', 'CA', '2021-03-01', 6),
-  (8, 'Sandra',  'Blackwood',     '1984-06-19', '(602) 555-0907', 'blackwood@ath.admin.com',   'Phoenix',     'AZ', '2021-05-15', 7),
-  (9, 'Michael', 'Chen',          '1980-12-03', '(206) 555-0908', 'chen@ath.admin.com',        'Seattle',     'WA', '2021-09-01', 8);
+  (1, 'Nicole',   'Adams',   '1990-04-12', 1,  'Medical Assistant',  '2021-01-10', '(214) 555-0401', 'adams201@audittrailhealth.com',    '08:00:00', '16:00:00'),
+  (2, 'Jordan',   'Brooks',  '1988-09-23', 4,  'Billing Specialist', '2019-06-15', '(713) 555-0401', 'brooks202@audittrailhealth.com',   '09:00:00', '17:00:00'),
+  (3, 'Morgan',   'Taylor',  '1993-02-17', 3,  'Receptionist',       '2020-03-01', '(512) 555-0401', 'taylor203@audittrailhealth.com',   '08:00:00', '16:00:00'),
+  (4, 'Maria',    'Gomez',   '1991-07-22', 13, 'Receptionist',       '2021-05-10', '(210) 555-0401', 'gomez204@audittrailhealth.com',    '08:00:00', '16:00:00'),
+  (5, 'David',    'Kim',     '1989-11-04', 17, 'Medical Assistant',  '2022-01-15', '(817) 555-0401', 'kim205@audittrailhealth.com',      '08:00:00', '16:00:00'),
+  (6, 'Rachel',   'Lin',     '1994-03-30', 21, 'Billing Specialist', '2020-09-01', '(972) 555-0401', 'lin206@audittrailhealth.com',      '09:00:00', '17:00:00'),
+  (7, 'Carlos',   'Mendez',  '1987-06-18', 25, 'Receptionist',       '2019-11-01', '(915) 555-0401', 'mendez207@audittrailhealth.com',   '08:00:00', '16:00:00'),
+  (8, 'Brittany', 'Ross',    '1995-01-09', 28, 'Medical Assistant',  '2023-03-01', '(361) 555-0401', 'ross208@audittrailhealth.com',     '08:00:00', '16:00:00');
 
 -- ─── Users (login accounts) ─────────────────────────────────
 -- Passwords bcrypt-hashed (10 rounds)
 -- Patient@123  → $2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy
--- Doctor@123   → $2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS
--- Staff@123    → $2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.
--- Admin@123    → $2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu
+-- Doctor@123   → $2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6
+-- Staff@123    → $2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6
 
-INSERT IGNORE INTO users (user_id, username, password_hash, role, physician_id, staff_id, clinic_id) VALUES
+INSERT IGNORE INTO users (user_id, email, password_hash, role, physician_id, staff_id) VALUES
   -- Patients (1–5)
-  (1,  'alex.smith@email.com',    '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL, NULL),
-  (2,  'taylor.jones@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL, NULL),
-  (3,  'morgan.w@email.com',      '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL, NULL),
-  (4,  'jordan.brown@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL, NULL),
-  (5,  'casey.davis@email.com',   '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL, NULL),
-  -- Physicians (lastname@ath.doctor.com / Doctor@123)
-  (6,  'johnson@ath.doctor.com',   '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 1,  NULL, NULL),
-  (7,  'garcia@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 2,  NULL, NULL),
-  (8,  'moore@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 3,  NULL, NULL),
-  (9,  'white@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 4,  NULL, NULL),
-  (10, 'davis@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 5,  NULL, NULL),
-  (11, 'foster@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 6,  NULL, NULL),
-  (15, 'chen@ath.doctor.com',      '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 7,  NULL, NULL),
-  (16, 'kim@ath.doctor.com',       '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 8,  NULL, NULL),
-  (17, 'martinez@ath.doctor.com',  '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 9,  NULL, NULL),
-  (18, 'thompson@ath.doctor.com',  '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 10, NULL, NULL),
-  (19, 'lee@ath.doctor.com',       '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 11, NULL, NULL),
-  (20, 'snguyen@ath.doctor.com',   '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 12, NULL, NULL),
-  (21, 'rivera@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 13, NULL, NULL),
-  (22, 'scott@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 14, NULL, NULL),
-  (23, 'tbrown@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 15, NULL, NULL),
-  (24, 'npatel@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 16, NULL, NULL),
-  (25, 'hall@ath.doctor.com',      '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 17, NULL, NULL),
-  (26, 'wright@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 18, NULL, NULL),
-  (27, 'chan@ath.doctor.com',      '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 19, NULL, NULL),
-  (28, 'monroe@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 20, NULL, NULL),
-  (29, 'wilson@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 21, NULL, NULL),
-  (30, 'clark@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 22, NULL, NULL),
-  (31, 'lewis@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 23, NULL, NULL),
-  (32, 'sharma@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 24, NULL, NULL),
-  (33, 'torres@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 25, NULL, NULL),
-  (34, 'evans@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 26, NULL, NULL),
-  (35, 'scollins@ath.doctor.com',  '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 27, NULL, NULL),
-  (36, 'chill@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 28, NULL, NULL),
-  (37, 'baker@ath.doctor.com',     '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 29, NULL, NULL),
-  (38, 'nelson@ath.doctor.com',    '$2b$10$FflEttnDtE9rlMCiWdmg.eAF26SD2Aq3xcMggSF39wkessRXtb8bS', 'physician', 30, NULL, NULL),
-  -- Staff (lastname@ath.staff.com / Staff@123)
-  (12, 'adams@ath.staff.com',   '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 1, NULL),
-  (13, 'brooks@ath.staff.com',  '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 2, NULL),
-  (14, 'taylor@ath.staff.com',  '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 3, NULL),
-  (39, 'gomez@ath.staff.com',   '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 4, NULL),
-  (40, 'dkim@ath.staff.com',    '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 5, NULL),
-  (41, 'lin@ath.staff.com',     '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 6, NULL),
-  (42, 'mendez@ath.staff.com',  '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 7, NULL),
-  (43, 'bross@ath.staff.com',   '$2b$10$pfu1W3brrKj0eR2hRfzgyOKpozU8R7mWsIF5ASoQwKWTBERyqKrh.', 'staff', NULL, 8, NULL);
-
--- ─── Admin Users ─────────────────────────────────────────────
--- Admin@123 → $2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu
-
-INSERT IGNORE INTO users (username, password_hash, role, physician_id, staff_id, clinic_id) VALUES
-  -- Global super admin (clinic_id = NULL = access to all)
-  ('admin@ath.admin.com',       '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, NULL),
-  -- Clinic admins (one per clinic)
-  ('henderson@ath.admin.com',   '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 1),
-  ('patel@ath.admin.com',       '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 2),
-  ('morrison@ath.admin.com',    '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 3),
-  ('fitzgerald@ath.admin.com',  '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 4),
-  ('oconnor@ath.admin.com',     '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 5),
-  ('ramirez@ath.admin.com',     '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 6),
-  ('blackwood@ath.admin.com',   '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 7),
-  ('chen@ath.admin.com',        '$2b$10$N5BtuSlpfCMLZNLbRruyQu5A9gxBcfKIdduQpnu5v1jp28MrwfXQu', 'admin', NULL, NULL, 8);
+  (1,  'alex.smith@email.com',    '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
+  (2,  'taylor.jones@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
+  (3,  'morgan.w@email.com',      '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
+  (4,  'jordan.brown@email.com',  '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
+  (5,  'casey.davis@email.com',   '$2b$10$2BNnadEL3Jfi23zImdwLM.uDE.3W3.51V2Xa2FVIUfJIW40dhz2vy', 'patient',   NULL, NULL),
+  -- Physicians — original 6
+  (6,  'johnson101@audittrailhealth.com',   '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 1,  NULL),
+  (7,  'garcia102@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 2,  NULL),
+  (8,  'moore103@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 3,  NULL),
+  (9,  'white104@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 4,  NULL),
+  (10, 'davis105@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 5,  NULL),
+  (11, 'foster106@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 6,  NULL),
+  -- Physicians — new
+  (15, 'chen107@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 7,  NULL),
+  (16, 'kim108@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 8,  NULL),
+  (17, 'martinez109@audittrailhealth.com',  '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 9,  NULL),
+  (18, 'thompson110@audittrailhealth.com',  '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 10, NULL),
+  (19, 'lee111@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 11, NULL),
+  (20, 'nguyen112@audittrailhealth.com',   '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 12, NULL),
+  (21, 'rivera113@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 13, NULL),
+  (22, 'scott114@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 14, NULL),
+  (23, 'brown115@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 15, NULL),
+  (24, 'patel116@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 16, NULL),
+  (25, 'hall117@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 17, NULL),
+  (26, 'wright118@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 18, NULL),
+  (27, 'chan119@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 19, NULL),
+  (28, 'monroe120@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 20, NULL),
+  (29, 'wilson121@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 21, NULL),
+  (30, 'clark122@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 22, NULL),
+  (31, 'lewis123@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 23, NULL),
+  (32, 'sharma124@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 24, NULL),
+  (33, 'torres125@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 25, NULL),
+  (34, 'evans126@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 26, NULL),
+  (35, 'collins127@audittrailhealth.com',  '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 27, NULL),
+  (36, 'hill128@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 28, NULL),
+  (37, 'baker129@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 29, NULL),
+  (38, 'nelson130@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 30, NULL),
+  -- Staff — original 3
+  (12, 'adams201@audittrailhealth.com',  '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 1),
+  (13, 'brooks202@audittrailhealth.com', '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 2),
+  (14, 'taylor203@audittrailhealth.com', '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 3),
+  -- Staff — new
+  (39, 'gomez204@audittrailhealth.com',  '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 4),
+  (40, 'kim205@audittrailhealth.com',   '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 5),
+  (41, 'lin206@audittrailhealth.com',    '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 6),
+  (42, 'mendez207@audittrailhealth.com', '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 7),
+  (43, 'ross208@audittrailhealth.com',  '$2b$10$1lOpxTZx1crCArWmk/jP6OPz40BsG3qPJeTQQP5WF6y0PveuhvnA6', 'staff',     NULL, 8);
 
 -- ─── Patients (5 — linked to user accounts) ─────────────────
 
@@ -361,14 +311,19 @@ INSERT IGNORE INTO patient (patient_id, user_id, first_name, last_name, date_of_
 -- ─── Appointments ────────────────────────────────────────────
 
 INSERT IGNORE INTO appointment (appointment_id, patient_id, physician_id, office_id, appointment_date, appointment_time, status_id, booking_method, reason_for_visit, appointment_type, duration_minutes) VALUES
-  (1, 1, 1, 1, '2026-04-28', '09:00:00', 1, 'online',    'Annual physical exam',        'Physical',   60),
-  (2, 1, 1, 1, '2025-12-05', '10:30:00', 2, 'phone',     'Follow-up on blood pressure', 'Follow-Up',  30),
-  (3, 2, 3, 2, '2026-05-06', '11:00:00', 1, 'online',    'Routine checkup',             'General',    30),
-  (4, 2, 3, 2, '2025-11-20', '14:00:00', 2, 'in-person', 'Hypertension management',     'Follow-Up',  30),
-  (5, 2, 4, 2, '2026-05-13', '10:00:00', 1, 'online',    'Cardiology consultation',     'Specialist', 45),
-  (6, 3, 5, 3, '2025-10-15', '09:00:00', 4, 'phone',     'Headache evaluation',         'General',    30),
-  (7, 4, 1, 1, '2026-04-30', '14:00:00', 1, 'online',    'Diabetes management check',   'Follow-Up',  30),
-  (8, 5, 3, 2, '2026-05-08', '13:00:00', 1, 'online',    'New patient visit',           'Physical',   60);
+  (1,  1, 1, 1, '2026-04-28', '09:00:00', 1, 'online',    'Annual physical exam',        'Physical',   60),
+  (2,  1, 1, 1, '2025-12-05', '10:30:00', 2, 'phone',     'Follow-up on blood pressure', 'Follow-Up',  30),
+  (3,  2, 3, 2, '2026-05-06', '11:00:00', 1, 'online',    'Routine checkup',             'General',    30),
+  (4,  2, 3, 2, '2025-11-20', '14:00:00', 2, 'in-person', 'Hypertension management',     'Follow-Up',  30),
+  (5,  2, 4, 2, '2026-05-13', '10:00:00', 1, 'online',    'Cardiology consultation',     'Specialist', 45),
+  (6,  3, 5, 3, '2025-10-15', '09:00:00', 4, 'phone',     'Headache evaluation',         'General',    30),
+  (7,  4, 1, 1, '2026-04-30', '14:00:00', 1, 'online',    'Diabetes management check',   'Follow-Up',  30),
+  (8,  5, 3, 2, '2026-05-08', '13:00:00', 1, 'online',    'New patient visit',           'Physical',   60),
+  -- Today's appointments (2026-04-18) — for demo / daily schedule
+  (9,  1, 1, 1, '2026-04-18', '10:00:00', 1, 'online',    'Blood pressure recheck',      'Follow-Up',  30),
+  (10, 4, 1, 1, '2026-04-18', '11:30:00', 1, 'phone',     'Diabetes management review',  'Follow-Up',  30),
+  (11, 5, 3, 2, '2026-04-18', '09:30:00', 1, 'online',    'Routine wellness checkup',    'General',    30),
+  (12, 3, 5, 3, '2026-04-18', '14:00:00', 1, 'in-person', 'Migraine consultation',       'Specialist', 45);
 
 -- ─── Medical History ─────────────────────────────────────────
 
@@ -475,48 +430,48 @@ INSERT IGNORE INTO department (department_id, department_name, description, clin
 
 INSERT IGNORE INTO physician (physician_id, first_name, last_name, email, phone_number, specialty, department_id, hire_date, physician_type) VALUES
   -- Dallas additions (office 1)
-  (31, 'Anthony',   'Reed',      'reed@ath.doctor.com',      '(214) 555-0305', 'Family Medicine',    7,  '2021-03-01', 'primary'),
-  (32, 'Laura',     'Price',     'price@ath.doctor.com',     '(214) 555-0306', 'Internal Medicine',  1,  '2018-07-15', 'primary'),
-  (33, 'Marcus',    'Allen',     'allen@ath.doctor.com',     '(214) 555-0307', 'Cardiology',         31, '2016-04-01', 'specialist'),
-  (34, 'Stephanie', 'Cook',      'cook@ath.doctor.com',      '(214) 555-0308', 'Dermatology',        32, '2019-09-01', 'specialist'),
+  (31, 'Anthony',   'Reed',      'reed131@audittrailhealth.com',      '(214) 555-0305', 'Family Medicine',    7,  '2021-03-01', 'primary'),
+  (32, 'Laura',     'Price',     'price132@audittrailhealth.com',     '(214) 555-0306', 'Internal Medicine',  1,  '2018-07-15', 'primary'),
+  (33, 'Marcus',    'Allen',     'allen133@audittrailhealth.com',     '(214) 555-0307', 'Cardiology',         31, '2016-04-01', 'specialist'),
+  (34, 'Stephanie', 'Cook',      'cook134@audittrailhealth.com',      '(214) 555-0308', 'Dermatology',        32, '2019-09-01', 'specialist'),
   -- Houston additions (office 2)
-  (35, 'Daniel',    'Flores',    'flores@ath.doctor.com',    '(713) 555-0305', 'Family Medicine',    3,  '2020-11-01', 'primary'),
-  (36, 'Nicole',    'Simmons',   'simmons@ath.doctor.com',   '(713) 555-0306', 'Internal Medicine',  9,  '2017-06-15', 'primary'),
-  (37, 'Victor',    'Huang',     'huang@ath.doctor.com',     '(713) 555-0307', 'Oncology',           33, '2015-09-01', 'specialist'),
-  (38, 'Melissa',   'Jordan',    'jordan@ath.doctor.com',    '(713) 555-0308', 'Gastroenterology',   34, '2018-02-01', 'specialist'),
+  (35, 'Daniel',    'Flores',    'flores135@audittrailhealth.com',    '(713) 555-0305', 'Family Medicine',    3,  '2020-11-01', 'primary'),
+  (36, 'Nicole',    'Simmons',   'simmons136@audittrailhealth.com',   '(713) 555-0306', 'Internal Medicine',  9,  '2017-06-15', 'primary'),
+  (37, 'Victor',    'Huang',     'huang137@audittrailhealth.com',     '(713) 555-0307', 'Oncology',           33, '2015-09-01', 'specialist'),
+  (38, 'Melissa',   'Jordan',    'jordan138@audittrailhealth.com',    '(713) 555-0308', 'Gastroenterology',   34, '2018-02-01', 'specialist'),
   -- Austin additions (office 3)
-  (39, 'Steven',    'Perry',     'perry@ath.doctor.com',     '(512) 555-0305', 'General Practice',   5,  '2022-01-10', 'primary'),
-  (40, 'Kimberly',  'Ross',      'ross@ath.doctor.com',      '(512) 555-0306', 'Geriatrics',         11, '2019-05-01', 'primary'),
+  (39, 'Steven',    'Perry',     'perry139@audittrailhealth.com',     '(512) 555-0305', 'General Practice',   5,  '2022-01-10', 'primary'),
+  (40, 'Kimberly',  'Ross',      'ross140@audittrailhealth.com',      '(512) 555-0306', 'Geriatrics',         11, '2019-05-01', 'primary'),
   -- New York additions (office 4) — major hub
-  (41, 'Jonathan',  'Wallace',   'wallace@ath.doctor.com',   '(212) 555-0309', 'Family Medicine',    13, '2018-03-01', 'primary'),
-  (42, 'Christine', 'Bennett',   'bennett@ath.doctor.com',   '(212) 555-0310', 'Internal Medicine',  14, '2020-07-01', 'primary'),
-  (43, 'Raymond',   'Diaz',      'diaz@ath.doctor.com',      '(212) 555-0311', 'Family Medicine',    13, '2016-11-01', 'primary'),
-  (44, 'Natalie',   'Wu',        'wu@ath.doctor.com',        '(212) 555-0312', 'Internal Medicine',  14, '2021-04-15', 'primary'),
-  (45, 'Gregory',   'Vasquez',   'vasquez@ath.doctor.com',   '(212) 555-0313', 'Cardiology',         35, '2015-06-01', 'specialist'),
-  (46, 'Helen',     'Nguyen',    'nguyen@ath.doctor.com',    '(212) 555-0314', 'Gastroenterology',   36, '2017-10-01', 'specialist'),
-  (47, 'Patrick',   'Morales',   'morales@ath.doctor.com',   '(212) 555-0315', 'Neurology',          37, '2019-01-15', 'specialist'),
+  (41, 'Jonathan',  'Wallace',   'wallace141@audittrailhealth.com',   '(212) 555-0309', 'Family Medicine',    13, '2018-03-01', 'primary'),
+  (42, 'Christine', 'Bennett',   'bennett142@audittrailhealth.com',   '(212) 555-0310', 'Internal Medicine',  14, '2020-07-01', 'primary'),
+  (43, 'Raymond',   'Diaz',      'diaz143@audittrailhealth.com',      '(212) 555-0311', 'Family Medicine',    13, '2016-11-01', 'primary'),
+  (44, 'Natalie',   'Wu',        'wu144@audittrailhealth.com',        '(212) 555-0312', 'Internal Medicine',  14, '2021-04-15', 'primary'),
+  (45, 'Gregory',   'Vasquez',   'vasquez145@audittrailhealth.com',   '(212) 555-0313', 'Cardiology',         35, '2015-06-01', 'specialist'),
+  (46, 'Helen',     'Nguyen',    'nguyen146@audittrailhealth.com',    '(212) 555-0314', 'Gastroenterology',   36, '2017-10-01', 'specialist'),
+  (47, 'Patrick',   'Morales',   'morales147@audittrailhealth.com',   '(212) 555-0315', 'Neurology',          37, '2019-01-15', 'specialist'),
   -- Chicago additions (office 5)
-  (48, 'Vanessa',   'Griffin',   'griffin@ath.doctor.com',   '(312) 555-0309', 'Family Medicine',    17, '2021-08-01', 'primary'),
-  (49, 'Eric',      'Stone',     'stone@ath.doctor.com',     '(312) 555-0310', 'General Practice',   18, '2019-02-15', 'primary'),
-  (50, 'Tamara',    'Owens',     'owens@ath.doctor.com',     '(312) 555-0311', 'Gastroenterology',   38, '2016-08-01', 'specialist'),
-  (51, 'Derek',     'Murphy',    'murphy@ath.doctor.com',    '(312) 555-0312', 'Dermatology',        39, '2020-03-01', 'specialist'),
+  (48, 'Vanessa',   'Griffin',   'griffin148@audittrailhealth.com',   '(312) 555-0309', 'Family Medicine',    17, '2021-08-01', 'primary'),
+  (49, 'Eric',      'Stone',     'stone149@audittrailhealth.com',     '(312) 555-0310', 'General Practice',   18, '2019-02-15', 'primary'),
+  (50, 'Tamara',    'Owens',     'owens150@audittrailhealth.com',     '(312) 555-0311', 'Gastroenterology',   38, '2016-08-01', 'specialist'),
+  (51, 'Derek',     'Murphy',    'murphy151@audittrailhealth.com',    '(312) 555-0312', 'Dermatology',        39, '2020-03-01', 'specialist'),
   -- LA additions (office 6) — major hub
-  (52, 'Alicia',    'Castillo',  'castillo@ath.doctor.com',  '(310) 555-0309', 'Internal Medicine',  21, '2018-05-01', 'primary'),
-  (53, 'Trevor',    'Hoffman',   'hoffman@ath.doctor.com',   '(310) 555-0310', 'Family Medicine',    22, '2020-10-01', 'primary'),
-  (54, 'Jasmine',   'Reyes',     'reyes@ath.doctor.com',     '(310) 555-0311', 'Internal Medicine',  21, '2017-01-15', 'primary'),
-  (55, 'Wesley',    'Cunningham','cunningham@ath.doctor.com','(310) 555-0312', 'Dermatology',        40, '2015-11-01', 'specialist'),
-  (56, 'Olivia',    'Park',      'park@ath.doctor.com',      '(310) 555-0313', 'Endocrinology',      41, '2018-09-01', 'specialist'),
-  (57, 'Brandon',   'Yates',     'yates@ath.doctor.com',     '(310) 555-0314', 'Rheumatology',       42, '2016-06-01', 'specialist'),
+  (52, 'Alicia',    'Castillo',  'castillo152@audittrailhealth.com',  '(310) 555-0309', 'Internal Medicine',  21, '2018-05-01', 'primary'),
+  (53, 'Trevor',    'Hoffman',   'hoffman153@audittrailhealth.com',   '(310) 555-0310', 'Family Medicine',    22, '2020-10-01', 'primary'),
+  (54, 'Jasmine',   'Reyes',     'reyes154@audittrailhealth.com',     '(310) 555-0311', 'Internal Medicine',  21, '2017-01-15', 'primary'),
+  (55, 'Wesley',    'Cunningham','cunningham155@audittrailhealth.com','(310) 555-0312', 'Dermatology',        40, '2015-11-01', 'specialist'),
+  (56, 'Olivia',    'Park',      'park156@audittrailhealth.com',      '(310) 555-0313', 'Endocrinology',      41, '2018-09-01', 'specialist'),
+  (57, 'Brandon',   'Yates',     'yates157@audittrailhealth.com',     '(310) 555-0314', 'Rheumatology',       42, '2016-06-01', 'specialist'),
   -- Phoenix additions (office 7)
-  (58, 'Erica',     'Watts',     'watts@ath.doctor.com',     '(602) 555-0308', 'General Practice',   25, '2021-06-01', 'primary'),
-  (59, 'Marcus',    'Fleming',   'fleming@ath.doctor.com',   '(602) 555-0309', 'Family Medicine',    26, '2019-08-15', 'primary'),
-  (60, 'Hannah',    'Cross',     'cross@ath.doctor.com',     '(602) 555-0310', 'Endocrinology',      43, '2017-04-01', 'specialist'),
-  (61, 'Jerome',    'Tran',      'tran@ath.doctor.com',      '(602) 555-0311', 'Pulmonology',        44, '2020-01-15', 'specialist'),
+  (58, 'Erica',     'Watts',     'watts158@audittrailhealth.com',     '(602) 555-0308', 'General Practice',   25, '2021-06-01', 'primary'),
+  (59, 'Marcus',    'Fleming',   'fleming159@audittrailhealth.com',   '(602) 555-0309', 'Family Medicine',    26, '2019-08-15', 'primary'),
+  (60, 'Hannah',    'Cross',     'cross160@audittrailhealth.com',     '(602) 555-0310', 'Endocrinology',      43, '2017-04-01', 'specialist'),
+  (61, 'Jerome',    'Tran',      'tran161@audittrailhealth.com',      '(602) 555-0311', 'Pulmonology',        44, '2020-01-15', 'specialist'),
   -- Seattle additions (office 8)
-  (62, 'Audrey',    'Manning',   'manning@ath.doctor.com',   '(206) 555-0308', 'Family Medicine',    28, '2022-03-01', 'primary'),
-  (63, 'Calvin',    'Holt',      'holt@ath.doctor.com',      '(206) 555-0309', 'Internal Medicine',  29, '2019-07-01', 'primary'),
-  (64, 'Renee',     'Stanton',   'stanton@ath.doctor.com',   '(206) 555-0310', 'Oncology',           45, '2016-10-01', 'specialist'),
-  (65, 'Miles',     'Egan',      'egan@ath.doctor.com',      '(206) 555-0311', 'Neurology',          46, '2018-12-01', 'specialist');
+  (62, 'Audrey',    'Manning',   'manning162@audittrailhealth.com',   '(206) 555-0308', 'Family Medicine',    28, '2022-03-01', 'primary'),
+  (63, 'Calvin',    'Holt',      'holt163@audittrailhealth.com',      '(206) 555-0309', 'Internal Medicine',  29, '2019-07-01', 'primary'),
+  (64, 'Renee',     'Stanton',   'stanton164@audittrailhealth.com',   '(206) 555-0310', 'Oncology',           45, '2016-10-01', 'specialist'),
+  (65, 'Miles',     'Egan',      'egan165@audittrailhealth.com',      '(206) 555-0311', 'Neurology',          46, '2018-12-01', 'specialist');
 
 -- ─── New Work Schedules (IDs 69–142) ─────────────────────────
 INSERT IGNORE INTO work_schedule (schedule_id, physician_id, office_id, day_of_week, start_time, end_time) VALUES
@@ -602,39 +557,61 @@ INSERT IGNORE INTO work_schedule (schedule_id, physician_id, office_id, day_of_w
 -- ─── New Users (IDs 44–77) ───────────────────────────────────
 -- Doctor@123 → $2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6
 
-INSERT IGNORE INTO users (user_id, username, password_hash, role, physician_id, staff_id) VALUES
-  (44, 'dr.reed',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 31, NULL),
-  (45, 'dr.price',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 32, NULL),
-  (46, 'dr.allen',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 33, NULL),
-  (47, 'dr.cook',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 34, NULL),
-  (48, 'dr.flores',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 35, NULL),
-  (49, 'dr.simmons',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 36, NULL),
-  (50, 'dr.huang',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 37, NULL),
-  (51, 'dr.mjordan',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 38, NULL),
-  (52, 'dr.perry',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 39, NULL),
-  (53, 'dr.kross',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 40, NULL),
-  (54, 'dr.wallace',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 41, NULL),
-  (55, 'dr.bennett',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 42, NULL),
-  (56, 'dr.diaz',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 43, NULL),
-  (57, 'dr.nwu',        '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 44, NULL),
-  (58, 'dr.vasquez',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 45, NULL),
-  (59, 'dr.hnguyen',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 46, NULL),
-  (60, 'dr.morales',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 47, NULL),
-  (61, 'dr.griffin',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 48, NULL),
-  (62, 'dr.stone',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 49, NULL),
-  (63, 'dr.owens',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 50, NULL),
-  (64, 'dr.murphy',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 51, NULL),
-  (65, 'dr.castillo',   '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 52, NULL),
-  (66, 'dr.hoffman',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 53, NULL),
-  (67, 'dr.reyes',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 54, NULL),
-  (68, 'dr.cunningham', '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 55, NULL),
-  (69, 'dr.opark',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 56, NULL),
-  (70, 'dr.yates',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 57, NULL),
-  (71, 'dr.watts',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 58, NULL),
-  (72, 'dr.fleming',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 59, NULL),
-  (73, 'dr.cross',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 60, NULL),
-  (74, 'dr.tran',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 61, NULL),
-  (75, 'dr.manning',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 62, NULL),
-  (76, 'dr.holt',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 63, NULL),
-  (77, 'dr.stanton',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 64, NULL),
-  (78, 'dr.egan',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 65, NULL);
+INSERT IGNORE INTO users (user_id, email, password_hash, role, physician_id, staff_id) VALUES
+  (44, 'reed131@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 31, NULL),
+  (45, 'price132@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 32, NULL),
+  (46, 'allen133@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 33, NULL),
+  (47, 'cook134@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 34, NULL),
+  (48, 'flores135@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 35, NULL),
+  (49, 'simmons136@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 36, NULL),
+  (50, 'huang137@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 37, NULL),
+  (51, 'jordan138@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 38, NULL),
+  (52, 'perry139@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 39, NULL),
+  (53, 'ross140@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 40, NULL),
+  (54, 'wallace141@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 41, NULL),
+  (55, 'bennett142@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 42, NULL),
+  (56, 'diaz143@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 43, NULL),
+  (57, 'wu144@audittrailhealth.com',        '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 44, NULL),
+  (58, 'vasquez145@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 45, NULL),
+  (59, 'nguyen146@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 46, NULL),
+  (60, 'morales147@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 47, NULL),
+  (61, 'griffin148@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 48, NULL),
+  (62, 'stone149@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 49, NULL),
+  (63, 'owens150@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 50, NULL),
+  (64, 'murphy151@audittrailhealth.com',     '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 51, NULL),
+  (65, 'castillo152@audittrailhealth.com',   '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 52, NULL),
+  (66, 'hoffman153@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 53, NULL),
+  (67, 'reyes154@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 54, NULL),
+  (68, 'cunningham155@audittrailhealth.com', '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 55, NULL),
+  (69, 'park156@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 56, NULL),
+  (70, 'yates157@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 57, NULL),
+  (71, 'watts158@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 58, NULL),
+  (72, 'fleming159@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 59, NULL),
+  (73, 'cross160@audittrailhealth.com',      '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 60, NULL),
+  (74, 'tran161@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 61, NULL),
+  (75, 'manning162@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 62, NULL),
+  (76, 'holt163@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 63, NULL),
+  (77, 'stanton164@audittrailhealth.com',    '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 64, NULL),
+  (78, 'egan165@audittrailhealth.com',       '$2b$10$iYtcOYwO7FI7XmaNKeVAYev4WdRcLNaYzcT08LtJoBxGdGXHElDk6', 'physician', 65, NULL);
+
+-- ─── Accepted Insurance per Clinic ───────────────────────────
+-- added_by = NULL because admin user is created separately (not seeded)
+-- reimbursement_threshold_pct = the contracted minimum we negotiated
+-- min_participation_rate = network adequacy floor (75% standard)
+
+INSERT IGNORE INTO clinic_accepted_insurance
+  (clinic_id, insurance_id, is_active, reimbursement_threshold_pct, min_participation_rate, effective_date, added_by)
+VALUES
+  -- Dallas (clinic 1) accepts BlueCross, Aetna, UnitedHealth, Cigna
+  (1, 1, TRUE, 78.00, 75.00, '2024-01-01', NULL),
+  (1, 2, TRUE, 72.00, 75.00, '2024-01-01', NULL),
+  (1, 3, TRUE, 82.00, 75.00, '2024-01-01', NULL),
+  (1, 4, TRUE, 75.00, 75.00, '2024-06-01', NULL),
+  -- Houston (clinic 2) accepts BlueCross, Aetna, UnitedHealth
+  (2, 1, TRUE, 78.00, 75.00, '2024-03-01', NULL),
+  (2, 2, TRUE, 72.00, 75.00, '2024-03-01', NULL),
+  (2, 3, TRUE, 82.00, 75.00, '2024-03-01', NULL),
+  -- Austin (clinic 3) accepts BlueCross, UnitedHealth, Humana
+  (3, 1, TRUE, 78.00, 75.00, '2024-06-01', NULL),
+  (3, 3, TRUE, 82.00, 75.00, '2024-06-01', NULL),
+  (3, 5, TRUE, 79.00, 75.00, '2024-06-01', NULL);

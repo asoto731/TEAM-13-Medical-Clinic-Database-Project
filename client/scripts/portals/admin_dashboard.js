@@ -4,38 +4,8 @@ if (!user || user.role !== "admin") {
     window.location.href = "/client/auth/admin_login.html";
 }
 
-/* ── Sidebar name + location ── */
-const displayName = (user?.firstName && user?.lastName)
-    ? `${user.firstName} ${user.lastName}`
-    : user?.username || "Administrator";
-document.getElementById("sidebarName").textContent = displayName;
-
-// Location badge in sidebar
-const sidebarLoc = document.getElementById("sidebarLocation");
-if (sidebarLoc) {
-    sidebarLoc.textContent = user?.isGlobal
-        ? "🌐 All Locations"
-        : `📍 ${user?.clinicCity || user?.clinicName || ""}`;
-}
-
-// Greeting card
-const greetName = document.getElementById("greetName");
-if (greetName) greetName.textContent = `Welcome, ${user?.firstName || "Administrator"}.`;
-
-const greetLocation = document.getElementById("greetLocation");
-const greetLocationText = document.getElementById("greetLocationText");
-if (greetLocation && greetLocationText) {
-    if (user?.isGlobal) {
-        greetLocationText.textContent = "Global Admin — All Locations";
-    } else {
-        greetLocationText.textContent = `${user?.clinicName || ""}${user?.clinicCity ? ` · ${user.clinicCity}, ${user?.clinicState || ""}` : ""}`;
-    }
-    greetLocation.style.display = "block";
-}
-
-// Badge
-const adminBadge = document.getElementById("adminBadge");
-if (adminBadge) adminBadge.textContent = user?.isGlobal ? "Global Admin" : "Clinic Admin";
+/* ── Sidebar name ── */
+document.getElementById("sidebarName").textContent = user?.email || "Administrator";
 
 /* ── Logout ── */
 function logoutUser() {
@@ -57,8 +27,7 @@ document.getElementById("logoutBtn").addEventListener("click", logoutUser);
 /* ── Section nav ── */
 const sectionLabels = {
     overview:"Overview", physicians:"Physicians", staff:"Staff Members",
-    appointments:"Appointments", reports:"Clinic Reports",
-    analytics:"Analytics", insurance:"Insurance", settings:"Settings"
+    reports:"Clinic Reports", insurance:"Insurance", settings:"Settings"
 };
 
 function showSection(name) {
@@ -71,12 +40,10 @@ function showSection(name) {
     document.getElementById("currentSection").textContent = sectionLabels[name] || name;
 
     // Lazy-load section data
-    if (name === "physicians")   loadPhysicians();
-    if (name === "staff")        loadStaff();
-    if (name === "reports")      loadClinicReport();
-    if (name === "analytics")    initAnalytics();
-    if (name === "appointments") initAppointments();
-    if (name === "insurance")    initInsurance();
+    if (name === "physicians") loadPhysicians();
+    if (name === "staff")      loadStaff();
+    if (name === "reports")    { loadClinicReport(); initAdminApptReport(); }
+    if (name === "insurance")  loadInsurance();
 }
 
 /* ── Theme ── */
@@ -173,6 +140,8 @@ async function loadOverview() {
    PHYSICIANS
 ══════════════════════════════════════ */
 let _departmentsLoaded = false;
+let _physicianCache    = {};   // id → row object, for edit modal pre-fill
+let _staffCache        = {};   // id → row object
 
 async function loadDepartments() {
     if (_departmentsLoaded) return;
@@ -181,8 +150,10 @@ async function loadDepartments() {
         const rows = await r.json();
         const opts = '<option value="">— Select Department —</option>' +
             rows.map(d => `<option value="${d.department_id}">${d.clinic_name} → ${d.department_name}</option>`).join("");
-        document.getElementById("ph_dept").innerHTML = opts;
-        document.getElementById("st_dept").innerHTML = opts;
+        ["ph_dept","st_dept","ep_dept","es_dept"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = opts;
+        });
         _departmentsLoaded = true;
     } catch(e) {}
 }
@@ -199,6 +170,8 @@ async function loadPhysicians() {
     try {
         const r    = await fetch(`/api/admin/physicians?user_id=${user.id}`);
         const rows = await r.json();
+        _physicianCache = {};
+        rows.forEach(p => { _physicianCache[p.physician_id] = p; });
         document.getElementById("physicianListBody").innerHTML = rows.length
             ? rows.map(p => `<tr>
                 <td class="primary">Dr. ${p.first_name} ${p.last_name}</td>
@@ -208,10 +181,18 @@ async function loadPhysicians() {
                 <td>${p.clinic_name || "—"}</td>
                 <td>${p.email || "—"}</td>
                 <td>${fmt(p.hire_date)}</td>
+                <td>
+                    <div style="display:flex;gap:6px">
+                        <button onclick="openEditPhysicianModal(${p.physician_id})"
+                            style="padding:4px 10px;background:#4a90d9;border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Edit</button>
+                        <button onclick="confirmDeletePhysician(${p.physician_id},'Dr. ${p.first_name} ${p.last_name}')"
+                            style="padding:4px 10px;background:none;border:1px solid #e05c5c;border-radius:6px;color:#e05c5c;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Delete</button>
+                    </div>
+                </td>
             </tr>`).join("")
-            : `<tr><td colspan="7" class="table-empty">No physicians found</td></tr>`;
+            : `<tr><td colspan="8" class="table-empty">No physicians found</td></tr>`;
     } catch(e) {
-        document.getElementById("physicianListBody").innerHTML = `<tr><td colspan="7" class="table-empty">Could not load data</td></tr>`;
+        document.getElementById("physicianListBody").innerHTML = `<tr><td colspan="8" class="table-empty">Could not load data</td></tr>`;
     }
 }
 
@@ -238,38 +219,24 @@ async function addScheduleRow() {
     document.getElementById("scheduleRows").appendChild(row);
 }
 
-// Auto-fill username previews when last name is typed
-document.getElementById("ph_last")?.addEventListener("input", e => {
-    const slug = e.target.value.trim().toLowerCase().replace(/\s+/g, "");
-    document.getElementById("ph_user").value = slug ? `${slug}@ath.doctor.com` : "";
-});
-document.getElementById("st_last")?.addEventListener("input", e => {
-    const slug = e.target.value.trim().toLowerCase().replace(/\s+/g, "");
-    document.getElementById("st_user").value = slug ? `${slug}@ath.staff.com` : "";
-});
-
 async function submitAddPhysician() {
     const errEl = document.getElementById("phError");
     errEl.style.display = "none";
 
     const first_name    = document.getElementById("ph_first").value.trim();
     const last_name     = document.getElementById("ph_last").value.trim();
-    const email         = document.getElementById("ph_email").value.trim();
     const phone_number  = document.getElementById("ph_phone").value.trim();
     const specialty     = document.getElementById("ph_specialty").value.trim();
     const physician_type = document.getElementById("ph_type").value;
     const department_id = document.getElementById("ph_dept").value;
     const hire_date     = document.getElementById("ph_hire").value;
-    const password      = document.getElementById("ph_pass").value || "Doctor@123";
+    const password      = document.getElementById("ph_pass").value;
 
-    if (!first_name || !last_name) {
-        errEl.textContent = "First name and last name are required.";
+    if (!first_name || !last_name || !password) {
+        errEl.textContent = "First name, last name, and password are required.";
         errEl.style.display = "block";
         return;
     }
-
-    // Username is auto-generated server-side from last name; pass it along for display
-    const username = document.getElementById("ph_user").value.trim();
 
     // Collect schedule rows
     const schedule = [];
@@ -286,29 +253,101 @@ async function submitAddPhysician() {
         const r = await fetch("/api/admin/add-physician", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: user.id, first_name, last_name, email, phone_number,
+            body: JSON.stringify({ user_id: user.id, first_name, last_name, phone_number,
                 specialty, physician_type, department_id: department_id || null,
-                hire_date: hire_date || null, username, password, schedule })
+                hire_date: hire_date || null, password, schedule })
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.message);
 
-        // Reset form
-        ["ph_first","ph_last","ph_email","ph_phone","ph_specialty","ph_hire","ph_user","ph_pass"]
+        // Reset form — show the auto-generated email to the admin
+        if (data.email) {
+            errEl.style.color = "#0d7a60";
+            errEl.textContent = `✓ Dr. ${first_name} ${last_name} added. Login email: ${data.email}`;
+            errEl.style.display = "block";
+        }
+        ["ph_first","ph_last","ph_phone","ph_specialty","ph_hire","ph_pass"]
             .forEach(id => document.getElementById(id).value = "");
         document.getElementById("scheduleRows").innerHTML = "";
         document.getElementById("ph_type").value = "primary";
         document.getElementById("ph_dept").value = "";
 
-        // Show success and reload list
-        errEl.style.color = "#0d7a60";
-        errEl.textContent = `✓ Dr. ${first_name} ${last_name} added successfully!`;
-        errEl.style.display = "block";
-        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 4000);
+        // Show success with generated email and reload list
+        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 6000);
         loadPhysicians();
     } catch(err) {
         errEl.textContent = err.message || "Could not add physician.";
         errEl.style.display = "block";
+    }
+}
+
+/* ── Edit / Delete Physician ── */
+let _editPhysicianId = null;
+
+function openEditPhysicianModal(id) {
+    const p = _physicianCache[id];
+    if (!p) return;
+    _editPhysicianId = id;
+    loadDepartments(); // no-op if already loaded
+    document.getElementById("ep_first").value     = p.first_name    || "";
+    document.getElementById("ep_last").value      = p.last_name     || "";
+    document.getElementById("ep_phone").value     = p.phone_number  || "";
+    document.getElementById("ep_specialty").value = p.specialty     || "";
+    document.getElementById("ep_type").value      = p.physician_type || "primary";
+    document.getElementById("ep_hire").value      = p.hire_date ? String(p.hire_date).split("T")[0] : "";
+    document.getElementById("ep_dept").value      = p.department_id || "";
+    document.getElementById("epError").style.display = "none";
+    document.getElementById("editPhysicianModal").classList.remove("hidden");
+}
+
+function closeEditPhysicianModal() {
+    document.getElementById("editPhysicianModal").classList.add("hidden");
+    _editPhysicianId = null;
+}
+
+async function submitEditPhysician() {
+    const errEl = document.getElementById("epError");
+    errEl.style.display = "none";
+    const first_name     = document.getElementById("ep_first").value.trim();
+    const last_name      = document.getElementById("ep_last").value.trim();
+    const phone_number   = document.getElementById("ep_phone").value.trim();
+    const specialty      = document.getElementById("ep_specialty").value.trim();
+    const physician_type = document.getElementById("ep_type").value;
+    const department_id  = document.getElementById("ep_dept").value;
+    const hire_date      = document.getElementById("ep_hire").value;
+
+    if (!first_name || !last_name) {
+        errEl.textContent = "First name and last name are required.";
+        errEl.style.display = "block"; return;
+    }
+    try {
+        const r = await fetch(`/api/admin/physician/${_editPhysicianId}?user_id=${user.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ first_name, last_name,
+                phone_number: phone_number || null, specialty: specialty || null,
+                physician_type, department_id: department_id || null,
+                hire_date: hire_date || null, user_id: user.id })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        closeEditPhysicianModal();
+        loadPhysicians();
+    } catch(err) {
+        errEl.textContent = err.message || "Could not save changes.";
+        errEl.style.display = "block";
+    }
+}
+
+async function confirmDeletePhysician(id, name) {
+    if (!confirm(`Delete ${name}?\n\nThis will also remove their login account and cannot be undone.`)) return;
+    try {
+        const r = await fetch(`/api/admin/physician/${id}?user_id=${user.id}`, { method: "DELETE" });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        loadPhysicians();
+    } catch(err) {
+        alert("Could not delete: " + (err.message || "Unknown error"));
     }
 }
 
@@ -320,6 +359,8 @@ async function loadStaff() {
     try {
         const r    = await fetch(`/api/admin/staff-members?user_id=${user.id}`);
         const rows = await r.json();
+        _staffCache = {};
+        rows.forEach(s => { _staffCache[s.staff_id] = s; });
         document.getElementById("staffListBody").innerHTML = rows.length
             ? rows.map(s => `<tr>
                 <td class="primary">${s.first_name} ${s.last_name}</td>
@@ -329,10 +370,18 @@ async function loadStaff() {
                 <td>${s.email || "—"}</td>
                 <td>${s.shift_start ? timeFmt(s.shift_start) + " – " + timeFmt(s.shift_end) : "—"}</td>
                 <td>${fmt(s.hire_date)}</td>
+                <td>
+                    <div style="display:flex;gap:6px">
+                        <button onclick="openEditStaffModal(${s.staff_id})"
+                            style="padding:4px 10px;background:#4a90d9;border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Edit</button>
+                        <button onclick="confirmDeleteStaff(${s.staff_id},'${s.first_name} ${s.last_name}')"
+                            style="padding:4px 10px;background:none;border:1px solid #e05c5c;border-radius:6px;color:#e05c5c;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Delete</button>
+                    </div>
+                </td>
             </tr>`).join("")
-            : `<tr><td colspan="7" class="table-empty">No staff members found</td></tr>`;
+            : `<tr><td colspan="8" class="table-empty">No staff members found</td></tr>`;
     } catch(e) {
-        document.getElementById("staffListBody").innerHTML = `<tr><td colspan="7" class="table-empty">Could not load data</td></tr>`;
+        document.getElementById("staffListBody").innerHTML = `<tr><td colspan="8" class="table-empty">Could not load data</td></tr>`;
     }
 }
 
@@ -342,18 +391,16 @@ async function submitAddStaff() {
 
     const first_name   = document.getElementById("st_first").value.trim();
     const last_name    = document.getElementById("st_last").value.trim();
-    const email        = document.getElementById("st_email").value.trim();
     const phone_number = document.getElementById("st_phone").value.trim();
     const role         = document.getElementById("st_role").value;
     const department_id = document.getElementById("st_dept").value;
     const hire_date    = document.getElementById("st_hire").value;
     const shift_start  = document.getElementById("st_shift_start").value;
     const shift_end    = document.getElementById("st_shift_end").value;
-    const username     = document.getElementById("st_user").value.trim();
-    const password     = document.getElementById("st_pass").value || "Staff@123";
+    const password     = document.getElementById("st_pass").value;
 
-    if (!first_name || !last_name) {
-        errEl.textContent = "First name and last name are required.";
+    if (!first_name || !last_name || !password) {
+        errEl.textContent = "First name, last name, and password are required.";
         errEl.style.display = "block";
         return;
     }
@@ -362,28 +409,104 @@ async function submitAddStaff() {
         const r = await fetch("/api/admin/add-staff", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: user.id, first_name, last_name, email, phone_number,
+            body: JSON.stringify({ user_id: user.id, first_name, last_name, phone_number,
                 role, department_id: department_id || null,
                 hire_date: hire_date || null,
                 shift_start: shift_start || null, shift_end: shift_end || null,
-                username, password })
+                password })
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.message);
 
-        ["st_first","st_last","st_email","st_phone","st_hire","st_shift_start","st_shift_end","st_user","st_pass"]
+        ["st_first","st_last","st_phone","st_hire","st_shift_start","st_shift_end","st_pass"]
             .forEach(id => document.getElementById(id).value = "");
         document.getElementById("st_role").value = "Receptionist";
         document.getElementById("st_dept").value = "";
 
         errEl.style.color = "#0d7a60";
-        errEl.textContent = `✓ ${first_name} ${last_name} added successfully!`;
+        errEl.textContent = data.email
+            ? `✓ ${first_name} ${last_name} added. Login email: ${data.email}`
+            : `✓ ${first_name} ${last_name} added successfully!`;
         errEl.style.display = "block";
-        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 4000);
+        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 6000);
         loadStaff();
     } catch(err) {
         errEl.textContent = err.message || "Could not add staff member.";
         errEl.style.display = "block";
+    }
+}
+
+/* ── Edit / Delete Staff ── */
+let _editStaffId = null;
+
+function openEditStaffModal(id) {
+    const s = _staffCache[id];
+    if (!s) return;
+    _editStaffId = id;
+    loadDepartments(); // no-op if already loaded
+    document.getElementById("es_first").value       = s.first_name   || "";
+    document.getElementById("es_last").value        = s.last_name    || "";
+    document.getElementById("es_phone").value       = s.phone_number || "";
+    document.getElementById("es_role").value        = s.role         || "Receptionist";
+    document.getElementById("es_hire").value        = s.hire_date ? String(s.hire_date).split("T")[0] : "";
+    document.getElementById("es_shift_start").value = s.shift_start ? String(s.shift_start).substring(0, 5) : "";
+    document.getElementById("es_shift_end").value   = s.shift_end   ? String(s.shift_end).substring(0, 5) : "";
+    document.getElementById("es_dept").value        = s.department_id || "";
+    document.getElementById("esError").style.display = "none";
+    document.getElementById("editStaffModal").classList.remove("hidden");
+}
+
+function closeEditStaffModal() {
+    document.getElementById("editStaffModal").classList.add("hidden");
+    _editStaffId = null;
+}
+
+async function submitEditStaff() {
+    const errEl = document.getElementById("esError");
+    errEl.style.display = "none";
+    const first_name    = document.getElementById("es_first").value.trim();
+    const last_name     = document.getElementById("es_last").value.trim();
+    const phone_number  = document.getElementById("es_phone").value.trim();
+    const role          = document.getElementById("es_role").value;
+    const department_id = document.getElementById("es_dept").value;
+    const hire_date     = document.getElementById("es_hire").value;
+    const shift_start   = document.getElementById("es_shift_start").value;
+    const shift_end     = document.getElementById("es_shift_end").value;
+
+    if (!first_name || !last_name) {
+        errEl.textContent = "First name and last name are required.";
+        errEl.style.display = "block"; return;
+    }
+    try {
+        const r = await fetch(`/api/admin/staff/${_editStaffId}?user_id=${user.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ first_name, last_name,
+                phone_number: phone_number || null, role,
+                department_id: department_id || null,
+                hire_date: hire_date || null,
+                shift_start: shift_start || null, shift_end: shift_end || null,
+                user_id: user.id })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        closeEditStaffModal();
+        loadStaff();
+    } catch(err) {
+        errEl.textContent = err.message || "Could not save changes.";
+        errEl.style.display = "block";
+    }
+}
+
+async function confirmDeleteStaff(id, name) {
+    if (!confirm(`Delete ${name}?\n\nThis will also remove their login account and cannot be undone.`)) return;
+    try {
+        const r = await fetch(`/api/admin/staff/${id}?user_id=${user.id}`, { method: "DELETE" });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        loadStaff();
+    } catch(err) {
+        alert("Could not delete: " + (err.message || "Unknown error"));
     }
 }
 
@@ -464,651 +587,553 @@ async function loadClinicReport() {
     }
 }
 
-/* ── Bootstrap ── */
-loadOverview();
+/* ══════════════════════════════════════
+   APPOINTMENTS REPORT (admin)
+══════════════════════════════════════ */
 
-/* ══════════════════════════════════════════════════
-   ANALYTICS SECTION
-══════════════════════════════════════════════════ */
+/* Pre-fill today's date and load clinic options when reports section opens */
+function initAdminApptReport() {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+    const dateEl = document.getElementById("rptDate");
+    if (dateEl && !dateEl.value) dateEl.value = today;
 
-const chartInstances = {};
+    const sel = document.getElementById("rptClinic");
+    if (sel && sel.options.length <= 1) {
+        // Reuse clinic data from overview endpoint
+        fetch(`/api/admin/dashboard?user_id=${user.id}`)
+            .then(r => r.json())
+            .then(d => {
+                (d.clinics || []).forEach(c => {
+                    const o = document.createElement("option");
+                    o.value = c.clinic_id;
+                    o.textContent = c.clinic_name + " — " + c.city;
+                    sel.appendChild(o);
+                });
+            }).catch(() => {});
+    }
+}
 
-function renderChart(id, type, labels, datasets, options = {}) {
-    if (chartInstances[id]) chartInstances[id].destroy();
-    const ctx = document.getElementById(id);
-    if (!ctx) return;
-    chartInstances[id] = new Chart(ctx, {
-        type,
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { position: "bottom" } },
-            ...options
+async function loadAdminAppointments() {
+    const date     = document.getElementById("rptDate").value;
+    const clinicId = document.getElementById("rptClinic").value;
+    const tbody    = document.getElementById("rptApptBody");
+    if (!date) { tbody.innerHTML = `<tr><td colspan="7" class="table-empty">Please select a date.</td></tr>`; return; }
+
+    tbody.innerHTML = `<tr><td colspan="7" class="table-empty">Loading…</td></tr>`;
+    const params = `date=${date}&user_id=${user.id}` + (clinicId ? `&clinic_id=${clinicId}` : "");
+    try {
+        const r = await fetch(`/api/reports/daily-schedule?${params}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+
+        const { summary, appointments } = data;
+
+        // Stats bar
+        const stats = document.getElementById("rptApptStats");
+        if (stats) {
+            stats.style.display = "flex";
+            stats.innerHTML = [
+                { label:"Total", val: summary.total, col:"#1f2a6d" },
+                { label:"Scheduled", val: summary.scheduled, col:"#4a90d9" },
+                { label:"Completed", val: summary.completed, col:"#0d7a60" },
+                { label:"No-Shows",  val: summary.noShow,    col:"#c87d00" },
+                { label:"Cancelled", val: summary.cancelled, col:"#e05c5c" }
+            ].map(s => `<span><strong style="color:${s.col}">${s.val}</strong> ${s.label}</span>`).join(" &nbsp;·&nbsp; ");
         }
-    });
-}
 
-/* ══════════════════════════════════════════════
-   APPOINTMENTS SECTION
-══════════════════════════════════════════════ */
-let _apptAllUpcoming = [];
-let _apptAllPast     = [];
-let _apptClinicId    = null; // null = all (global), number = specific
-
-function initAppointments() {
-    const user = JSON.parse(localStorage.getItem("clinicUser") || "{}");
-    const isGlobal = !user.clinicId;
-
-    if (isGlobal) {
-        // Show clinic picker, load clinic list
-        document.getElementById("appt-clinic-picker").classList.remove("hidden");
-        loadApptClinicPicker(user);
-    } else {
-        document.getElementById("appt-clinic-picker").classList.add("hidden");
-        fetchAppointments(null);
+        tbody.innerHTML = appointments.length
+            ? appointments.map(a => `<tr>
+                <td class="primary">${timeFmt(a.appointment_time)}</td>
+                <td>${a.patient_name}</td>
+                <td>${a.physician_name}<br><span style="font-size:11px;color:#aaa">${a.specialty}</span></td>
+                <td>${a.appointment_type || "—"}</td>
+                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.reason_for_visit || "—"}</td>
+                <td>${a.clinic_name || a.city}</td>
+                <td>${pill(a.status_name)}</td>
+            </tr>`).join("")
+            : `<tr><td colspan="7" class="table-empty">No appointments on ${date}${clinicId ? " at this location" : ""}</td></tr>`;
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="7" class="table-empty">Could not load: ${e.message}</td></tr>`;
     }
 }
 
-function loadApptClinicPicker(user) {
-    fetch(`/api/admin/dashboard?user_id=${user.id}`)
-        .then(r => r.json())
-        .then(data => {
-            const clinics = data.clinics || [];
-            const pills = document.getElementById("appt-clinic-pills");
-            pills.innerHTML = clinics.map(c =>
-                `<button class="report-tab" onclick="fetchAppointments(${c.clinic_id}, this)">
-                    ${c.clinic_name} <span style="opacity:.6;font-size:11px">${c.city}, ${c.state}</span>
-                </button>`
-            ).join("");
-            // Auto-select first clinic
-            const first = pills.querySelector(".report-tab");
-            if (first) { first.classList.add("active"); fetchAppointments(clinics[0].clinic_id, first); }
-        });
-}
-
-function fetchAppointments(clinicId, btn) {
-    _apptClinicId = clinicId;
-
-    // Update active pill
-    if (btn) {
-        document.querySelectorAll("#appt-clinic-pills .report-tab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-    }
-
-    const user = JSON.parse(localStorage.getItem("clinicUser") || "{}");
-    const qs = clinicId ? `?user_id=${user.id}&clinic_id=${clinicId}` : `?user_id=${user.id}`;
-
-    fetch(`/api/admin/clinic-appointments${qs}`)
-        .then(r => r.json())
-        .then(data => {
-            _apptAllUpcoming = data.upcoming || [];
-            _apptAllPast     = data.past     || [];
-            renderApptTables(_apptAllUpcoming, _apptAllPast);
-        })
-        .catch(() => {
-            document.querySelector("#appt-upcoming-table tbody").innerHTML = `<tr><td colspan="7" class="table-empty">Failed to load</td></tr>`;
-            document.querySelector("#appt-past-table tbody").innerHTML     = `<tr><td colspan="7" class="table-empty">Failed to load</td></tr>`;
-        });
-}
-
-function applyApptFilters() {
-    const search = document.getElementById("appt-search").value.toLowerCase();
-    const status = document.getElementById("appt-status-filter").value;
-
-    const filter = rows => rows.filter(r => {
-        const matchStatus = !status || r.status_name === status;
-        const matchSearch = !search ||
-            r.patient_name.toLowerCase().includes(search) ||
-            r.physician_name.toLowerCase().includes(search) ||
-            (r.appointment_type || "").toLowerCase().includes(search);
-        return matchStatus && matchSearch;
-    });
-
-    renderApptTables(filter(_apptAllUpcoming), filter(_apptAllPast));
-}
-
-function renderApptTables(upcoming, past) {
-    const fmt = d => new Date(d).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
-    const fmtTime = t => { const [h,m] = t.split(":"); const hr = +h; return `${hr%12||12}:${m} ${hr<12?"AM":"PM"}`; };
-    const statusBadge = s => {
-        const cls = {Scheduled:"badge-scheduled",Completed:"badge-completed",Cancelled:"badge-cancelled","No-Show":"badge-noshow"}[s] || "";
-        return `<span class="status-badge ${cls}">${s}</span>`;
-    };
-    const row = r => `<tr>
-        <td>${fmt(r.appointment_date)}</td>
-        <td>${fmtTime(r.appointment_time)}</td>
-        <td>${r.patient_name}</td>
-        <td>${r.physician_name}</td>
-        <td>${r.appointment_type || "—"}</td>
-        <td>${statusBadge(r.status_name)}</td>
-        <td>${r.city}</td>
-    </tr>`;
-
-    document.querySelector("#appt-upcoming-table tbody").innerHTML =
-        upcoming.length ? upcoming.map(row).join("") : `<tr><td colspan="7" class="table-empty">No upcoming appointments</td></tr>`;
-    document.querySelector("#appt-past-table tbody").innerHTML =
-        past.length ? past.map(row).join("") : `<tr><td colspan="7" class="table-empty">No past appointments</td></tr>`;
-
-    document.getElementById("appt-upcoming-count").textContent = `(${upcoming.length})`;
-    document.getElementById("appt-past-count").textContent     = `(${past.length})`;
-
-    // Wire search input for live filtering
-    document.getElementById("appt-search").oninput = applyApptFilters;
-    document.getElementById("appt-status-filter").onchange = applyApptFilters;
-}
-
-/* ══════════════════════════════════════════════
-   INSURANCE SCORECARD
-══════════════════════════════════════════════ */
-const _insCharts = {};
-let _insPayers = [];
+/* ══════════════════════════════════════
+   INSURANCE ANALYTICS — Per-Payer Design
+══════════════════════════════════════ */
 
 function switchInsTab(tab, btn) {
-    document.querySelectorAll('.report-tabs .report-tab').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    document.getElementById('ins-tab-scorecard').classList.toggle('hidden', tab !== 'scorecard');
-    document.getElementById('ins-tab-manage').classList.toggle('hidden', tab !== 'manage');
-    if (tab === 'manage') loadInsPlans();
+    document.querySelectorAll(".ins-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".ins-tab-panel").forEach(p => p.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+    const panel = document.getElementById("ins-panel-" + tab);
+    if (panel) panel.classList.add("active");
+    if (tab === "manage") loadAcceptedInsurance();
 }
 
-function initInsurance() {
-    const user = JSON.parse(localStorage.getItem('clinicUser') || '{}');
-    fetch(`/api/admin/insurance/scorecard?user_id=${user.id}`)
-        .then(r => r.json())
-        .then(d => {
-            _insPayers = d.payers || [];
-            const tabs = document.getElementById('ins-payer-tabs');
-            tabs.innerHTML = _insPayers.map((p, i) =>
-                `<button class="report-tab${i===0?' active':''}" onclick="selectInsPayer(${i},this)">${p.provider_name}</button>`
-            ).join('');
-            if (_insPayers.length) selectInsPayer(0, tabs.querySelector('.report-tab'));
-        })
-        .catch(() => console.error('Insurance scorecard load failed'));
+/* Chart instance store */
+const _insCharts = {};
+function _dChart(key) { if (_insCharts[key]) { _insCharts[key].destroy(); delete _insCharts[key]; } }
+
+/* Compute composite score (50% financial, 30% access, 20% reliability) */
+function _computeScore(row) {
+    const contracted  = parseFloat(row.contracted_rate) || 0;
+    const actual      = parseFloat(row.actual_rate)     || 0;
+    const paidClaims  = parseInt(row.paid_claims)        || 0;
+    const totalClaims = parseInt(row.total_claims)       || 0;
+    const completion  = parseFloat(row.completion_rate_pct) || 0;
+    const financial   = contracted > 0 ? Math.min((actual / contracted) * 100, 100) : 0;
+    const reliability = totalClaims > 0 ? (paidClaims / totalClaims) * 100 : 0;
+    const composite   = Math.round((0.50 * financial) + (0.30 * completion) + (0.20 * reliability));
+    const status      = composite >= 80 ? "strong" : composite >= 60 ? "monitor" : "risk";
+    return { financial: Math.round(financial), reliability: Math.round(reliability),
+             access: Math.round(completion), composite, status };
 }
 
-function selectInsPayer(idx, btn) {
-    document.querySelectorAll('#ins-payer-tabs .report-tab').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    const p = _insPayers[idx];
-    if (!p) return;
-    const user = JSON.parse(localStorage.getItem('clinicUser') || '{}');
-    fetch(`/api/admin/insurance/payer-detail?user_id=${user.id}&insurance_id=${p.insurance_id}`)
-        .then(r => r.json())
-        .then(detail => renderInsScorecard(p, detail))
-        .catch(() => console.error('Payer detail load failed'));
-}
+/* ── All-payers cache ── */
+let _allPayers = [];
 
-function _insScoreColor(v, good, warn) {
-    return v >= good ? '#5CAD2A' : v >= warn ? '#EF9F27' : '#E24B4A';
-}
+/* ── Main loader ── */
+async function loadInsurance() {
+    try {
+        const [scRes, alRes] = await Promise.all([
+            fetch(`/api/admin/insurance/scorecard?user_id=${user.id}`),
+            fetch(`/api/admin/insurance/alerts?user_id=${user.id}`)
+        ]);
+        _allPayers = await scRes.json();
+        const alerts = alRes.ok ? await alRes.json() : [];
+        if (!scRes.ok) throw new Error(_allPayers.message || "Could not load scorecard");
 
-function _insComputeScores(p) {
-    const reimb  = p.avg_billed > 0 ? (p.avg_paid / p.avg_billed * 100) : 0;
-    const thresh = parseFloat(p.coverage_percentage);
-    const financial    = Math.min(100, Math.round(reimb / thresh * 100));
-    const reliability  = p.total_claims > 0 ? Math.round(p.paid_claims / p.total_claims * 100) : 0;
-    const network      = Math.min(100, Math.round(thresh));
-    const access       = Math.min(100, Math.round(thresh * 1.05));
-    const arDays       = parseFloat(p.avg_ar_days) || 12;
-    const admin        = Math.min(100, Math.max(0, Math.round(100 - arDays * 2)));
-    const composite    = Math.round(0.35*financial + 0.25*reliability + 0.15*network + 0.15*access + 0.10*admin);
-    return { financial, reliability, network, access, admin, composite, reimb, thresh, arDays };
-}
-
-function renderInsScorecard(p, detail) {
-    const sc = _insComputeScores(p);
-    const paidRate    = p.total_claims > 0 ? Math.round(p.paid_claims / p.total_claims * 100) : 0;
-    const pendingRate = 100 - paidRate;
-    const threshDollar = p.avg_billed > 0 ? Math.round(p.avg_billed * parseFloat(p.coverage_percentage) / 100) : 0;
-
-    // KPIs
-    const rc = _insScoreColor(sc.reimb, parseFloat(p.coverage_percentage), parseFloat(p.coverage_percentage)*0.9);
-    const nc = _insScoreColor(sc.network, 75, 70);
-    const pc = paidRate >= 70 ? '#5CAD2A' : paidRate >= 55 ? '#EF9F27' : '#E24B4A';
-    const ac = sc.arDays <= 20 ? '#5CAD2A' : sc.arDays <= 30 ? '#EF9F27' : '#E24B4A';
-    document.getElementById('ins-kpi-row').innerHTML = `
-        <div class="ins-kpi"><div class="ins-kpi-label">Avg Reimbursement</div>
-            <div class="ins-kpi-value" style="color:${rc}">$${Math.round(p.avg_paid||0)}</div>
-            <div class="ins-kpi-sub">Threshold: $${threshDollar}</div></div>
-        <div class="ins-kpi"><div class="ins-kpi-label">Network Participation</div>
-            <div class="ins-kpi-value" style="color:${nc}">${sc.network}%</div>
-            <div class="ins-kpi-sub">Minimum required: 70%</div></div>
-        <div class="ins-kpi"><div class="ins-kpi-label">Paid Rate</div>
-            <div class="ins-kpi-value" style="color:${pc}">${paidRate}%</div>
-            <div class="ins-kpi-sub">Target: &gt;70%</div></div>
-        <div class="ins-kpi"><div class="ins-kpi-label">Avg A/R Days</div>
-            <div class="ins-kpi-value" style="color:${ac}">${Math.abs(sc.arDays)} days</div>
-            <div class="ins-kpi-sub">Target: &lt;20 days</div></div>`;
-
-    // Build monthly labels/data (fill missing months with 0)
-    const monthly = detail.monthly || [];
-    const labels  = monthly.map(m => { const [y,mo]=m.month.split('-'); return new Date(y,mo-1).toLocaleString('en-US',{month:'short'}); });
-    const reimbData = monthly.map(m => parseFloat(m.reimb_rate)||0);
-    const threshLine = Array(monthly.length).fill(parseFloat(p.coverage_percentage));
-    const paidData    = monthly.map(m => parseInt(m.paid)||0);
-    const pendingData = monthly.map(m => (parseInt(m.total)||0) - (parseInt(m.paid)||0));
-
-    // Reimb line chart
-    _insChart('ins-reimb-chart', 'line', {
-        labels,
-        datasets: [
-            { label:'Avg Reimb %', data:reimbData, borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,.08)', tension:.38, pointRadius:3, fill:true, borderWidth:2 },
-            { label:'Threshold',   data:threshLine, borderColor:'#E24B4A', borderDash:[7,4], pointRadius:0, borderWidth:1.5, fill:false }
-        ]
-    }, { plugins:{legend:{display:false}}, scales:{ y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(128,128,128,.08)'}}, x:{grid:{display:false},ticks:{font:{size:10}}} } });
-
-    // Scatter chart — individual claims
-    const claims = detail.claims || [];
-    const inBand=[], outBand=[];
-    const bandMin = threshDollar * 0.7, bandMax = p.avg_billed * 1.1;
-    claims.forEach((c,i) => {
-        const pt = {x:i+1, y:parseFloat(c.paid)||0};
-        (pt.y >= bandMin && pt.y <= bandMax ? inBand : outBand).push(pt);
-    });
-    _insChart('ins-scatter-chart', 'scatter', {
-        datasets: [
-            { label:'In range',    data:inBand,  backgroundColor:'rgba(55,138,221,.65)', pointRadius:5 },
-            { label:'Out of range',data:outBand, backgroundColor:'rgba(226,75,74,.85)',  pointRadius:6, pointStyle:'rectRot' }
-        ]
-    }, { plugins:{legend:{display:false}},
-         scales:{ y:{ticks:{callback:v=>'$'+v,font:{size:9}},grid:{color:'rgba(128,128,128,.07)'}}, x:{display:false} } });
-
-    // Gauge
-    drawInsGauge(document.getElementById('ins-gauge'), sc.network);
-    document.getElementById('ins-gauge-label').textContent = sc.network + '%';
-    document.getElementById('ins-gauge-label').style.color = nc;
-    const gs = document.getElementById('ins-gauge-status');
-    if (sc.network >= 75) { gs.textContent='Compliant'; gs.style.color='#5CAD2A'; }
-    else if (sc.network >= 70) { gs.textContent='Borderline'; gs.style.color='#EF9F27'; }
-    else { gs.textContent='Non-compliant'; gs.style.color='#E24B4A'; }
-
-    // Claims stacked bar
-    _insChart('ins-claims-chart', 'bar', {
-        labels,
-        datasets: [
-            { label:'Paid',    data:paidData,    backgroundColor:'#5CAD2A', stack:'s' },
-            { label:'Pending', data:pendingData, backgroundColor:'#EF9F27', stack:'s' }
-        ]
-    }, { plugins:{legend:{display:false}}, scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}, y:{stacked:true,ticks:{font:{size:10}},grid:{color:'rgba(128,128,128,.08)'}} } });
-
-    // Score ring
-    drawInsScoreRing(document.getElementById('ins-score-ring'), sc.composite);
-    const sl = document.getElementById('ins-score-label');
-    const ss = document.getElementById('ins-score-status');
-    const scCol = sc.composite>=80?'#5CAD2A': sc.composite>=60?'#EF9F27':'#E24B4A';
-    sl.textContent = sc.composite; sl.style.color = scCol;
-    if (sc.composite>=80) { ss.textContent='Strong payer'; ss.style.color='#5CAD2A'; }
-    else if (sc.composite>=60) { ss.textContent='Acceptable — monitor'; ss.style.color='#EF9F27'; }
-    else { ss.textContent='Problematic — review'; ss.style.color='#E24B4A'; }
-
-    // Flags
-    const flags = [
-        sc.network>=75 ? {c:'g',t:'Network above 70% threshold'} : sc.network>=70 ? {c:'y',t:'Network borderline — approaching minimum'} : {c:'r',t:'Network below 70% minimum'},
-        paidRate>=70 ? {c:'g',t:`Paid rate healthy (${paidRate}%)`} : {c:'r',t:`Low paid rate (${paidRate}%) — investigate denials`},
-        sc.arDays<=20 ? {c:'g',t:'A/R days within target'} : {c:'y',t:`A/R days elevated (${Math.abs(sc.arDays)} days)`}
-    ];
-    document.getElementById('ins-flags').innerHTML = flags.map(f=>
-        `<div class="ins-flag"><span class="ins-dot ins-dot-${f.c}"></span>${f.t}</div>`).join('');
-
-    // Breakdown grid
-    const comps = [
-        {label:'Financial', val:sc.financial, wt:'35%'},
-        {label:'Reliability', val:sc.reliability, wt:'25%'},
-        {label:'Network', val:sc.network, wt:'15%'},
-        {label:'Access', val:sc.access, wt:'15%'},
-        {label:'Admin', val:sc.admin, wt:'10%'},
-    ];
-    document.getElementById('ins-breakdown-grid').innerHTML = comps.map(c => {
-        const col = c.val>=80?'#5CAD2A': c.val>=60?'#EF9F27':'#E24B4A';
-        const h = Math.round((c.val/100)*72);
-        return `<div class="ins-bd-item">
-            <div class="ins-bd-bar-wrap"><div class="ins-bd-bar" style="height:${h}px;background:${col}"></div></div>
-            <div class="ins-bd-val" style="color:${col}">${c.val}</div>
-            <div class="ins-bd-label">${c.label}</div>
-            <div class="ins-bd-wt">×${c.wt}</div>
-        </div>`;
-    }).join('');
-
-    // Triggers
-    const triggers = [
-        { cond: sc.reimb < parseFloat(p.coverage_percentage), sev:'r', text:`Reimbursement (${Math.round(sc.reimb)}%) below contracted threshold (${p.coverage_percentage}%)`, action:'Review CPT rates with billing manager' },
-        { cond: sc.network < 70, sev:'r', text:`Network participation (${sc.network}%) below 70% minimum`, action:'Escalate to contracting team' },
-        { cond: paidRate < 55, sev:'r', text:`Paid rate critically low (${paidRate}%)`, action:'Open renegotiation workflow' },
-        { cond: sc.arDays > 30, sev:'r', text:`A/R days excessive (${Math.abs(sc.arDays)} days)`, action:'Trigger collections follow-up queue' },
-        { cond: sc.network>=70 && sc.network<75, sev:'y', text:`Network borderline (${sc.network}%) — approaching minimum`, action:'Schedule quarterly review' },
-        { cond: paidRate>=55 && paidRate<70, sev:'y', text:`Paid rate below target (${paidRate}%)`, action:'Monitor monthly' },
-        { cond: sc.arDays>20 && sc.arDays<=30, sev:'y', text:`A/R days approaching limit (${Math.abs(sc.arDays)} days)`, action:'Flag for next collections cycle' },
-        { cond: sc.network>=75 && paidRate>=70 && sc.reimb>=parseFloat(p.coverage_percentage), sev:'g', text:'All primary metrics within acceptable range', action:'No action required — continue monitoring' },
-    ];
-    const active = triggers.filter(t=>t.cond);
-    document.getElementById('ins-triggers').innerHTML = active.length
-        ? active.map(t=>`<div class="ins-trigger t${t.sev}">
-            <span class="ins-tbadge b${t.sev}">${t.sev==='r'?'ALERT':t.sev==='y'?'WATCH':'OK'}</span>
-            <span class="ins-ttext">${t.text}</span>
-            <span class="ins-taction">${t.action}</span>
-          </div>`).join('')
-        : '<div style="font-size:12px;color:#aaa;padding:8px 0">No active alerts for this payer.</div>';
-}
-
-function _insChart(id, type, data, options) {
-    if (_insCharts[id]) _insCharts[id].destroy();
-    _insCharts[id] = new Chart(document.getElementById(id), {
-        type, data,
-        options: { responsive:true, maintainAspectRatio:false, ...options }
-    });
-}
-
-function drawInsGauge(canvas, pct) {
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    ctx.clearRect(0,0,W,H);
-    const cx=W/2, cy=H-14, r=Math.min(W,H*2)*0.42;
-    const zones=[{end:.70,color:'#F09595'},{end:.75,color:'#FAC775'},{end:1,color:'#A8D86E'}];
-    let prev=Math.PI;
-    zones.forEach(z=>{ const ea=Math.PI+z.end*Math.PI; ctx.beginPath(); ctx.arc(cx,cy,r,prev,ea); ctx.arc(cx,cy,r*.62,ea,prev,true); ctx.closePath(); ctx.fillStyle=z.color; ctx.fill(); prev=ea; });
-    const na=Math.PI+(pct/100)*Math.PI;
-    const nx=cx+Math.cos(na)*r*.76, ny=cy+Math.sin(na)*r*.76;
-    ctx.beginPath(); ctx.moveTo(nx,ny); ctx.lineTo(cx+Math.cos(na+.1)*r*.12,cy+Math.sin(na+.1)*r*.12); ctx.lineTo(cx+Math.cos(na-.1)*r*.12,cy+Math.sin(na-.1)*r*.12); ctx.closePath(); ctx.fillStyle='#333'; ctx.fill();
-    ctx.beginPath(); ctx.arc(cx,cy,9,0,2*Math.PI); ctx.fillStyle='#666'; ctx.fill();
-    ctx.font='500 9px monospace'; ctx.fillStyle='#999'; ctx.textAlign='center';
-    ctx.fillText('0%',cx-r+6,cy+13); ctx.fillText('50%',cx,cy-r+12); ctx.fillText('100%',cx+r-6,cy+13);
-}
-
-function drawInsScoreRing(canvas, score) {
-    const ctx=canvas.getContext('2d'), s=canvas.width;
-    ctx.clearRect(0,0,s,s);
-    const cx=s/2,cy=s/2,r=s*.38,lw=s*.11;
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI); ctx.strokeStyle='#E8E6E0'; ctx.lineWidth=lw; ctx.stroke();
-    const col=score>=80?'#5CAD2A': score>=60?'#EF9F27':'#E24B4A';
-    const ea=-0.5*Math.PI+(score/100)*2*Math.PI;
-    ctx.beginPath(); ctx.arc(cx,cy,r,-0.5*Math.PI,ea); ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
-}
-
-function loadInsPlans() {
-    const user = JSON.parse(localStorage.getItem('clinicUser')||'{}');
-    fetch(`/api/admin/insurance/scorecard?user_id=${user.id}`)
-        .then(r=>r.json())
-        .then(d=>{
-            const rows = d.payers||[];
-            document.querySelector('#ins-plans-table tbody').innerHTML = rows.length
-                ? rows.map(p=>`<tr>
-                    <td><strong>${p.provider_name}</strong></td>
-                    <td>${p.policy_number||'—'}</td>
-                    <td>${p.coverage_percentage}%</td>
-                    <td>${p.group_number||'—'}</td>
-                    <td>${p.phone_number||'—'}</td>
-                  </tr>`).join('')
-                : `<tr><td colspan="5" class="table-empty">No plans found</td></tr>`;
-        });
-}
-
-function filterTable(tableId, query) {
-    const q = query.toLowerCase();
-    document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
-        tr.style.display = tr.textContent.toLowerCase().includes(q) ? "" : "none";
-    });
-}
-
-function toggleView(panel, mode, btn) {
-    const chartView = document.getElementById(`${panel}-chart-view`);
-    const listView  = document.getElementById(`${panel}-list-view`);
-    const arList    = document.getElementById("fin-ar-list");
-    btn.closest(".view-toggle").querySelectorAll("button").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    if (mode === "chart") {
-        chartView?.classList.remove("hidden-view"); chartView?.classList.add("chart-view");
-        listView?.classList.remove("visible");
-        if (arList) { arList.classList.remove("hidden-view"); arList.classList.add("chart-view"); }
-    } else {
-        chartView?.classList.add("hidden-view"); chartView?.classList.remove("chart-view");
-        listView?.classList.add("visible");
-        if (arList) { arList.classList.add("hidden-view"); arList.classList.remove("chart-view"); }
+        _renderPayerPills(_allPayers);
+        _renderAlertBanner(alerts);
+        _renderAllPayersTable(_allPayers);
+        if (_allPayers.length) selectPayer(_allPayers[0].insurance_id);
+    } catch(e) {
+        document.getElementById("insPayerPills").innerHTML =
+            `<span style="color:#e05c5c;font-size:13px">Could not load insurance data.</span>`;
     }
 }
 
-function switchReportTab(tab, btn) {
-    document.querySelectorAll(".report-tab").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    document.querySelectorAll(".report-panel").forEach(p => p.classList.remove("active"));
-    document.getElementById(`report-${tab}`)?.classList.add("active");
-
-    if (tab === "financial")    loadFinancialReports();
-    if (tab === "appointments") loadAppointmentReports();
-    if (tab === "physicians")   loadPhysicianReports();
-    if (tab === "referrals")    loadReferralReport();
+/* ── Payer pills ── */
+function _renderPayerPills(payers) {
+    const row = document.getElementById("insPayerPills");
+    if (!payers.length) { row.innerHTML = '<span style="color:#aaa;font-size:13px">No payer data.</span>'; return; }
+    row.innerHTML = payers.map((p, i) => {
+        const s = _computeScore(p);
+        const icon = s.status === "strong" ? "🟢" : s.status === "monitor" ? "🟡" : "🔴";
+        return `<button class="ins-payer-pill${i === 0 ? " active" : ""}"
+            onclick="selectPayer(${p.insurance_id}, this)">${icon} ${p.provider_name}</button>`;
+    }).join("");
 }
 
-function getDateRange(fromId, toId) {
-    const from = document.getElementById(fromId)?.value || "2020-01-01";
-    const to   = document.getElementById(toId)?.value   || new Date().toISOString().slice(0, 10);
-    return { from, to };
+/* ── Select payer → fetch detail → redraw all charts ── */
+async function selectPayer(insuranceId, btnEl) {
+    if (btnEl) {
+        document.querySelectorAll(".ins-payer-pill").forEach(b => b.classList.remove("active"));
+        btnEl.classList.add("active");
+    }
+    try {
+        const r = await fetch(`/api/admin/insurance/payer-detail?insurance_id=${insuranceId}&user_id=${user.id}`);
+        const detail = await r.json();
+        if (!r.ok) throw new Error(detail.message);
+        const scoreRow = _allPayers.find(p => p.insurance_id == insuranceId) || {};
+        _renderKpis(detail.stats, scoreRow);
+        _renderLineChart(detail.trend, detail.stats);
+        _renderScatterChart(detail.scatter, detail.stats);
+        _renderClaimsBar(detail.bar);
+        _drawGaugeCanvas(detail.stats);
+        _drawScoreRingCanvas(scoreRow);
+        _renderBreakdown(scoreRow);
+        _renderTriggeredAlerts(detail.stats, scoreRow);
+    } catch(e) { console.error("payer-detail:", e); }
 }
 
-function money(v) { return "$" + parseFloat(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+/* ── KPI Row ── */
+function _renderKpis(stats, scoreRow) {
+    const contracted = parseFloat(stats.contracted_rate) || 0;
+    const actual     = parseFloat(stats.avg_reimb_pct)   || 0;
+    const kc = (v, g, w) => v >= g ? "good" : v >= w ? "warn" : "bad";
 
-function buildTableRows(tbodySelector, rows, cellFns) {
-    const tbody = document.querySelector(tbodySelector);
-    if (!tbody) return;
-    tbody.innerHTML = rows.length
-        ? rows.map(r => `<tr>${cellFns.map(fn => `<td>${fn(r) ?? "—"}</td>`).join("")}</tr>`).join("")
-        : `<tr><td colspan="${cellFns.length}" style="text-align:center;color:#aaa;padding:20px">No data found.</td></tr>`;
-}
-
-function initAnalytics() {
-    setDefaultDates();
-    populatePhysicianDropdown();
-    populateSpecialtyDropdown();
-    loadFinancialReports();
-}
-
-function setDefaultDates() {
-    const to   = new Date().toISOString().slice(0, 10);
-    const from = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().slice(0, 10);
-    ["fin-from","fin-to","appt-from","appt-to","phy-from","phy-to","ref-from","ref-to"].forEach((id, i) => {
+    const set = (id, txt, cls) => {
         const el = document.getElementById(id);
-        if (el) el.value = i % 2 === 0 ? from : to;
+        if (!el) return;
+        el.textContent = txt;
+        el.className = "ins-kpi-val" + (cls ? " " + cls : "");
+    };
+
+    set("kpiReimb",    actual + "%",         kc(actual, contracted, contracted * 0.9));
+    set("kpiThreshold", contracted + "%");
+    set("kpiClaims",   stats.total_claims    || 0);
+    set("kpiPatients", stats.total_patients  || 0);
+    const paidPct = stats.total_claims > 0 ? Math.round(stats.paid_claims / stats.total_claims * 100) : 0;
+    set("kpiPaid",     (stats.paid_claims || 0) + " (" + paidPct + "%)", kc(paidPct, 75, 50));
+    const ov = parseInt(stats.overdue_claims) || 0;
+    set("kpiOverdue",  ov, ov > 0 ? "bad" : "good");
+}
+
+/* ── Line Chart ── */
+function _renderLineChart(trend, stats) {
+    _dChart("insLine");
+    const ctx = document.getElementById("insChartLine"); if (!ctx) return;
+    const contracted = parseFloat(stats.contracted_rate) || 0;
+    const labels  = trend.map(t => t.month_label);
+    const actuals = trend.map(t => parseFloat(t.avg_reimb_pct) || 0);
+    _insCharts["insLine"] = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [
+            { label: "Avg Reimbursement %", data: actuals, borderColor: "#4a90d9",
+              backgroundColor: "rgba(74,144,217,0.1)", borderWidth: 2.5, pointRadius: 5, fill: true, tension: 0.3,
+              pointBackgroundColor: actuals.map(v => v < contracted ? "#e05c5c" : "#4a90d9") },
+            { label: "Contracted (" + contracted + "%)", data: new Array(labels.length).fill(contracted),
+              borderColor: "#e05c5c", borderWidth: 2, borderDash: [8,4], pointRadius: 0, fill: false }
+        ]},
+        options: { responsive: true,
+            plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } },
+                tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}%` } } },
+            scales: { y: { min: Math.max(0, contracted - 20), max: 105, ticks: { callback: v => v + "%" } } } }
     });
 }
 
-async function populatePhysicianDropdown() {
+/* ── Scatter Chart ── */
+function _renderScatterChart(scatter, stats) {
+    _dChart("insScatter");
+    const ctx = document.getElementById("insChartScatter"); if (!ctx) return;
+    const contracted = parseFloat(stats.contracted_rate) || 0;
+    const pts = scatter.map(s => ({ x: new Date(s.date_str).getTime(), y: parseFloat(s.reimb_pct) || 0 }));
+    const below = pts.filter(p => p.y < contracted);
+    const above = pts.filter(p => p.y >= contracted);
+    _insCharts["insScatter"] = new Chart(ctx, {
+        type: "scatter",
+        data: { datasets: [
+            { label: "Below threshold", data: below, backgroundColor: "rgba(224,92,92,0.7)", pointRadius: 5 },
+            { label: "At/above threshold", data: above, backgroundColor: "rgba(13,122,96,0.6)", pointRadius: 5 },
+            { label: "Threshold (" + contracted + "%)", type: "line",
+              data: pts.length > 0 ? [{ x: pts[0].x, y: contracted }, { x: pts[pts.length-1].x, y: contracted }] : [],
+              borderColor: "#e05c5c", borderWidth: 1.5, borderDash: [6,3], pointRadius: 0, fill: false }
+        ]},
+        options: { responsive: true,
+            plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } },
+                tooltip: { callbacks: { label: c => {
+                    const d = new Date(c.parsed.x);
+                    return ` ${d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"})}: ${c.parsed.y}%`;
+                }}}},
+            scales: { x: { type:"linear", ticks: { callback: v => new Date(v).toLocaleDateString("en-US",{month:"short",year:"2-digit"}) }},
+                      y: { min: 0, max: 110, ticks: { callback: v => v + "%" } } } }
+    });
+}
+
+/* ── Stacked Bar ── */
+function _renderClaimsBar(barData) {
+    _dChart("insBar");
+    const ctx = document.getElementById("insChartBar"); if (!ctx) return;
+    const months = [...new Set(barData.map(r => r.month))].sort();
+    const labels  = months.map(m => (barData.find(r => r.month === m) || {}).month_label || m);
+    const getPaid   = m => parseInt((barData.find(r => r.month === m && r.payment_status === "Paid") || {}).cnt) || 0;
+    const getUnpaid = m => parseInt((barData.find(r => r.month === m && r.payment_status !== "Paid") || {}).cnt) || 0;
+    _insCharts["insBar"] = new Chart(ctx, {
+        type: "bar",
+        data: { labels, datasets: [
+            { label: "Paid", data: months.map(getPaid), backgroundColor: "rgba(13,122,96,0.8)", borderRadius: 4 },
+            { label: "Unpaid", data: months.map(getUnpaid), backgroundColor: "rgba(224,92,92,0.7)", borderRadius: 4 }
+        ]},
+        options: { responsive: true,
+            plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } },
+            scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+    });
+}
+
+/* ── Gauge Canvas ── */
+function _drawGaugeCanvas(stats) {
+    const canvas = document.getElementById("insGauge"); if (!canvas) return;
+    const actual    = parseFloat(stats.avg_reimb_pct)   || 0;
+    const threshold = parseFloat(stats.contracted_rate) || 75;
+    const c = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height, cx = W/2, cy = H-8, r = Math.min(W/2-10, H-20);
+    c.clearRect(0, 0, W, H);
+
+    // Track
+    c.beginPath(); c.arc(cx,cy,r,Math.PI,0); c.lineWidth=16; c.strokeStyle="#f0f2f8"; c.lineCap="round"; c.stroke();
+
+    // Zones (red, amber, green)
+    const zones = [{from:0,to:70,col:"rgba(224,92,92,0.22)"},{from:70,to:threshold,col:"rgba(200,125,0,0.22)"},{from:threshold,to:100,col:"rgba(13,122,96,0.22)"}];
+    zones.forEach(z => {
+        if (z.from >= z.to) return;
+        c.beginPath(); c.arc(cx,cy,r, Math.PI+(z.from/100)*Math.PI, Math.PI+(z.to/100)*Math.PI);
+        c.lineWidth=16; c.strokeStyle=z.col; c.stroke();
+    });
+
+    // Value arc
+    const col = actual >= threshold ? "#0d7a60" : actual >= 70 ? "#c87d00" : "#e05c5c";
+    c.beginPath(); c.arc(cx,cy,r,Math.PI,Math.PI+(Math.min(actual,100)/100)*Math.PI);
+    c.lineWidth=16; c.strokeStyle=col; c.lineCap="round"; c.stroke();
+
+    // Threshold needle
+    const ta = Math.PI+(threshold/100)*Math.PI;
+    c.beginPath(); c.moveTo(cx+(r-18)*Math.cos(ta),cy+(r-18)*Math.sin(ta));
+    c.lineTo(cx+(r+5)*Math.cos(ta),cy+(r+5)*Math.sin(ta));
+    c.strokeStyle="#1a3a6d"; c.lineWidth=2.5; c.lineCap="square"; c.stroke();
+
+    // Center text
+    c.textAlign="center"; c.textBaseline="alphabetic";
+    c.fillStyle=col; c.font="bold 19px system-ui,sans-serif";
+    c.fillText(Math.round(actual)+"%",cx,cy-8);
+    c.fillStyle="#aaa"; c.font="10px system-ui,sans-serif"; c.fillText("avg reimb",cx,cy+4);
+
+    const label = document.getElementById("insGaugeLabel");
+    if (label) {
+        const diff = (actual - threshold).toFixed(1);
+        label.textContent = (diff >= 0 ? "+" : "") + diff + "% vs contracted";
+        label.style.color = actual >= threshold ? "#0d7a60" : "#e05c5c";
+    }
+}
+
+/* ── Score Ring Canvas ── */
+function _drawScoreRingCanvas(scoreRow) {
+    const canvas = document.getElementById("insScoreRing"); if (!canvas) return;
+    const s = _computeScore(scoreRow);
+    const c = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height, cx = W/2, cy = H/2, r = Math.min(W,H)/2-12;
+    c.clearRect(0,0,W,H);
+    const col = s.composite >= 80 ? "#0d7a60" : s.composite >= 60 ? "#c87d00" : "#e05c5c";
+    c.beginPath(); c.arc(cx,cy,r,0,2*Math.PI); c.lineWidth=14; c.strokeStyle="#f0f2f8"; c.stroke();
+    c.beginPath(); c.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+(s.composite/100)*2*Math.PI);
+    c.lineWidth=14; c.strokeStyle=col; c.lineCap="round"; c.stroke();
+    c.textAlign="center"; c.textBaseline="middle";
+    c.fillStyle=col; c.font="bold 24px system-ui,sans-serif"; c.fillText(s.composite,cx,cy-8);
+    c.fillStyle="#aaa"; c.font="11px system-ui,sans-serif"; c.fillText("/ 100",cx,cy+12);
+
+    const lbl = document.getElementById("insRingLabel");
+    if (lbl) {
+        lbl.textContent = s.status === "strong" ? "Strong" : s.status === "monitor" ? "Monitor" : "At Risk";
+        lbl.style.color = col;
+    }
+}
+
+/* ── Breakdown bars ── */
+function _renderBreakdown(scoreRow) {
+    const s = _computeScore(scoreRow);
+    const el = document.getElementById("insBreakdown"); if (!el) return;
+    const items = [
+        { label:"Financial (50%)",    value: s.financial,   color:"#4a90d9" },
+        { label:"Access (30%)",       value: s.access,      color:"#8a4af5" },
+        { label:"Reliability (20%)",  value: s.reliability, color:"#0d7a60" }
+    ];
+    el.innerHTML = items.map(i => `
+        <div class="ins-breakdown-item">
+            <div class="ins-breakdown-row"><span>${i.label}</span><span>${i.value}</span></div>
+            <div class="ins-breakdown-track"><div class="ins-breakdown-fill" style="width:${i.value}%;background:${i.color}"></div></div>
+        </div>`).join("");
+}
+
+/* ── Risk Indicator Rows ── */
+function _renderTriggeredAlerts(stats, scoreRow) {
+    const el = document.getElementById("insTriggeredAlerts"); if (!el) return;
+    const s = _computeScore(scoreRow);
+    const contracted = parseFloat(stats.contracted_rate) || 0;
+    const actual     = parseFloat(stats.avg_reimb_pct)   || 0;
+    const ov = parseInt(stats.overdue_claims) || 0;
+    const paidPct = stats.total_claims > 0 ? Math.round(stats.paid_claims / stats.total_claims * 100) : 100;
+
+    const rows = [
+        { label:"Composite Score", value:`${s.composite} / 100`,
+          badge: s.composite>=80?"ok":s.composite>=60?"watch":"alert",
+          bText: s.composite>=80?"OK":s.composite>=60?"WATCH":"ALERT",
+          desc: s.composite>=80?"Payer performing well.":s.composite>=60?"Some metrics need attention — monitor closely.":"At risk — consider contract review." },
+        { label:"Reimbursement vs Contracted", value:`${actual}% vs ${contracted}% contracted`,
+          badge: actual>=contracted?"ok":actual>=contracted*0.9?"watch":"alert",
+          bText: actual>=contracted?"OK":actual>=contracted*0.9?"WATCH":"ALERT",
+          desc: actual>=contracted?"Payer meeting contracted rate.":"Actual reimbursement is below contracted threshold." },
+        { label:"Claims Paid Rate", value:`${paidPct}%`,
+          badge: paidPct>=75?"ok":paidPct>=50?"watch":"alert",
+          bText: paidPct>=75?"OK":paidPct>=50?"WATCH":"ALERT",
+          desc: paidPct>=75?"Strong claims resolution rate.":paidPct>=50?"Moderate unpaid claims — review open items.":"High proportion of unpaid claims — escalate." },
+        { label:"Overdue Claims", value:`${ov} overdue`,
+          badge: ov===0?"ok":ov<=2?"watch":"alert",
+          bText: ov===0?"OK":ov<=2?"WATCH":"ALERT",
+          desc: ov===0?"No overdue claims.":ov<=2?"A small number of claims are past due.":"Multiple claims past due — follow up required." }
+    ];
+
+    el.innerHTML = rows.map(a => `
+        <div class="ins-alert-row">
+            <div style="flex:1">
+                <div style="font-weight:700;color:#333;font-size:12px;margin-bottom:2px">${a.label}</div>
+                <div style="color:#888;font-size:11px">${a.desc}</div>
+            </div>
+            <div style="text-align:right;min-width:140px;flex-shrink:0">
+                <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:3px">${a.value}</div>
+                <span class="ins-tbadge ${a.badge}">${a.bText}</span>
+            </div>
+        </div>`).join("");
+}
+
+/* ── DB Alert Banner ── */
+let _alertIds = [];
+function _renderAlertBanner(alerts) {
+    const banner = document.getElementById("payerAlertBanner");
+    const list   = document.getElementById("payerAlertList");
+    if (!alerts.length) { banner.style.display = "none"; return; }
+    _alertIds = alerts.map(a => a.alert_id);
+    list.innerHTML = alerts.slice(0,5).map(a =>
+        `<li>${a.provider_name}${a.clinic_name ? " at " + a.clinic_name : ""}: ${a.alert_message}</li>`
+    ).join("");
+    if (alerts.length > 5) list.innerHTML += `<li>…and ${alerts.length-5} more</li>`;
+    banner.style.display = "flex";
+}
+async function dismissAllAlerts() {
+    await Promise.all(_alertIds.map(id =>
+        fetch(`/api/admin/insurance/alerts/${id}/read`, { method:"PUT",
+            headers:{"Content-Type":"application/json"}, body:JSON.stringify({user_id:user.id}) })
+    ));
+    document.getElementById("payerAlertBanner").style.display = "none";
+}
+
+/* ── All-payers summary table ── */
+function _renderAllPayersTable(payers) {
+    const tbody = document.getElementById("payerDetailBody");
+    if (!payers.length) { tbody.innerHTML = `<tr><td colspan="9" class="table-empty">No data</td></tr>`; return; }
+    tbody.innerHTML = payers.map(p => {
+        const s = _computeScore(p);
+        const col = s.status==="strong"?"#0d7a60":s.status==="monitor"?"#c87d00":"#e05c5c";
+        const actualCol = (p.actual_rate||0) < (p.contracted_rate||0) ? "#e05c5c" : "#0d7a60";
+        return `<tr>
+            <td class="primary">${p.provider_name}</td>
+            <td>${p.total_patients??0}</td>
+            <td>${p.total_claims??0}</td>
+            <td>${parseFloat(p.contracted_rate||0).toFixed(0)}%</td>
+            <td style="color:${actualCol}">${p.actual_rate??'—'}%</td>
+            <td>${money(p.total_paid)}</td>
+            <td style="color:#e05c5c">${money(p.total_outstanding)}</td>
+            <td>${p.completion_rate_pct??0}%</td>
+            <td><span style="color:${col};font-weight:700">${s.composite}</span></td>
+        </tr>`;
+    }).join("");
+}
+
+/* ══════════════════════════════════════
+   MANAGE ACCEPTED PLANS
+══════════════════════════════════════ */
+
+/* Load clinics into the insurance form dropdown (reuses clinic data from overview if loaded) */
+async function loadInsuranceClinics() {
+    const sel = document.getElementById("ins_clinic");
+    if (sel.options.length > 1) return; // already loaded
     try {
-        const rows = await fetch(`/api/admin/physicians?user_id=${user.id}`).then(r => r.json());
-        const sel  = document.getElementById("appt-physician");
-        if (!sel) return;
-        rows.forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.physician_id;
-            opt.textContent = `${p.first_name} ${p.last_name}`;
-            sel.appendChild(opt);
+        const r = await fetch(`/api/admin/dashboard?user_id=${user.id}`);
+        const d = await r.json();
+        (d.clinics || []).forEach(c => {
+            const o = document.createElement("option");
+            o.value = c.clinic_id; o.textContent = c.clinic_name;
+            sel.appendChild(o);
         });
-    } catch {}
+    } catch(e) {}
 }
 
-async function populateSpecialtyDropdown() {
+async function loadInsurancePlans() {
+    const sel = document.getElementById("ins_plan");
+    if (sel.options.length > 1) return;
     try {
-        const rows = await fetch(`/api/admin/physicians?user_id=${user.id}`).then(r => r.json());
-        const sel  = document.getElementById("phy-specialty");
-        if (!sel) return;
-        const specialties = [...new Set(rows.map(p => p.specialty).filter(Boolean))].sort();
-        specialties.forEach(s => {
-            const opt = document.createElement("option");
-            opt.value = s; opt.textContent = s;
-            sel.appendChild(opt);
+        const r = await fetch(`/api/admin/departments?user_id=${user.id}`);
+        // departments endpoint doesn't give us insurance — use a workaround: fetch scorecard which has all insurance rows
+        const r2 = await fetch(`/api/admin/insurance/scorecard?user_id=${user.id}`);
+        const plans = await r2.json();
+        plans.forEach(p => {
+            const o = document.createElement("option");
+            o.value = p.insurance_id; o.textContent = p.provider_name;
+            sel.appendChild(o);
         });
-    } catch {}
+    } catch(e) {}
 }
 
-/* ── Financial ── */
-async function loadFinancialReports() {
-    const { from, to } = getDateRange("fin-from", "fin-to");
-    const uid = user.id;
+async function loadAcceptedInsurance() {
+    loadInsuranceClinics();
+    loadInsurancePlans();
+    const tbody = document.getElementById("acceptedInsBody");
+    tbody.innerHTML = `<tr><td colspan="8" class="table-empty">Loading…</td></tr>`;
+    try {
+        const r    = await fetch(`/api/admin/insurance/accepted?user_id=${user.id}`);
+        const rows = await r.json();
+        if (!r.ok) throw new Error(rows.message);
+
+        tbody.innerHTML = rows.length ? rows.map(row => {
+            const dot = row.is_active
+                ? `<span class="dot active"></span>Active`
+                : `<span class="dot inactive"></span>Inactive`;
+            const deactivateBtn = row.is_active
+                ? `<button onclick="deactivateInsuranceRow(${row.id})" style="padding:4px 10px;background:none;border:1px solid #e05c5c;border-radius:6px;color:#e05c5c;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Deactivate</button>`
+                : `<span style="font-size:11px;color:#aaa">Removed ${fmt(row.removed_date)}</span>`;
+            return `<tr>
+                <td>${dot}</td>
+                <td class="primary">${row.provider_name}</td>
+                <td>${row.clinic_name}</td>
+                <td>${parseFloat(row.coverage_percentage).toFixed(0)}%</td>
+                <td>${parseFloat(row.reimbursement_threshold_pct).toFixed(0)}%</td>
+                <td>${parseFloat(row.min_participation_rate).toFixed(0)}%</td>
+                <td>${fmt(row.effective_date)}</td>
+                <td>${deactivateBtn}</td>
+            </tr>`;
+        }).join("") : `<tr><td colspan="8" class="table-empty">No accepted plans found</td></tr>`;
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="8" class="table-empty">Could not load plans</td></tr>`;
+    }
+}
+
+async function submitAddInsurance() {
+    const errEl = document.getElementById("insError");
+    errEl.style.display = "none"; errEl.style.color = "#e05c5c";
+
+    const insurance_id              = document.getElementById("ins_plan").value;
+    const clinic_id                 = document.getElementById("ins_clinic").value;
+    const reimbursement_threshold_pct = document.getElementById("ins_threshold").value;
+    const min_participation_rate    = document.getElementById("ins_participation").value;
+    const effective_date            = document.getElementById("ins_effective").value;
+
+    if (!insurance_id || !clinic_id || !reimbursement_threshold_pct) {
+        errEl.textContent = "Insurance plan, clinic, and contracted minimum reimbursement % are required.";
+        errEl.style.display = "block"; return;
+    }
 
     try {
-        const [revData, arData, insData] = await Promise.all([
-            fetch(`/api/admin/reports/revenue?user_id=${uid}&from=${from}&to=${to}`).then(r => r.json()),
-            fetch(`/api/admin/reports/ar?user_id=${uid}`).then(r => r.json()),
-            fetch(`/api/admin/reports/insurance-breakdown?user_id=${uid}&from=${from}&to=${to}`).then(r => r.json())
-        ]);
+        const r = await fetch("/api/admin/insurance/accept", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ insurance_id, clinic_id, reimbursement_threshold_pct,
+                min_participation_rate: min_participation_rate || 75,
+                effective_date: effective_date || null, user_id: user.id })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
 
-        // Revenue line chart
-        renderChart("chart-revenue", "line",
-            revData.chart.map(r => r.month),
-            [
-                { label: "Total Billed",  data: revData.chart.map(r => +r.billed),      borderColor: "#1a3a6d", backgroundColor: "rgba(26,58,109,0.1)", fill: true, tension: 0.3 },
-                { label: "Collected",     data: revData.chart.map(r => +r.collected),    borderColor: "#0d7a60", backgroundColor: "rgba(13,122,96,0.1)",  fill: true, tension: 0.3 },
-                { label: "Outstanding",   data: revData.chart.map(r => +r.outstanding),  borderColor: "#e74c3c", backgroundColor: "rgba(231,76,60,0.1)",  fill: true, tension: 0.3 }
-            ],
-            { scales: { y: { ticks: { callback: v => "$" + v.toLocaleString() } } } }
-        );
+        errEl.style.color = "#0d7a60";
+        errEl.textContent = "✓ Insurance plan accepted and added successfully.";
+        errEl.style.display = "block";
+        setTimeout(() => { errEl.style.display = "none"; errEl.style.color = "#e05c5c"; }, 5000);
 
-        // AR aging bar chart
-        const aging = arData.aging || {};
-        renderChart("chart-ar", "bar",
-            ["0–30 days", "31–60 days", "61–90 days", "90+ days"],
-            [{ label: "Amount Owed ($)", data: [+aging["0-30"]||0, +aging["31-60"]||0, +aging["61-90"]||0, +aging["90+"]||0], backgroundColor: ["#4a90d9","#f39c12","#e67e22","#e74c3c"] }],
-            { scales: { y: { ticks: { callback: v => "$" + v.toLocaleString() } } } }
-        );
-
-        // Insurance doughnut
-        const insRows = insData.rows || [];
-        renderChart("chart-insurance", "doughnut",
-            insRows.map(r => r.provider_name),
-            [{ data: insRows.map(r => +r.insurance_paid), backgroundColor: ["#1a3a6d","#0d7a60","#4a90d9","#f39c12","#9b59b6"] }]
-        );
-
-        // Financial list table
-        buildTableRows("#fin-table tbody", revData.list || [], [
-            r => r.patient, r => money(r.total_amount), r => money(r.insurance_paid_amount),
-            r => money(r.patient_owed),
-            r => `<span class="status-pill ${r.payment_status === 'Paid' ? 'pill-completed' : 'pill-cancelled'}">${r.payment_status}</span>`,
-            r => r.payment_date?.slice(0,10) || "—", r => r.due_date?.slice(0,10) || "—", r => r.clinic_city
-        ]);
-
-        // AR detail list
-        buildTableRows("#ar-table tbody", arData.list || [], [
-            r => r.patient, r => money(r.patient_owed),
-            r => r.due_date?.slice(0,10) || "—",
-            r => `<span style="color:${+r.days_overdue > 90 ? '#e74c3c' : +r.days_overdue > 60 ? '#e67e22' : '#f39c12'}">${r.days_overdue} days</span>`,
-            r => r.clinic_city
-        ]);
-
-    } catch(e) { console.error("Financial report error:", e); }
+        ["ins_plan","ins_clinic","ins_threshold"].forEach(id => document.getElementById(id).value = "");
+        document.getElementById("ins_participation").value = "75";
+        document.getElementById("ins_effective").value = "";
+        loadAcceptedInsurance();
+    } catch(e) {
+        errEl.textContent = e.message || "Could not add insurance plan.";
+        errEl.style.display = "block";
+    }
 }
 
-/* ── Appointments ── */
-async function loadAppointmentReports() {
-    const { from, to } = getDateRange("appt-from", "appt-to");
-    const type  = document.getElementById("appt-type")?.value || "";
-    const phyId = document.getElementById("appt-physician")?.value || "";
-    const uid   = user.id;
-
-    let url = `/api/admin/reports/appointments?user_id=${uid}&from=${from}&to=${to}`;
-    if (type)  url += `&type=${encodeURIComponent(type)}`;
-    if (phyId) url += `&physician_id=${phyId}`;
-
+async function deactivateInsuranceRow(id) {
+    const reason = prompt("Enter a reason for removing this insurance plan from the clinic:");
+    if (!reason || !reason.trim()) return;
     try {
-        const data = await fetch(url).then(r => r.json());
-
-        // Build stacked bar by month
-        const months   = [...new Set((data.chart || []).map(r => r.month))].sort();
-        const statuses = ["Scheduled", "Completed", "Cancelled", "No-Show"];
-        const colors   = { Scheduled: "#4a90d9", Completed: "#0d7a60", Cancelled: "#e74c3c", "No-Show": "#f39c12" };
-
-        const datasets = statuses.map(s => ({
-            label: s,
-            data: months.map(m => {
-                const row = data.chart.find(r => r.month === m && r.status_name === s);
-                return row ? +row.count : 0;
-            }),
-            backgroundColor: colors[s]
-        }));
-
-        renderChart("chart-appt-volume", "bar", months, datasets, { scales: { x: { stacked: true }, y: { stacked: true } } });
-
-        // Type pie
-        const typeRows = data.typeBreak || [];
-        renderChart("chart-appt-type", "pie",
-            typeRows.map(r => r.appointment_type || "Unknown"),
-            [{ data: typeRows.map(r => +r.count), backgroundColor: ["#1a3a6d","#0d7a60","#4a90d9","#f39c12","#9b59b6"] }]
-        );
-
-        // List table
-        buildTableRows("#appt-table tbody", data.list || [], [
-            r => r.appointment_date?.slice(0,10), r => r.appointment_time?.slice(0,5),
-            r => r.patient, r => r.physician, r => r.appointment_type || "—",
-            r => `<span class="status-pill pill-${(r.status_name||"").toLowerCase().replace("-","")}">${r.status_name}</span>`,
-            r => r.city
-        ]);
-
-    } catch(e) { console.error("Appointment report error:", e); }
+        const r = await fetch(`/api/admin/insurance/${id}/deactivate`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ removal_reason: reason, user_id: user.id })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        loadAcceptedInsurance();
+    } catch(e) {
+        alert("Could not deactivate: " + (e.message || "Unknown error"));
+    }
 }
 
-/* ── Physician Productivity ── */
-async function loadPhysicianReports() {
-    const { from, to } = getDateRange("phy-from", "phy-to");
-    const specialty = document.getElementById("phy-specialty")?.value || "";
-    const phyType   = document.getElementById("phy-type")?.value || "";
-    const uid = user.id;
-
-    let url = `/api/admin/reports/physician-productivity?user_id=${uid}&from=${from}&to=${to}`;
-    if (specialty) url += `&specialty=${encodeURIComponent(specialty)}`;
-    if (phyType)   url += `&physician_type=${phyType}`;
-
-    try {
-        const data = await fetch(url).then(r => r.json());
-        const rows = data.rows || [];
-        const top20 = rows.slice(0, 20);
-
-        renderChart("chart-phy-productivity", "bar",
-            top20.map(r => r.physician),
-            [
-                { label: "Total Appointments", data: top20.map(r => r.total_appointments), backgroundColor: "#1a3a6d" },
-                { label: "Completed",          data: top20.map(r => r.completed),          backgroundColor: "#0d7a60" }
-            ],
-            { indexAxis: "y", scales: { x: { stacked: false } } }
-        );
-
-        renderChart("chart-phy-revenue", "bar",
-            top20.map(r => r.physician),
-            [{ label: "Revenue ($)", data: top20.map(r => +r.total_revenue), backgroundColor: "#4a90d9" }],
-            { indexAxis: "y", scales: { x: { ticks: { callback: v => "$" + v.toLocaleString() } } } }
-        );
-
-        buildTableRows("#phy-table tbody", rows, [
-            r => r.physician, r => r.specialty || "—", r => r.physician_type,
-            r => r.total_appointments, r => r.completed,
-            r => `${r.completion_rate ?? 0}%`,
-            r => money(r.total_revenue)
-        ]);
-
-    } catch(e) { console.error("Physician report error:", e); }
-}
-
-/* ── Referrals ── */
-async function loadReferralReport() {
-    const { from, to } = getDateRange("ref-from", "ref-to");
-    const uid = user.id;
-    const url = `/api/admin/reports/referrals?user_id=${uid}&from=${from}&to=${to}`;
-
-    try {
-        const data = await fetch(url).then(r => r.json());
-        const chart = data.chart || [];
-        const statusColors = { Requested:"#4a90d9", Issued:"#1a3a6d", Accepted:"#0d7a60", Rejected:"#e74c3c", Scheduled:"#f39c12", Completed:"#27ae60", Expired:"#aaa" };
-
-        renderChart("chart-referrals", "bar",
-            chart.map(r => r.status),
-            [{ label: "Referrals", data: chart.map(r => +r.count), backgroundColor: chart.map(r => statusColors[r.status] || "#999") }],
-            { indexAxis: "y" }
-        );
-
-        buildTableRows("#ref-table tbody", data.list || [], [
-            r => r.patient, r => r.referring_doctor, r => r.specialist,
-            r => `<span class="status-pill">${r.status}</span>`,
-            r => r.date_issued?.slice(0,10) || "—",
-            r => r.expiration_date?.slice(0,10) || "—",
-            r => r.referral_reason || "—"
-        ]);
-
-    } catch(e) { console.error("Referral report error:", e); }
-}
+/* ── Bootstrap ── */
+loadOverview();

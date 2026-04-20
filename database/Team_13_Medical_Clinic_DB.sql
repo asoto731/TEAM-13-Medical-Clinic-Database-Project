@@ -93,7 +93,7 @@ CREATE TABLE staff (
 --   role = 'staff'     → staff portal,     staff_id links to staff table
 CREATE TABLE users (
     user_id       INT PRIMARY KEY AUTO_INCREMENT,
-    username      VARCHAR(100) UNIQUE NOT NULL,
+    email         VARCHAR(150) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role          VARCHAR(50)  NOT NULL,
     physician_id  INT NULL,
@@ -242,4 +242,36 @@ CREATE TABLE billing (
     FOREIGN KEY (appointment_id) REFERENCES appointment(appointment_id),
     FOREIGN KEY (patient_id)     REFERENCES patient(patient_id),
     FOREIGN KEY (insurance_id)   REFERENCES insurance(insurance_id)
+) ENGINE=InnoDB;
+
+-- ─── 12. Insurance Analytics ──────────────────────────────────
+
+-- Which clinics accept which insurance plans, plus contracted terms
+CREATE TABLE clinic_accepted_insurance (
+    id                          INT PRIMARY KEY AUTO_INCREMENT,
+    clinic_id                   INT NOT NULL,
+    insurance_id                INT NOT NULL,
+    is_active                   BOOLEAN DEFAULT TRUE,
+    reimbursement_threshold_pct DECIMAL(5,2) NOT NULL COMMENT 'Contracted minimum reimbursement %',
+    min_participation_rate      DECIMAL(5,2) DEFAULT 75.00 COMMENT 'Network adequacy target %',
+    effective_date              DATE,
+    removed_date                DATE,
+    removal_reason              VARCHAR(255),
+    added_by                    INT NULL COMMENT 'admin user_id',
+    removed_by                  INT NULL,
+    UNIQUE KEY uq_clinic_insurance (clinic_id, insurance_id),
+    FOREIGN KEY (clinic_id)    REFERENCES clinic(clinic_id)    ON DELETE CASCADE,
+    FOREIGN KEY (insurance_id) REFERENCES insurance(insurance_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Alert rows created by trigger when a claim falls below contracted threshold
+CREATE TABLE payer_alert (
+    alert_id      INT PRIMARY KEY AUTO_INCREMENT,
+    insurance_id  INT NOT NULL,
+    clinic_id     INT NULL,
+    alert_type    ENUM('BELOW_THRESHOLD','HIGH_NO_SHOW','LOW_PAYMENT_RATE') NOT NULL,
+    alert_message VARCHAR(500),
+    triggered_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_read       BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (insurance_id) REFERENCES insurance(insurance_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

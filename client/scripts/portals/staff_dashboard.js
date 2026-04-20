@@ -342,10 +342,14 @@ async function confirmPayment() {
 }
 
 /* ── Staff: Daily Schedule Report ── */
+function localDateStr(date) {
+    const d = date || new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 async function loadDailySchedule() {
     const dateInput = document.getElementById("scheduleDate");
     if (!dateInput.value) {
-        dateInput.value = new Date().toISOString().split("T")[0];
+        dateInput.value = localDateStr();
     }
     const date = dateInput.value;
 
@@ -424,11 +428,11 @@ async function openOnboardModal() {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById("ob_date").min = tomorrow.toISOString().split("T")[0];
 
-    // Load insurance options
+    // Load insurance options — use public auth endpoint (not patient-role-gated)
     const insSelect = document.getElementById("ob_insurance");
     insSelect.innerHTML = '<option value="">None / Self-Pay</option>';
     try {
-        const r = await fetch(`/api/patient/care/insurance?user_id=${user.id}`);
+        const r = await fetch(`/api/auth/insurance-plans`);
         _onboardInsuranceList = await r.json();
         insSelect.innerHTML = '<option value="">None / Self-Pay</option>' +
             _onboardInsuranceList.map(i => `<option value="${i.insurance_id}" data-cov="${i.coverage_percentage}">${i.provider_name} (${i.coverage_percentage}% coverage)</option>`).join("");
@@ -636,7 +640,7 @@ function showOnboardSuccess(data) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div>
                 <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Portal Login</div>
-                <div style="font-size:13px;color:#333">${data.username}</div>
+                <div style="font-size:13px;color:#333">${data.email}</div>
             </div>
             <div>
                 <div style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Temp Password</div>

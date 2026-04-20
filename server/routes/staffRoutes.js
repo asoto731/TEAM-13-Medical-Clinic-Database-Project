@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians } = require("../controllers/staffController");
+const { loginStaff, getPhysicianDashboard, getStaffDashboard, getAllSchedules, getPhysicianReferrals, updateReferralStatus, addPhysicianNote, updateAppointmentStatus, undoAppointmentStatus, deleteMedicalHistoryNote, staffBookAppointment, markBillingPaid, getAllPatients, getAllPhysicians, onboardPatient, getAcceptingPhysicians, getAllSpecialists, createReferral } = require("../controllers/staffController");
 const { requireRole } = require("../middleware/auth");
 
 router.post("/login",                        loginStaff);
@@ -19,5 +19,7 @@ router.get("/patients",                      requireRole("physician","staff"),  
 router.get("/physicians",                    requireRole("staff"),              getAllPhysicians);
 router.post("/patients/onboard",             requireRole("staff"),              onboardPatient);
 router.get("/physicians/accepting",          requireRole("staff"),              getAcceptingPhysicians);
+router.get("/specialists",                   requireRole("physician","staff"),  getAllSpecialists);
+router.post("/referral/create",             requireRole("physician"),          createReferral);
 
 module.exports = router;
