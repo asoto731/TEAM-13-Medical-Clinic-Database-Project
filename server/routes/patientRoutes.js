@@ -12,7 +12,7 @@ router.put("/care/assign",            requireRole("patient"), assignCare);
 router.get("/referral/specialists",       requireRole("patient"), getSpecialistsByCity);
 router.post("/referral/request",          requireRole("patient"), requestReferral);
 router.get("/appointments/physician-schedule", requireRole("patient"), getPhysicianSchedule);
-router.get("/appointments/slots",         requireRole("patient"), getAvailableSlots);
+router.get("/appointments/slots",         requireRole("patient", "staff"), getAvailableSlots);
 router.post("/appointments/book",         requireRole("patient"), bookAppointment);
 router.put("/appointments/:id/cancel",    requireRole("patient"), cancelAppointment);
 router.get("/intake/:appointment_id",     requireRole("patient"), getIntakeForm);
