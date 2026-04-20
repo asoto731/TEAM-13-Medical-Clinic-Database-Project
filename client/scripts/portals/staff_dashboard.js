@@ -243,6 +243,7 @@ async function loadStaffSlots() {
     try {
         const r = await fetch(`/api/patient/appointments/slots?physician_id=${physician_id}&date=${date}&user_id=${user.id}`);
         const data = await r.json();
+        if (!r.ok) throw new Error(data.message || data.error || "Could not load slots");
         if (!data.slots || !data.slots.length) {
             slotSelect.innerHTML = '<option value="">No slots available</option>';
         } else {
@@ -423,6 +424,7 @@ async function openOnboardModal() {
     document.getElementById("ob_slot").innerHTML = '<option value="">Pick physician &amp; date first</option>';
     document.getElementById("ob_physician_schedule").textContent = "";
     document.getElementById("ob_coverage_badge").style.display = "none";
+    document.getElementById("ob_physician").innerHTML = '<option value="">Loading…</option>';
 
     // Set min date for appointment to tomorrow
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -441,8 +443,16 @@ async function openOnboardModal() {
     // Load accepting physicians for step 3
     try {
         const r2 = await fetch(`/api/staff/physicians/accepting?user_id=${user.id}`);
-        _acceptingPhysicians = await r2.json();
-    } catch(e) { _acceptingPhysicians = []; }
+        const physicians = await r2.json();
+        if (!r2.ok) throw new Error(physicians.message || physicians.error || "Could not load physicians");
+        _acceptingPhysicians = Array.isArray(physicians) ? physicians : [];
+    } catch(e) {
+        _acceptingPhysicians = [];
+        document.getElementById("ob_physician").innerHTML = '<option value="">Could not load physicians</option>';
+    }
+
+    // If user already navigated to step 3 while loading, refresh dropdown immediately.
+    if (_onboardStep === 3) renderOnboardStep();
 }
 
 function closeOnboardModal() {
@@ -488,9 +498,14 @@ function renderOnboardStep() {
     // Populate physician dropdown on step 3
     if (_onboardStep === 3) {
         const phSelect = document.getElementById("ob_physician");
+        const physicians = Array.isArray(_acceptingPhysicians) ? _acceptingPhysicians : [];
+        if (!physicians.length) {
+            phSelect.innerHTML = '<option value="">No physicians available</option>';
+            return;
+        }
         phSelect.innerHTML = '<option value="">Select physician…</option>' +
-            _acceptingPhysicians.map(p =>
-                `<option value="${p.physician_id}" data-city="${p.city}" data-days="${p.schedule.map(s=>s.day_of_week).join(', ')}">`
+            physicians.map(p =>
+                `<option value="${p.physician_id}" data-city="${p.city || ""}" data-days="${(p.schedule || []).map(s=>s.day_of_week).join(', ')}">`
                 + `Dr. ${p.first_name} ${p.last_name} — ${p.specialty} (${p.city})</option>`
             ).join("");
     }
@@ -549,6 +564,7 @@ async function loadOnboardSlots() {
     try {
         const r = await fetch(`/api/patient/appointments/slots?physician_id=${physician_id}&date=${date}&user_id=${user.id}`);
         const data = await r.json();
+        if (!r.ok) throw new Error(data.message || data.error || "Could not load slots");
         if (!data.slots || !data.slots.length) {
             slotSelect.innerHTML = '<option value="">No slots available on this day</option>';
         } else {
