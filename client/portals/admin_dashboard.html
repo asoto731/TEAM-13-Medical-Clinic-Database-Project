@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="/client/styles/dashboard.css">
     <style>
         /* Admin navy/blue accent */
-        .nav-item.active   { border-left-color: #4a90d9; color: #1a3a6d; }
+        .nav-item.active   { border-left-color: #4a90d9; color: #fff; }
         .sidebar-logo .clinic-name { color: #1a3a6d; }
         .user-avatar       { background: #1a3a6d; }
         .stat-card         { border-left-color: #4a90d9; }
@@ -30,6 +30,8 @@
         /* Settings */
         .settings-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 20px; font-size:13px; color:#888; cursor:pointer; font-family:inherit; font-weight:600; transition:color 0.15s,border-color 0.15s; }
         .settings-tab.active { color:#1a3a6d; border-bottom-color:#4a90d9; }
+        html[data-theme="dark"] .settings-tab { color:#a6b3d4; }
+        html[data-theme="dark"] .settings-tab.active { color:#cde6ff; border-bottom-color:#4a90d9; }
         .settings-tab-content { padding:0 24px; }
         .settings-tab-content.hidden { display:none; }
         .settings-row { display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f0f2f8; }
@@ -67,6 +69,7 @@
         .ins-tabs { display:flex; gap:0; border-bottom:2px solid #e8ecf4; margin-bottom:22px; }
         .ins-tab { background:none; border:none; border-bottom:3px solid transparent; padding:10px 20px; font-size:13px; font-weight:600; color:#888; cursor:pointer; font-family:inherit; transition:color 0.15s,border-color 0.15s; margin-bottom:-2px; }
         .ins-tab.active { color:#1a3a6d; border-bottom-color:#4a90d9; }
+        html[data-theme="dark"] .ins-tab { color:#a6b3d4; }
         html[data-theme="dark"] .ins-tab.active { color:#7ab4f5; border-bottom-color:#4a90d9; }
         .ins-tab-panel { display:none; }
         .ins-tab-panel.active { display:block; }
