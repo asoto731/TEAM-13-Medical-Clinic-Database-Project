@@ -33,7 +33,7 @@ function showSection(name) {
     if (sec) sec.classList.remove("hidden");
     const btn = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
     if (btn) btn.classList.add("active");
-    const labels = { overview:"Overview", appointments:"Appointments", billing:"Billing Queue", profile:"My Profile", settings:"Settings" };
+    const labels = { overview:"Dashboard", schedule:"Schedule & Booking", checkin:"Check In / Out", billing:"Billing & Payments", comms:"Communications", reports:"Reports", profile:"Staff Profile", settings:"Settings" };
     document.getElementById("currentSection").textContent = labels[name] || name;
 }
 

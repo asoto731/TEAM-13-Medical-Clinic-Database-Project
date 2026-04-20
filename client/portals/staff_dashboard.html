@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Staff purple accent overrides */
-        .nav-item.active   { border-left-color: #9e6afe; color: #3a1a6d; }
+        .nav-item.active   { background: #4a2c8a; border-left-color: #9e6afe; color: white; }
         .sidebar-logo .clinic-name { color: #3a1a6d; }
         .user-avatar       { background: #4a2c8a; }
         .stat-card         { border-left-color: #9e6afe; }
@@ -58,13 +58,14 @@
             <div class="portal-label">Staff Portal</div>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('overview')"><i class="fa-solid fa-gauge-high"></i>Overview</button>
-            <button class="nav-item" onclick="showSection('appointments')"><i class="fa-solid fa-calendar-days"></i>Appointments</button>
-            <button class="nav-item" onclick="showSection('billing')"><i class="fa-solid fa-file-invoice-dollar"></i>Billing Queue</button>
-            <button class="nav-item" onclick="showSection('profile')"><i class="fa-solid fa-id-card"></i>My Profile</button>
-            <button class="nav-item" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i>Settings</button>
-        </nav>
+    <button class="nav-item active" onclick="showSection('overview')"><i class="fa-solid fa-gauge-high"></i>Dashboard</button>
+    <button class="nav-item" onclick="showSection('schedule')"><i class="fa-solid fa-calendar-days"></i>Schedule &amp; Booking</button>
+    <button class="nav-item" onclick="showSection('checkin')"><i class="fa-solid fa-clipboard-check"></i>Check In / Out</button>
+    <button class="nav-item" onclick="showSection('billing')"><i class="fa-solid fa-file-invoice-dollar"></i>Billing</button>
+    <button class="nav-item" onclick="showSection('comms')"><i class="fa-solid fa-comments"></i>Communications</button>
+    <button class="nav-item" onclick="showSection('reports')"><i class="fa-solid fa-chart-bar"></i>Reports</button>
+    <button class="nav-item" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i>Settings</button>
+</nav>
         <div class="sidebar-user">
             <div class="user-avatar" id="avatarInitials">ST</div>
             <div class="user-info">
@@ -78,7 +79,7 @@
     <div class="main-content">
 
         <div class="topbar">
-            <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Overview</span></div>
+            <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Dashboard</span></div>
             <div class="topbar-right">
                 <button class="logout-btn" id="logoutBtn">Sign Out</button>
             </div>
@@ -100,10 +101,10 @@
             </div>
 
             <div class="quick-actions">
-                <button class="quick-btn purple" onclick="showSection('appointments')">Appointments</button>
-                <button class="quick-btn violet" onclick="showSection('billing')">Billing Queue</button>
-                <button class="quick-btn navy"   onclick="showSection('profile')">My Profile</button>
-                <button class="quick-btn" style="background:#10b981" onclick="openOnboardModal()">+ Onboard Patient</button>
+                <button class="quick-btn purple" onclick="showSection('schedule')"><i class="fa-solid fa-calendar-days"></i> Schedule</button>
+                <button class="quick-btn violet" onclick="showSection('checkin')"><i class="fa-solid fa-clipboard-check"></i> Check In</button>
+                <button class="quick-btn navy"   onclick="showSection('billing')"><i class="fa-solid fa-file-invoice-dollar"></i> Billing</button>
+                <button class="quick-btn" style="background:#10b981" onclick="openOnboardModal()"><i class="fa-solid fa-user-plus"></i> Onboard Patient</button>
             </div>
 
             <div class="stats-row">
@@ -153,10 +154,10 @@
         </div>
 
         <!-- ── Appointments ── -->
-        <div class="page-section hidden" id="sec-appointments">
+        <div class="page-section hidden" id="sec-schedule">
             <div class="section-block">
                 <div class="section-block-header">
-                    <div><h3>Department Appointments</h3><p>Upcoming appointments in your department</p></div>
+                    <div><h3>Schedule &amp; Booking</h3><p>Manage and book appointments</p></div>
                     <div style="display:flex;gap:8px">
                         <button class="profile-edit-btn" onclick="loadDailySchedule()">Today's Schedule</button>
                         <button class="profile-edit-btn" onclick="openStaffBookingModal()">+ Book Appointment</button>
@@ -172,11 +173,64 @@
             </div>
         </div>
 
+<!-- ── Check In / Out ── -->
+<div class="page-section hidden" id="sec-checkin">
+    <div class="section-block">
+        <div class="section-block-header">
+            <div><h3>Check In / Out</h3><p>Patient queue management for today</p></div>
+            <button class="profile-edit-btn" onclick="loadDailySchedule()">Load Today's Queue</button>
+        </div>
+        <div id="checkinContent" style="padding:24px">
+            <div style="background:#f5f3ff;border:1px solid #e0d9ff;border-radius:10px;padding:14px 18px;font-size:13px;color:#5b21b6;line-height:1.6;margin-bottom:16px">
+                Click <strong>Load Today's Queue</strong> to view and manage patient check-ins for today.
+            </div>
+            <table class="data-table">
+                <thead><tr><th>Time</th><th>Patient</th><th>Physician</th><th>Type</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="checkinBody"><tr><td colspan="6" class="table-empty">Load today's queue to see check-ins</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── Communications ── -->
+<div class="page-section hidden" id="sec-comms">
+    <div class="section-block">
+        <div class="section-block-header">
+            <div><h3>Communications</h3><p>Messages to patients and physicians</p></div>
+        </div>
+        <div style="padding:40px;text-align:center">
+            <div style="font-size:36px;margin-bottom:12px;opacity:0.3">💬</div>
+            <div style="font-size:14px;font-weight:700;color:#4a2c8a;margin-bottom:6px">Messaging coming soon</div>
+            <div style="font-size:13px;color:#aaa;font-weight:300">For urgent communications, call your clinic directly.</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Reports ── -->
+<div class="page-section hidden" id="sec-reports">
+    <div class="section-block">
+        <div class="section-block-header">
+            <div><h3>Reports</h3><p>Daily schedule and billing summary</p></div>
+            <button class="profile-edit-btn" onclick="loadDailySchedule()">Daily Schedule Report</button>
+        </div>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#f5f3ff;border-radius:10px;padding:16px 20px">
+                <div style="font-size:13px;font-weight:700;color:#4a2c8a;margin-bottom:8px">Daily Appointments</div>
+                <div style="font-size:13px;color:#555;font-weight:300">Click "Daily Schedule Report" to view today's full appointment schedule filtered by date and location.</div>
+            </div>
+            <div style="background:#f0fdf4;border-radius:10px;padding:16px 20px">
+                <div style="font-size:13px;font-weight:700;color:#065f46;margin-bottom:8px">Billing Summary</div>
+                <div style="font-size:13px;color:#555;font-weight:300">Go to the Billing tab to view outstanding payments and revenue summary.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
         <!-- ── Billing ── -->
         <div class="page-section hidden" id="sec-billing">
             <div class="section-block">
                 <div class="section-block-header">
-                    <div><h3>Billing Queue</h3><p>Outstanding and recent bills</p></div>
+                    <div><h3>Billing &amp; Payments</h3><p>Outstanding and recent bills — click a record to process payment</p></div>
                 </div>
                 <table class="data-table">
                     <thead>

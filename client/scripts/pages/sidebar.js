@@ -48,7 +48,7 @@
 
             <div class="sidebar-form-group">
                 <label for="s-email">Email</label>
-                <input type="email" id="s-email" placeholder="lastname###@audittrailhealth.com" autocomplete="email">
+                <input type="email" id="s-email" placeholder="your@email.com" autocomplete="email">
             </div>
             <div class="sidebar-form-group">
                 <label for="s-password">Password</label>

@@ -3,9 +3,10 @@
 <head>
     <title>Admin Portal - Audit Trail Health</title>
     <link rel="stylesheet" href="/client/styles/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Admin navy/blue accent */
-        .nav-item.active   { border-left-color: #4a90d9; color: #1a3a6d; }
+        .nav-item.active   { background: #1a3a6d; border-left-color: #4a90d9; color: white; }
         .sidebar-logo .clinic-name { color: #1a3a6d; }
         .user-avatar       { background: #1a3a6d; }
         .stat-card         { border-left-color: #4a90d9; }
@@ -162,13 +163,12 @@
             <div class="portal-label">Admin Portal</div>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Menu</div>
-            <button class="nav-item active"  onclick="showSection('overview')">Overview</button>
-            <button class="nav-item"         onclick="showSection('physicians')">Physicians</button>
-            <button class="nav-item"         onclick="showSection('staff')">Staff Members</button>
-            <button class="nav-item"         onclick="showSection('reports')">Clinic Reports</button>
-            <button class="nav-item"         onclick="showSection('insurance')">Insurance</button>
-            <button class="nav-item"         onclick="showSection('settings')">Settings</button>
+            <button class="nav-item active"  onclick="showSection('overview')"><i class="fa-solid fa-gauge-high"></i>System Overview</button>
+            <button class="nav-item"         onclick="showSection('physicians')"><i class="fa-solid fa-user-doctor"></i>Physicians</button>
+            <button class="nav-item"         onclick="showSection('staff')"><i class="fa-solid fa-id-badge"></i>Staff Members</button>
+            <button class="nav-item"         onclick="showSection('reports')"><i class="fa-solid fa-chart-line"></i>Financial Reports</button>
+            <button class="nav-item"         onclick="showSection('insurance')"><i class="fa-solid fa-chart-pie"></i>Analytics</button>
+            <button class="nav-item"         onclick="showSection('settings')"><i class="fa-solid fa-sliders"></i>Clinic Settings</button>
         </nav>
         <div class="sidebar-user">
             <div class="user-avatar" id="avatarInitials">AD</div>
@@ -183,7 +183,7 @@
     <div class="main-content">
 
         <div class="topbar">
-            <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Overview</span></div>
+            <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">System Overview</span></div>
             <div class="topbar-right">
                 <button class="logout-btn" id="logoutBtn">Sign Out</button>
             </div>
@@ -194,7 +194,7 @@
 
             <div class="greeting-card">
                 <div>
-                    <h2>Welcome, Administrator.</h2>
+                    <h2>System Overview</h2>
                     <p id="greetSub">Loading system overview…</p>
                 </div>
                 <div class="greeting-meta">
@@ -204,9 +204,10 @@
             </div>
 
             <div class="quick-actions">
-                <button class="quick-btn blue"  onclick="showSection('physicians')">Manage Physicians</button>
-                <button class="quick-btn teal"  onclick="showSection('staff')">Manage Staff</button>
-                <button class="quick-btn navy"  onclick="showSection('reports')">Clinic Reports</button>
+                <button class="quick-btn blue"  onclick="showSection('physicians')"><i class="fa-solid fa-user-doctor"></i> Physicians</button>
+                <button class="quick-btn teal"  onclick="showSection('staff')"><i class="fa-solid fa-id-badge"></i> Staff</button>
+                <button class="quick-btn navy"  onclick="showSection('reports')"><i class="fa-solid fa-chart-line"></i> Reports</button>
+                <button class="quick-btn" style="background:#0d7a60" onclick="showSection('insurance')"><i class="fa-solid fa-chart-pie"></i> Analytics</button>
             </div>
 
             <div class="stats-row">
@@ -369,7 +370,7 @@
 
             <div class="greeting-card" style="margin-bottom:20px">
                 <div>
-                    <h2 style="font-size:20px">Clinic Performance Reports</h2>
+                    <h2 style="font-size:20px">Financial Reports</h2>
                     <p style="color:#888;margin:0">System-wide data across all clinic locations</p>
                 </div>
                 <button class="quick-btn blue" onclick="loadClinicReport()" style="padding:10px 20px">Refresh</button>
@@ -425,7 +426,7 @@
 
             <div class="greeting-card" style="margin-bottom:20px">
                 <div>
-                    <h2 style="font-size:20px">Insurance Analytics</h2>
+                    <h2 style="font-size:20px">Analytics &amp; Insurance</h2>
                     <p style="color:#888;margin:0">Payer performance scores built from financial, reliability, and access metrics</p>
                 </div>
                 <button class="quick-btn blue" onclick="loadInsurance()" style="padding:10px 20px">Refresh</button>

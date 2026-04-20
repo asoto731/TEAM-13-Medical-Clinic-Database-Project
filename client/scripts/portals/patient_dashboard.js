@@ -81,7 +81,7 @@ function showSection(name) {
     const btn = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
     if (btn) btn.classList.add("active");
 
-    const labels = { overview:"Overview", appointments:"My Appointments", history:"Health Records", billing:"Billing & Payments", profile:"My Profile", settings:"Settings" };
+    const labels = { overview:"Dashboard", appointments:"Appointments", history:"My Records", billing:"Billing", profile:"Profile & Insurance", help:"Help & FAQs", settings:"Settings" };
     document.getElementById("currentSection").textContent = labels[name] || name;
 
     // Push to nav history (skip duplicate consecutive entries and back/fwd traversals)

@@ -37,7 +37,7 @@ function showSection(name) {
     if (sec) sec.classList.remove("hidden");
     const btn = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
     if (btn) btn.classList.add("active");
-    const labels = { overview:"Overview", appointments:"Appointments", patients:"My Patients", schedule:"Work Schedule", referrals:"Referrals", incoming:"Incoming Referrals", settings:"Settings", reports:"Reports" };
+    const labels = { overview:"Dashboard", appointments:"Schedule", patients:"Patients", schedule:"Work Schedule", referrals:"Referrals", incoming:"Incoming Referrals", notes:"Clinic Notes", settings:"Settings", reports:"Reports" };
     document.getElementById("currentSection").textContent = labels[name] || name;
 }
 
@@ -580,8 +580,9 @@ async function loadDashboard() {
         document.getElementById("statReferrals").textContent = referrals.length;
 
         /* Overview: today's schedule (upcoming) */
-        const today = new Date().toISOString().slice(0, 10);
-        const todayAppts = appointments.filter(a => a.appointment_date && a.appointment_date.slice(0, 10) >= today).slice(0, 6);
+        const n = new Date();
+        const today = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+        const todayAppts = appointments.filter(a => a.appointment_date && a.appointment_date.slice(0, 10) === today).slice(0, 8);
         const oBody = document.getElementById("overviewApptBody");
         oBody.innerHTML = todayAppts.length
             ? todayAppts.map(a => `<tr>

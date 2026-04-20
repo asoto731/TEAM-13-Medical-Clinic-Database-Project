@@ -26,8 +26,8 @@ document.getElementById("logoutBtn").addEventListener("click", logoutUser);
 
 /* ── Section nav ── */
 const sectionLabels = {
-    overview:"Overview", physicians:"Physicians", staff:"Staff Members",
-    reports:"Clinic Reports", insurance:"Insurance", settings:"Settings"
+    overview:"System Overview", physicians:"Physicians", staff:"Staff Members",
+    reports:"Financial Reports", insurance:"Analytics", settings:"Clinic Settings"
 };
 
 function showSection(name) {

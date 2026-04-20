@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Patient accent overrides */
-        .nav-item.active   { border-left-color: #6ea8fe; color: #1f2a6d; }
+        .nav-item.active   { background: #1f2a6d; border-left-color: #6ea8fe; color: white; }
         .user-avatar       { background: #1f2a6d; }
         .stat-card         { border-left-color: #6ea8fe; }
         .greeting-badge    { background: #dbeafe; color: #1e40af; }
@@ -57,14 +57,12 @@
             <div class="portal-label">Patient Portal</div>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('overview')"><i class="fa-solid fa-gauge-high"></i>Overview</button>
-            <button class="nav-item" onclick="showSection('appointments')"><i class="fa-solid fa-calendar-days"></i>My Appointments</button>
-            <button class="nav-item" onclick="showSection('history')"><i class="fa-solid fa-notes-medical"></i>Health Records</button>
-            <button class="nav-item" onclick="showSection('billing')"><i class="fa-solid fa-receipt"></i>Billing &amp; Payments</button>
-            <div class="nav-section-label">Account</div>
-            <button class="nav-item" onclick="showSection('profile')"><i class="fa-solid fa-circle-user"></i>My Profile</button>
-            <button class="nav-item" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i>Settings</button>
+            <button class="nav-item active" onclick="showSection('overview')"><i class="fa-solid fa-house"></i>Dashboard</button>
+            <button class="nav-item" onclick="showSection('appointments')"><i class="fa-solid fa-calendar-days"></i>Appointments</button>
+            <button class="nav-item" onclick="showSection('history')"><i class="fa-solid fa-notes-medical"></i>My Records</button>
+            <button class="nav-item" onclick="showSection('billing')"><i class="fa-solid fa-receipt"></i>Billing</button>
+            <button class="nav-item" onclick="showSection('profile')"><i class="fa-solid fa-circle-user"></i>Profile &amp; Insurance</button>
+            <button class="nav-item" onclick="showSection('help')"><i class="fa-solid fa-circle-question"></i>Help &amp; FAQs</button>
         </nav>
         <div class="sidebar-user">
             <div class="user-avatar" id="avatarInitials">?</div>
@@ -80,13 +78,7 @@
 
         <!-- Top bar -->
         <div class="topbar">
-            <div style="display:flex;align-items:center;gap:8px">
-                <div class="topbar-nav">
-                    <button class="nav-arrow-btn" id="navBackBtn" onclick="navBack()" disabled title="Back">&#8592;</button>
-                    <button class="nav-arrow-btn" id="navFwdBtn"  onclick="navForward()" disabled title="Forward">&#8594;</button>
-                </div>
-                <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Overview</span></div>
-            </div>
+            <div class="topbar-title">Audit Trail Health &rsaquo; <span id="currentSection">Dashboard</span></div>
             <div class="topbar-right">
                 <button class="logout-btn" id="logoutBtn">Sign Out</button>
             </div>
@@ -311,32 +303,8 @@
                 <button class="quick-btn blue" onclick="showSection('billing')">Billing</button>
             </div>
 
-            <!-- Stats -->
-            <div class="stats-row" id="statsRow">
-                <div class="stat-card">
-                    <div class="stat-label">Total Appointments</div>
-                    <div class="stat-value" id="statAppts">—</div>
-                    <div class="stat-sub">All time</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Upcoming</div>
-                    <div class="stat-value" id="statUpcoming">—</div>
-                    <div class="stat-sub">Scheduled</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Conditions on Record</div>
-                    <div class="stat-value" id="statConditions">—</div>
-                    <div class="stat-sub">Medical history</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Outstanding Bills</div>
-                    <div class="stat-value" id="statBills">—</div>
-                    <div class="stat-sub">Unpaid</div>
-                </div>
-            </div>
-
             <!-- 2-col: next appointments + insurance -->
-            <div class="sections-grid">
+            <div>
                 <div class="section-block">
                     <div class="section-block-header">
                         <div><h3>Upcoming Appointments</h3><p>Your next scheduled visits</p></div>
@@ -345,14 +313,6 @@
                         <thead><tr><th>Date</th><th>Physician</th><th>Status</th></tr></thead>
                         <tbody id="overviewApptBody"><tr><td colspan="3" class="table-empty">Loading…</td></tr></tbody>
                     </table>
-                </div>
-                <div class="section-block">
-                    <div class="section-block-header">
-                        <div><h3>Primary Physician &amp; Insurance</h3><p>Your care team</p></div>
-                    </div>
-                    <div style="padding:20px;display:flex;flex-direction:column;gap:14px" id="careCard">
-                        <p class="table-empty">Loading…</p>
-                    </div>
                 </div>
             </div>
 
@@ -365,7 +325,7 @@
             <div class="section-block" style="margin-bottom:24px;padding:0">
                 <div style="padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
                     <div>
-                        <h3 style="font-size:15px;font-weight:700;color:#1f2a6d;margin-bottom:2px">My Appointments</h3>
+                        <h3 style="font-size:15px;font-weight:700;color:#1f2a6d;margin-bottom:2px">Appointments</h3>
                         <p style="font-size:12px;color:#aaa" id="apptFilterCount">All appointments</p>
                     </div>
                     <button class="profile-edit-btn" onclick="openBookingModal()">+ Book Appointment</button>
@@ -442,7 +402,7 @@
             <!-- Pill row — section quick-toggle -->
             <div class="section-block" style="margin-bottom:24px;padding:0">
                 <div style="padding:14px 20px 0">
-                    <h3 style="font-size:15px;font-weight:700;color:#1f2a6d;margin-bottom:2px">Health Records</h3>
+                    <h3 style="font-size:15px;font-weight:700;color:#1f2a6d;margin-bottom:2px">My Records</h3>
                     <p style="font-size:12px;color:#aaa">Click to show specific sections, or leave all selected to see everything</p>
                 </div>
                 <div class="pill-filter-row">
@@ -600,7 +560,7 @@
             <div id="profileEditBtn" style="padding:0 0 16px 0;display:flex;justify-content:flex-end;"></div>
             <div class="sections-grid">
                 <div class="section-block">
-                    <div class="section-block-header"><div><h3>Personal Information</h3></div></div>
+                    <div class="section-block-header"><div><h3>Profile &amp; Insurance</h3></div></div>
                     <div style="padding:20px;display:flex;flex-direction:column;gap:12px" id="profileInfo">
                         <p class="table-empty">Loading…</p>
                     </div>
@@ -665,8 +625,72 @@
             </div>
         </div>
 
+        <!-- ── Help & FAQs Section ── -->
+<div id="sec-help" class="page-section hidden">
+    <div class="section-block">
+        <div class="section-block-header"><div><h3>Help &amp; FAQs</h3><p>Support, contact info, and common questions</p></div></div>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:20px">
+
+            <div style="background:#f0f4ff;border-radius:10px;padding:18px 20px">
+                <div style="font-size:13px;font-weight:700;color:#1f2a6d;margin-bottom:10px">Contact Us</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+                    <div style="background:white;border-radius:8px;padding:10px 14px;border:1px solid #e0e4f0">
+                        <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px">Billing</div>
+                        <div style="font-size:13px;font-weight:700;color:#1f2a6d;margin-top:2px">billing@athhospital.com</div>
+                        <div style="font-size:12px;color:#6ea8fe;margin-top:2px">(800) 555-0192</div>
+                    </div>
+                    <div style="background:white;border-radius:8px;padding:10px 14px;border:1px solid #e0e4f0">
+                        <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px">Dallas, TX</div>
+                        <div style="font-size:13px;color:#6ea8fe;font-weight:700;margin-top:2px">(214) 555-0200</div>
+                    </div>
+                    <div style="background:white;border-radius:8px;padding:10px 14px;border:1px solid #e0e4f0">
+                        <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px">Houston, TX</div>
+                        <div style="font-size:13px;color:#6ea8fe;font-weight:700;margin-top:2px">(713) 555-0200</div>
+                    </div>
+                    <div style="background:white;border-radius:8px;padding:10px 14px;border:1px solid #e0e4f0">
+                        <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px">Austin, TX</div>
+                        <div style="font-size:13px;color:#6ea8fe;font-weight:700;margin-top:2px">(512) 555-0200</div>
+                    </div>
+                </div>
+                <div style="font-size:11px;color:#aaa;margin-top:12px">Hours: Mon–Fri 8 AM – 5 PM CT &nbsp;|&nbsp; Emergencies: <strong style="color:#e05c5c">911</strong></div>
+            </div>
+
+            <div>
+                <div style="font-size:13px;font-weight:700;color:#1f2a6d;margin-bottom:12px">Frequently Asked Questions</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <details style="border:1px solid #e0e4f0;border-radius:8px;padding:12px 16px;cursor:pointer">
+                        <summary style="font-size:13px;font-weight:700;color:#333;list-style:none">How do I book an appointment?</summary>
+                        <p style="font-size:13px;color:#555;margin-top:8px;line-height:1.7;font-weight:300">Go to the Appointments tab and click "Book Appointment". Select your physician, date, time slot, and reason for visit.</p>
+                    </details>
+                    <details style="border:1px solid #e0e4f0;border-radius:8px;padding:12px 16px;cursor:pointer">
+                        <summary style="font-size:13px;font-weight:700;color:#333;list-style:none">How do I cancel an appointment?</summary>
+                        <p style="font-size:13px;color:#555;margin-top:8px;line-height:1.7;font-weight:300">In the Appointments tab, find your upcoming appointment and click Cancel. Cancellations within 24 hours may be subject to a fee.</p>
+                    </details>
+                    <details style="border:1px solid #e0e4f0;border-radius:8px;padding:12px 16px;cursor:pointer">
+                        <summary style="font-size:13px;font-weight:700;color:#333;list-style:none">How do I update my insurance information?</summary>
+                        <p style="font-size:13px;color:#555;margin-top:8px;line-height:1.7;font-weight:300">Go to Profile &amp; Insurance tab and use the "Update Care Team" option, or contact your clinic directly.</p>
+                    </details>
+                    <details style="border:1px solid #e0e4f0;border-radius:8px;padding:12px 16px;cursor:pointer">
+                        <summary style="font-size:13px;font-weight:700;color:#333;list-style:none">How do I view my billing statement?</summary>
+                        <p style="font-size:13px;color:#555;margin-top:8px;line-height:1.7;font-weight:300">Go to the Billing tab. You can view outstanding balances, payment history, and download your full billing statement.</p>
+                    </details>
+                </div>
+            </div>
+
+            <div style="border-top:1px solid #f0f2f8;padding-top:16px">
+                <div style="font-size:12px;font-weight:700;color:#1f2a6d;margin-bottom:8px">Appearance</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:13px;color:#555">Theme:</span>
+                    <button class="theme-btn" id="themeLight" onclick="setTheme('light')">Light</button>
+                    <button class="theme-btn" id="themeDark"  onclick="setTheme('dark')">Dark</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
         <!-- ── Settings Section ── -->
-        <div id="sec-settings" class="page-section hidden">
+        <div id="sec-settings" class="page-section hidden" style="display:none">
             <div class="section-block">
                 <div class="section-block-header"><h3>Settings</h3></div>
 
