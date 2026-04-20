@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         /* Staff purple accent overrides */
-        .nav-item.active   { border-left-color: #9e6afe; color: #3a1a6d; }
+        .nav-item.active   { border-left-color: #9e6afe; color: #fff; }
         .sidebar-logo .clinic-name { color: #3a1a6d; }
         .user-avatar       { background: #4a2c8a; }
         .stat-card         { border-left-color: #9e6afe; }
@@ -36,6 +36,8 @@
         /* Settings panel */
         .settings-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 20px; font-size:13px; color:#888; cursor:pointer; font-family:inherit; font-weight:600; transition:color 0.15s,border-color 0.15s; }
         .settings-tab.active { color:#3a1a6d; border-bottom-color:#9e6afe; }
+        html[data-theme="dark"] .settings-tab { color:#c4b6ea; }
+        html[data-theme="dark"] .settings-tab.active { color:#dfd0ff; border-bottom-color:#9e6afe; }
         .settings-tab-content { padding:0 24px; }
         .settings-tab-content.hidden { display:none; }
         .settings-row { display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f0f2f8; }
