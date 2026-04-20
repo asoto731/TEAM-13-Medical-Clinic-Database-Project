@@ -70,6 +70,8 @@ syncThemeButtons();
 
 /* ── Helpers ── */
 document.getElementById("todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+const billingSearchInput = document.getElementById("billingSearchInput");
+let billingRecords = [];
 
 function fmt(d) { return d ? new Date(d).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }) : "—"; }
 function timeFmt(t) {
@@ -89,6 +91,30 @@ function infoRow(label, value) {
         <span style="font-size:11px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${label}</span>
         <span style="font-size:14px;color:#333">${value || "—"}</span>
     </div>`;
+}
+
+function renderBillingRows(records) {
+    const term = (billingSearchInput?.value || "").trim().toLowerCase();
+    const filteredRecords = term
+        ? records.filter(b => `${b.first_name || ""} ${b.last_name || ""}`.toLowerCase().includes(term))
+        : records;
+
+    document.getElementById("billingBody").innerHTML = filteredRecords.length
+        ? filteredRecords.map(b => `<tr>
+            <td class="primary">#${b.bill_id}</td>
+            <td>${b.first_name} ${b.last_name}</td>
+            <td>$${parseFloat(b.total_amount || 0).toFixed(2)}</td>
+            <td style="color:#10b981">$${parseFloat(b.insurance_paid_amount || 0).toFixed(2)}</td>
+            <td style="color:#e74c3c;font-weight:600">$${parseFloat(b.patient_owed || 0).toFixed(2)}</td>
+            <td style="text-transform:capitalize">${b.payment_method || "—"}</td>
+            <td>${fmt(b.payment_date)}</td>
+            <td>${pill(b.payment_status || "Unpaid")}</td>
+            <td>${b.payment_status !== 'Paid'
+                ? `<button onclick="openPaymentModal(${b.bill_id},'${b.first_name} ${b.last_name}',${parseFloat(b.total_amount||0).toFixed(2)},${parseFloat(b.insurance_paid_amount||0).toFixed(2)},${parseFloat(b.patient_owed||0).toFixed(2)})"
+                    style="padding:4px 10px;font-size:11px;background:none;border:1px solid #10b981;color:#10b981;border-radius:6px;cursor:pointer;font-family:inherit">Mark Paid</button>`
+                : '<span style="color:#10b981;font-size:12px;font-weight:600">✓ Paid</span>'}</td>
+        </tr>`).join("")
+        : `<tr><td colspan="9" class="table-empty">No billing records found</td></tr>`;
 }
 
 /* ── Load data ── */
@@ -159,22 +185,8 @@ async function loadDashboard() {
             : `<tr><td colspan="5" class="table-empty">No appointments found</td></tr>`;
 
         /* Full billing table */
-        document.getElementById("billingBody").innerHTML = billing.length
-            ? billing.map(b => `<tr>
-                <td class="primary">#${b.bill_id}</td>
-                <td>${b.first_name} ${b.last_name}</td>
-                <td>$${parseFloat(b.total_amount || 0).toFixed(2)}</td>
-                <td style="color:#10b981">$${parseFloat(b.insurance_paid_amount || 0).toFixed(2)}</td>
-                <td style="color:#e74c3c;font-weight:600">$${parseFloat(b.patient_owed || 0).toFixed(2)}</td>
-                <td style="text-transform:capitalize">${b.payment_method || "—"}</td>
-                <td>${fmt(b.payment_date)}</td>
-                <td>${pill(b.payment_status || "Unpaid")}</td>
-                <td>${b.payment_status !== 'Paid'
-                    ? `<button onclick="openPaymentModal(${b.bill_id},'${b.first_name} ${b.last_name}',${parseFloat(b.total_amount||0).toFixed(2)},${parseFloat(b.insurance_paid_amount||0).toFixed(2)},${parseFloat(b.patient_owed||0).toFixed(2)})"
-                        style="padding:4px 10px;font-size:11px;background:none;border:1px solid #10b981;color:#10b981;border-radius:6px;cursor:pointer;font-family:inherit">Mark Paid</button>`
-                    : '<span style="color:#10b981;font-size:12px;font-weight:600">✓ Paid</span>'}</td>
-            </tr>`).join("")
-            : `<tr><td colspan="9" class="table-empty">No billing records</td></tr>`;
+        billingRecords = billing;
+        renderBillingRows(billingRecords);
 
         /* Profile */
         document.getElementById("profileGrid").innerHTML = `
@@ -195,6 +207,8 @@ async function loadDashboard() {
 }
 
 loadDashboard();
+
+billingSearchInput?.addEventListener("input", () => renderBillingRows(billingRecords));
 
 /* ── Staff: Book Appointment Modal ── */
 async function openStaffBookingModal() {
